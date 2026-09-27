@@ -158,6 +158,21 @@ var connectionString = !string.IsNullOrWhiteSpace(encryptedConnectionString)
 
 builder.Services.AddDbContext<SyncNetDbContext>(opt => opt.UseNpgsql(connectionString));
 
+// Jwt:SigningKeyEncrypted — same AES.Config cipher as DbConnectionEncrypted above. When set,
+// the decrypted value is layered over Jwt:SigningKey so both the JwtOptions binding (used by
+// JwtTokenService) and the JwtBearer validation setup below see the plain key.
+var encryptedJwtSigningKey = builder.Configuration["Jwt:SigningKeyEncrypted"];
+if (!string.IsNullOrWhiteSpace(encryptedJwtSigningKey))
+{
+    var jwtSigningKey = AesConfigCipher.Decrypt(
+        encryptedJwtSigningKey,
+        legacyResourcesLoader.GetAesConfigKeyHex()
+            ?? throw new InvalidOperationException("Resources.bin's AES.Config key is not loaded — cannot decrypt Jwt:SigningKeyEncrypted."),
+        legacyResourcesLoader.GetAesConfigIvHex()
+            ?? throw new InvalidOperationException("Resources.bin's AES.Config IV is not loaded — cannot decrypt Jwt:SigningKeyEncrypted."));
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Jwt:SigningKey"] = jwtSigningKey });
+}
+
 // ---------------------------------------------------------------------------
 // Application services
 // ---------------------------------------------------------------------------

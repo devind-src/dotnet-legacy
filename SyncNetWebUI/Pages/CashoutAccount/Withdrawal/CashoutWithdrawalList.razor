@@ -1,0 +1,184 @@
+@page "/cashout/account/withdrawal"
+@attribute [Authorize]
+@inject CashoutWithdrawalManagementService WithdrawalManagement
+@inject MerchantManagementService MerchantManagement
+@inject TerminalManagementService TerminalManagement
+@inject BankManagementService BankManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Cash Withdrawal Account</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Cash Withdrawal Account</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Cashout Account &gt; Withdrawal.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari terminal / bank / account" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Withdrawal Account</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Terminal ID</MudTh>
+            <MudTh>Bank Name</MudTh>
+            <MudTh>Bank Code</MudTh>
+            <MudTh>Account Number</MudTh>
+            <MudTh>Account Name</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Terminal ID">@context.TerminalId</MudTd>
+            <MudTd DataLabel="Bank Name">@context.BankName</MudTd>
+            <MudTd DataLabel="Bank Code">@context.BankCode</MudTd>
+            <MudTd DataLabel="Account Number">@context.AccNumber</MudTd>
+            <MudTd DataLabel="Account Name">@context.AccName</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada cash withdrawal account ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<CashoutWithdrawalDto> _items = new();
+    private List<LookupItemDto> _merchants = new();
+    private List<TerminalDto> _terminals = new();
+    private List<BankDto> _banks = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var merchants = await MerchantManagement.GetMerchantsAsync();
+        _merchants = merchants?.Select(m => new LookupItemDto(m.MerchantId, m.Name ?? m.MerchantId)).ToList() ?? new();
+
+        _terminals = await TerminalManagement.GetTerminalsAsync() ?? new();
+        _banks = await BankManagement.GetBanksAsync() ?? new();
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await WithdrawalManagement.GetRecordsAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar cash withdrawal account.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<CashoutWithdrawalFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Merchants, _merchants },
+            { x => x.Terminals, _terminals },
+            { x => x.Banks, _banks }
+        };
+        var dialog = await DialogService.ShowAsync<CashoutWithdrawalFormDialog>("Tambah Withdrawal Account", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Cash withdrawal account berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(CashoutWithdrawalDto item)
+    {
+        var parameters = new DialogParameters<CashoutWithdrawalFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Item, item },
+            { x => x.Merchants, _merchants },
+            { x => x.Terminals, _terminals },
+            { x => x.Banks, _banks }
+        };
+        var dialog = await DialogService.ShowAsync<CashoutWithdrawalFormDialog>("Edit Withdrawal Account", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan cash withdrawal account berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(CashoutWithdrawalDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Withdrawal Account",
+            $"Yakin ingin menghapus cash withdrawal account untuk terminal '{item.TerminalId}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await WithdrawalManagement.DeleteAsync(item.Id);
+        if (success)
+        {
+            Snackbar.Add("Cash withdrawal account berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus cash withdrawal account.", Severity.Error);
+        }
+    }
+}

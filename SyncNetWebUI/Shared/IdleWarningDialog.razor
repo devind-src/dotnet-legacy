@@ -1,0 +1,48 @@
+@implements IDisposable
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Warning" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Timer" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">Sesi Akan Berakhir</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Anda tidak terdeteksi aktif. Sesi akan otomatis logout dalam:</MudText>
+        <MudText Typo="Typo.h3" Align="Align.Center" Class="my-4" Color="Color.Warning">
+            @_secondsRemaining detik
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="StayLoggedIn">Tetap Login</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public IdleTimerService IdleTimer { get; set; } = null!;
+
+    private int _secondsRemaining;
+
+    protected override void OnInitialized()
+    {
+        _secondsRemaining = IdleTimer.SecondsRemaining;
+        IdleTimer.WarningTick += OnTick;
+    }
+
+    private void OnTick(int secondsRemaining)
+    {
+        _secondsRemaining = secondsRemaining;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void StayLoggedIn()
+    {
+        IdleTimer.OnActivity();
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    public void Dispose() => IdleTimer.WarningTick -= OnTick;
+}

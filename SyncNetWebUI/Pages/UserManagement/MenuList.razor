@@ -1,0 +1,169 @@
+@page "/usermgmt-menu"
+@attribute [Authorize]
+@inject MenuManagementService MenuManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Menu Management</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Menu Management</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Kelola daftar menu navigasi dashboard.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari menu" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadMenusAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PlaylistAdd"
+                           OnClick="OpenCreateDialog">Tambah Menu</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_menus" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Menu ID</MudTh>
+            <MudTh>Level 1</MudTh>
+            <MudTh>Level 2</MudTh>
+            <MudTh>Level 3</MudTh>
+            <MudTh>Level 4</MudTh>
+            <MudTh>Icon</MudTh>
+            <MudTh>URL</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Menu ID">@context.MenuId</MudTd>
+            <MudTd DataLabel="Level 1">@context.Level1</MudTd>
+            <MudTd DataLabel="Level 2">@context.Level2</MudTd>
+            <MudTd DataLabel="Level 3">@context.Level3</MudTd>
+            <MudTd DataLabel="Level 4">@context.Level4</MudTd>
+            <MudTd DataLabel="Icon">@context.Icon</MudTd>
+            <MudTd DataLabel="URL">@context.Url</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada menu ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<MenuDto> _menus = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    protected override async Task OnInitializedAsync() => await LoadMenusAsync();
+
+    private async Task LoadMenusAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await MenuManagement.GetMenusAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar menu.";
+            _menus = new();
+        }
+        else
+        {
+            _menus = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadMenusAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var nextId = (_menus.Count == 0 ? 0 : _menus.Max(m => m.MenuId)) + 1;
+        var parameters = new DialogParameters<MenuFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.NextSuggestedId, nextId }
+        };
+        var dialog = await DialogService.ShowAsync<MenuFormDialog>("Tambah Menu", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Menu berhasil ditambahkan.", Severity.Success);
+            await LoadMenusAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(MenuDto menu)
+    {
+        var parameters = new DialogParameters<MenuFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Menu, menu }
+        };
+        var dialog = await DialogService.ShowAsync<MenuFormDialog>("Edit Menu", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan menu berhasil disimpan.", Severity.Success);
+            await LoadMenusAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(MenuDto menu)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Menu",
+            $"Yakin ingin menghapus menu '{menu.Level1} {menu.Level2}'? Role yang sudah diberi akses ke menu ini juga akan kehilangan akses tersebut.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await MenuManagement.DeleteMenuAsync(menu.MenuId);
+        if (success)
+        {
+            Snackbar.Add("Menu berhasil dihapus.", Severity.Success);
+            await LoadMenusAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus menu.", Severity.Error);
+        }
+    }
+}

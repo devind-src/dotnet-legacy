@@ -1,0 +1,310 @@
+@page "/card-issuer"
+@attribute [Authorize]
+@inject CardIssuerManagementService IssuerManagement
+@inject CardBranchManagementService BranchManagement
+@inject CurrencyManagementService CurrencyManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Issuer</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Issuer</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Card > Profile > Issuer.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari issuer" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Issuer</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage"
+              T="CardIssuerDto" OnRowClick="@((TableRowClickEventArgs<CardIssuerDto> e) => SelectIssuerAsync(e.Item))">
+        <HeaderContent>
+            <MudTh>Issuer</MudTh>
+            <MudTh>Inst ID</MudTh>
+            <MudTh>Currency</MudTh>
+            <MudTh>Velocity Per Tran</MudTh>
+            <MudTh>Velocity Daily</MudTh>
+            <MudTh>Velocity Monthly</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Issuer">@context.Issuer</MudTd>
+            <MudTd DataLabel="Inst ID">@context.InstId</MudTd>
+            <MudTd DataLabel="Currency">@context.Currency</MudTd>
+            <MudTd DataLabel="Velocity Per Tran">@(context.VelocityPerTran ? "Yes" : "No")</MudTd>
+            <MudTd DataLabel="Velocity Daily">@(context.VelocityDaily ? "Yes" : "No")</MudTd>
+            <MudTd DataLabel="Velocity Monthly">@(context.VelocityMonthly ? "Yes" : "No")</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada issuer ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+
+    @if (_selectedIssuer != null)
+    {
+        <MudPaper Class="pa-4 mt-4" Elevation="1">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h6" Color="Color.Primary">Branch — Issuer: @_selectedIssuer.Issuer</MudText>
+                @if (Session.UserManagementPermissions.CanAdd)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenCreateBranchDialog">Tambah Branch</MudButton>
+                }
+            </MudStack>
+
+            @if (_branchesLoading)
+            {
+                <MudProgressLinear Indeterminate="true" Class="mb-2" />
+            }
+            else
+            {
+                <MudTable Items="_branches" Hover="true" Dense="true" T="CardBranchDto">
+                    <HeaderContent>
+                        <MudTh>ID Branch</MudTh>
+                        <MudTh>Branch</MudTh>
+                        <MudTh>Address</MudTh>
+                        <MudTh>City</MudTh>
+                        <MudTh>Email</MudTh>
+                        <MudTh>Contact</MudTh>
+                        <MudTh>Aksi</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID Branch">@context.IdBranch</MudTd>
+                        <MudTd DataLabel="Branch">@context.Branch</MudTd>
+                        <MudTd DataLabel="Address">@context.Address</MudTd>
+                        <MudTd DataLabel="City">@context.City</MudTd>
+                        <MudTd DataLabel="Email">@context.Email</MudTd>
+                        <MudTd DataLabel="Contact">@context.Contact</MudTd>
+                        <MudTd DataLabel="Aksi">
+                            @if (Session.UserManagementPermissions.CanEdit)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                               OnClick="@(() => OpenEditBranchDialog(context))" title="Edit" />
+                            }
+                            @if (Session.UserManagementPermissions.CanDelete)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                               OnClick="@(() => ConfirmDeleteBranchAsync(context))" title="Hapus" />
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent>
+                        <MudText Style="opacity:.65">Belum ada branch untuk issuer ini.</MudText>
+                    </NoRecordsContent>
+                </MudTable>
+            }
+        </MudPaper>
+    }
+}
+
+@code {
+    private List<CardIssuerDto> _items = new();
+    private List<CurrencyDto> _currencies = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Large, FullWidth = true };
+    private static readonly DialogOptions BranchDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    private CardIssuerDto? _selectedIssuer;
+    private List<CardBranchDto> _branches = new();
+    private bool _branchesLoading;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await IssuerManagement.GetIssuersAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar issuer.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _currencies = await CurrencyManagement.GetCurrenciesAsync() ?? new();
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<CardIssuerFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Currencies, _currencies }
+        };
+        var dialog = await DialogService.ShowAsync<CardIssuerFormDialog>("Tambah Issuer", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Issuer berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(CardIssuerDto item)
+    {
+        var parameters = new DialogParameters<CardIssuerFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Issuer, item },
+            { x => x.Currencies, _currencies }
+        };
+        var dialog = await DialogService.ShowAsync<CardIssuerFormDialog>("Edit Issuer", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan issuer berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(CardIssuerDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Issuer",
+            $"Yakin ingin menghapus issuer '{item.Issuer}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await IssuerManagement.DeleteIssuerAsync(item.Issuer);
+        if (success)
+        {
+            Snackbar.Add("Issuer berhasil dihapus.", Severity.Success);
+            if (_selectedIssuer?.Issuer == item.Issuer) _selectedIssuer = null;
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus issuer.", Severity.Error);
+        }
+    }
+
+    private async Task SelectIssuerAsync(CardIssuerDto issuer)
+    {
+        _selectedIssuer = issuer;
+        await LoadBranchesAsync();
+    }
+
+    private async Task LoadBranchesAsync()
+    {
+        if (_selectedIssuer == null) return;
+
+        _branchesLoading = true;
+        _branches = await BranchManagement.GetByIssuerAsync(_selectedIssuer.Issuer) ?? new();
+        _branchesLoading = false;
+    }
+
+    private async Task OpenCreateBranchDialog()
+    {
+        if (_selectedIssuer == null) return;
+
+        var parameters = new DialogParameters<CardBranchFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Issuer, _selectedIssuer.Issuer }
+        };
+        var dialog = await DialogService.ShowAsync<CardBranchFormDialog>("Tambah Branch", parameters, BranchDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Branch berhasil ditambahkan.", Severity.Success);
+            await LoadBranchesAsync();
+        }
+    }
+
+    private async Task OpenEditBranchDialog(CardBranchDto item)
+    {
+        if (_selectedIssuer == null) return;
+
+        var parameters = new DialogParameters<CardBranchFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Branch, item },
+            { x => x.Issuer, _selectedIssuer.Issuer }
+        };
+        var dialog = await DialogService.ShowAsync<CardBranchFormDialog>("Edit Branch", parameters, BranchDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan branch berhasil disimpan.", Severity.Success);
+            await LoadBranchesAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteBranchAsync(CardBranchDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Branch",
+            $"Yakin ingin menghapus branch '{item.Branch}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await BranchManagement.DeleteBranchAsync(item.Id);
+        if (success)
+        {
+            Snackbar.Add("Branch berhasil dihapus.", Severity.Success);
+            await LoadBranchesAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus branch.", Severity.Error);
+        }
+    }
+}

@@ -1,0 +1,178 @@
+@page "/card-account"
+@attribute [Authorize]
+@inject CardAccountManagementService AccountManagement
+@inject CardGroupManagementService GroupManagement
+@inject AccountTypeManagementService AccountTypeManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Account</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Account</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Card > Base > Account.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari account" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog" Disabled="_groups.Count == 0 || _accountTypes.Count == 0">Tambah Account</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>ID</MudTh>
+            <MudTh>Group Name</MudTh>
+            <MudTh>Acc Type</MudTh>
+            <MudTh>Acc Name</MudTh>
+            <MudTh>PAN Verification</MudTh>
+            <MudTh>PIN Verification</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="ID">@context.Id</MudTd>
+            <MudTd DataLabel="Group Name">@context.GroupName</MudTd>
+            <MudTd DataLabel="Acc Type">@context.AccType</MudTd>
+            <MudTd DataLabel="Acc Name">@context.AccTypeName</MudTd>
+            <MudTd DataLabel="PAN Verification">@(context.PanVerification ? "Yes" : "No")</MudTd>
+            <MudTd DataLabel="PIN Verification">@(context.PinVerification ? "Yes" : "No")</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada account ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<CardAccountDto> _items = new();
+    private List<CardGroupDto> _groups = new();
+    private List<AccountTypeDto> _accountTypes = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _groups = await GroupManagement.GetGroupsAsync() ?? new();
+        _accountTypes = await AccountTypeManagement.GetAccountTypesAsync() ?? new();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await AccountManagement.GetAccountsAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar account.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<CardAccountFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Groups, _groups },
+            { x => x.AccountTypes, _accountTypes }
+        };
+        var dialog = await DialogService.ShowAsync<CardAccountFormDialog>("Tambah Account", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Account berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(CardAccountDto item)
+    {
+        var parameters = new DialogParameters<CardAccountFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Groups, _groups },
+            { x => x.AccountTypes, _accountTypes },
+            { x => x.Account, item }
+        };
+        var dialog = await DialogService.ShowAsync<CardAccountFormDialog>("Edit Account", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan account berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(CardAccountDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Account",
+            $"Yakin ingin menghapus account '{item.Id}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await AccountManagement.DeleteAccountAsync(item.Id);
+        if (success)
+        {
+            Snackbar.Add("Account berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus account.", Severity.Error);
+        }
+    }
+}

@@ -1,0 +1,543 @@
+﻿<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Payments" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Postpaid Fee" : "Tambah Postpaid Fee")</MudText>
+                <MudText Typo="Typo.caption" Style="opacity:.65">@(IsEdit ? $"{Item?.ProductId} · {(IsDefaultRow ? "default" : $"CA {Item?.MerchantId}")}" : "Bill Payment & Purchase")</MudText>
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="4">
+                <MudItem xs="12" sm="6">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Product" Value="@ProductDisplay" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudAutocomplete T="string" Label="Product" Value="_model.ProductId"
+                                         ValueChanged="@((string v) => OnProductChangedAsync(v))"
+                                         SearchFunc="SearchProducts" ToStringFunc="FormatProduct" Required="true" RequiredError="Product wajib diisi"
+                                         CoerceValue="true" Disabled="_busy" MaxLength="30" />
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Merchant (CA)" Value="@MerchantDisplay" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudAutocomplete T="string" Label="Merchant / CA (kosong = default produk)" Value="_model.MerchantId"
+                                         ValueChanged="@((string? v) => OnMerchantChanged(v))"
+                                         SearchFunc="SearchMerchants" ToStringFunc="FormatMerchant" Clearable="true"
+                                         CoerceValue="true" Disabled="_busy" MaxLength="15" />
+                    }
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Routing Mode" Value="_model.RoutingMode" ValueChanged="@((string v) => OnModeChanged(v))" Disabled="_busy">
+                        @if (!IsDefaultRow)
+                        {
+                            <MudSelectItem T="string" Value="@FollowDefault">Ikuti Default@(DefaultMode == null ? "" : $" ({RoutingModes.Label(DefaultMode)})")</MudSelectItem>
+                        }
+                        @foreach (var mode in RoutingModes.All)
+                        {
+                            <MudSelectItem T="string" Value="@mode">@RoutingModes.Label(mode)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    @if (_model.RoutingMode == RoutingModes.Static)
+                    {
+                        <MudSelect T="int?" Label="Biller (Static)" @bind-Value="_model.StaticNodeId" Clearable="true" Disabled="_busy"
+                                   HelperText="@StaticHelper">
+                            @foreach (var n in StaticChoices)
+                            {
+                                <MudSelectItem T="int?" Value="@n.NodeId">@StaticLabel(n)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else if (IsDynamic)
+                    {
+                        <MudSelect T="string" Label="Fee Type" Value="@("0")" Disabled="true" HelperText="Mode dynamic wajib Fixed">
+                            <MudSelectItem T="string" Value="@("0")">Fixed</MudSelectItem>
+                        </MudSelect>
+                    }
+                    else
+                    {
+                        <MudTextField T="string" Label="Biller (Static)" Value="@("Mengikuti baris default")" Disabled="true" />
+                    }
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Style="opacity:.7">@ModeHint</MudText>
+                </MudItem>
+
+                @if (!string.IsNullOrEmpty(_model.ProductId))
+                {
+                    <MudItem xs="12">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+                                <MudText Typo="Typo.subtitle2">
+                                    Biller produk:
+                                    @if (Billers.Count == 0)
+                                    {
+                                        <span style="opacity:.7">belum ada</span>
+                                    }
+                                    else
+                                    {
+                                        @string.Join(", ", Billers.Select(BillerLabel))
+                                    }
+                                </MudText>
+                                @if (Session.UserManagementPermissions.CanAdd)
+                                {
+                                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add"
+                                               OnClick="AddBillerAsync" Disabled="_busy">Tambah Biller</MudButton>
+                                }
+                            </MudStack>
+                            @if (EffectiveMode == RoutingModes.LoadBalance && ActiveBillerCount >= 2 && ActiveWeightTotal != 100)
+                            {
+                                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                                    Load Balance butuh total LB Weight biller aktif tepat 100% (sekarang @ActiveWeightTotal%).
+                                    Batal, lalu atur lewat tombol <b>Atur LB Weight</b> di panel Biller Produk sebelum menyimpan mode ini.
+                                </MudAlert>
+                            }
+                            @if (IsDynamic && ActiveBillerCount < 2)
+                            {
+                                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                                    Mode @RoutingModes.Label(EffectiveMode) butuh minimal 2 biller aktif dengan sharing fee.
+                                    Tambahkan biller di sini sebelum menyimpan, atau simpan dulu dengan mode Static.
+                                </MudAlert>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                }
+
+                @if (EffectiveMode == RoutingModes.Static)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" Label="Fee Type" @bind-Value="_model.FeeType" Disabled="_busy">
+                            <MudSelectItem T="string" Value="@("0")">Fixed</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("1")">Percent (mis. MDR)</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" />
+                }
+
+                @if (!IsDynamic && _model.FeeType == "1")
+                {
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField T="decimal?" Label="Total Fee (%)" @bind-Value="_model.PercentFee" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField T="decimal?" Label="Fee Loket (%)" @bind-Value="_model.PercentFeeAcq" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField T="decimal?" Label="Fee Mitra (%)" @bind-Value="_model.PercentFeeMer" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField T="decimal?" Label="Fee Biller (%)" @bind-Value="_model.PercentFeeBil" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField T="decimal?" Label="Fee Switch (%)" @bind-Value="_model.PercentFeeSwt" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Style="opacity:.65">
+                            Persen dari Total Fee. Loket + Mitra + Biller + Switch harus 100% (sekarang @PercentSum.ToString("N2")%).
+                        </MudText>
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField T="int?" Label="Total Fee (Rp)" @bind-Value="_model.FixedFee" Disabled="_busy" HelperText="Admin fee ke pelanggan" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField T="int?" Label="Fee Loket (Rp)" @bind-Value="_model.FixedFeeAcq" Disabled="_busy" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField T="int?" Label="Fee Mitra (Rp)" @bind-Value="_model.FixedFeeMer" Disabled="_busy" HelperText="Boleh 0" />
+                    </MudItem>
+                    @if (IsDynamic)
+                    {
+                        <MudItem xs="12">
+                            <MudAlert Severity="Severity.Info" Dense="true">
+                                Fee Biller = Total − Sharing Fee biller, Fee Switch = Sharing Fee − Loket − Mitra, dihitung per transaksi dari biller yang dipilih.
+                                @if (Billers.Count > 0)
+                                {
+                                    <br />
+                                    @foreach (var line in DynamicPreview())
+                                    {
+                                        <span>@line<br /></span>
+                                    }
+                                }
+                            </MudAlert>
+                        </MudItem>
+                    }
+                    else
+                    {
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField T="int?" Label="Fee Biller (Rp)" @bind-Value="_model.FixedFeeBil" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField T="int?" Label="Fee Switch (Rp)" @bind-Value="_model.FixedFeeSwt" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Style="opacity:.65">
+                                Loket + Mitra + Biller + Switch harus sama dengan Total Fee (sekarang @FixedSum.ToString("N0") dari @((_model.FixedFee ?? 0).ToString("N0"))).
+                            </MudText>
+                        </MudItem>
+                    }
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private const string FollowDefault = "";
+
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductPostpaidFeeManagementService FeeManagement { get; set; } = null!;
+    [Inject] private ProductPostpaidBillerManagementService BillerManagement { get; set; } = null!;
+    [Inject] private IDialogService DialogService { get; set; } = null!;
+    [Inject] private SessionState Session { get; set; } = null!;
+    [Parameter] public List<NodeDto> Nodes { get; set; } = new();
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public ProductPostpaidFeeDto? Item { get; set; }
+    /// <summary>Semua baris fee (untuk mode default produk dan salin nilai default ke baris CA baru).</summary>
+    [Parameter] public List<ProductPostpaidFeeDto> AllFees { get; set; } = new();
+    [Parameter] public List<LookupItemDto> Products { get; set; } = new();
+    [Parameter] public List<LookupItemDto> Merchants { get; set; } = new();
+    /// <summary>Produk yang sedang dipilih di master (untuk form tambah).</summary>
+    [Parameter] public string? InitialProductId { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private List<ProductPostpaidBillerDto> Billers = new();
+    private string? _billersLoadedFor;
+    private bool _busy;
+    private string? _error;
+
+    private bool IsDefaultRow => string.IsNullOrEmpty(IsEdit ? Item?.MerchantId : _model.MerchantId)
+                                 && string.IsNullOrEmpty(Item?.SubmerchantId);
+
+    private ProductPostpaidFeeDto? DefaultRow => AllFees.FirstOrDefault(f => f.ProductId == _model.ProductId
+        && string.IsNullOrEmpty(f.MerchantId) && string.IsNullOrEmpty(f.SubmerchantId) && f.Id != Item?.Id);
+
+    private string? DefaultMode => DefaultRow?.RoutingMode;
+
+    private string EffectiveMode => string.IsNullOrEmpty(_model.RoutingMode)
+        ? (IsDefaultRow ? RoutingModes.Static : DefaultMode ?? RoutingModes.Static)
+        : _model.RoutingMode;
+
+    private bool IsDynamic => RoutingModes.IsDynamic(EffectiveMode);
+
+    private int FixedSum => (_model.FixedFeeAcq ?? 0) + (_model.FixedFeeMer ?? 0) + (_model.FixedFeeBil ?? 0) + (_model.FixedFeeSwt ?? 0);
+    private decimal PercentSum => (_model.PercentFeeAcq ?? 0) + (_model.PercentFeeMer ?? 0) + (_model.PercentFeeBil ?? 0) + (_model.PercentFeeSwt ?? 0);
+
+    private string ModeHint => EffectiveMode switch
+    {
+        RoutingModes.Priority => "Priority: biller priority terkecil dipakai selama sehat; bila diblokir (link down/timeout) pindah ke priority berikutnya.",
+        RoutingModes.BestPrice => "Best Price: biller dengan sharing fee terbesar (fee switch terbesar) dipakai lebih dulu, lalu berikutnya bila diblokir.",
+        RoutingModes.LoadBalance => "Load Balance: transaksi dibagi acak berbobot sesuai LB Weight ke biller yang sehat.",
+        _ => "Static: selalu ke satu biller tanpa failover. Fee diisi manual (Fixed atau Percent)."
+    };
+
+    private string ProductDisplay => string.IsNullOrEmpty(Item?.ProductId) ? "-" : $"{Item.ProductId} - {Item.ProductName}";
+    private string MerchantDisplay => string.IsNullOrEmpty(Item?.MerchantId) ? "(default produk)" : $"{Item.MerchantId} - {Item.MerchantName}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEdit && Item != null)
+        {
+            _model.ProductId = Item.ProductId ?? string.Empty;
+            _model.MerchantId = Item.MerchantId;
+            _model.FeeType = Item.FeeType;
+            _model.RoutingMode = Item.RoutingMode ?? (IsDefaultRow ? RoutingModes.Static : FollowDefault);
+            _model.StaticNodeId = Item.StaticNodeId;
+            _model.FixedFee = Item.FixedFee;
+            _model.FixedFeeAcq = Item.FixedFeeAcq;
+            _model.FixedFeeMer = Item.FixedFeeMer;
+            _model.FixedFeeBil = Item.FixedFeeBil;
+            _model.FixedFeeSwt = Item.FixedFeeSwt;
+            _model.PercentFee = Item.PercentFee;
+            _model.PercentFeeAcq = Item.PercentFeeAcq;
+            _model.PercentFeeMer = Item.PercentFeeMer;
+            _model.PercentFeeBil = Item.PercentFeeBil;
+            _model.PercentFeeSwt = Item.PercentFeeSwt;
+        }
+        else
+        {
+            _model.ProductId = InitialProductId ?? string.Empty;
+            _model.RoutingMode = RoutingModes.Static;
+        }
+
+        await LoadBillersAsync();
+    }
+
+    private int ActiveBillerCount => Billers.Count(b => b.Active);
+    private int ActiveWeightTotal => Billers.Where(b => b.Active).Sum(b => b.LbWeight ?? 0);
+
+    // Static bisa diarahkan ke biller mana pun; biller yang belum terdaftar untuk produk ini
+    // otomatis ditambahkan saat Simpan (biller pertama produk menjadi primary)
+    private IEnumerable<NodeDto> StaticChoices => Nodes
+        .Where(n => n.Category is "0" or "2")
+        .OrderByDescending(n => Billers.Any(b => b.NodeId == n.NodeId && b.IsPrimary))
+        .ThenByDescending(n => Billers.Any(b => b.NodeId == n.NodeId))
+        .ThenBy(n => n.NodeName);
+
+    private string StaticLabel(NodeDto n)
+    {
+        var b = Billers.FirstOrDefault(x => x.NodeId == n.NodeId);
+        return b == null ? $"{n.NodeName} (belum terdaftar, ditambahkan saat simpan)" : $"{n.NodeName}{(b.IsPrimary ? " (primary)" : "")}";
+    }
+
+    private string StaticHelper => Billers.Count == 0
+        ? "Produk belum punya biller: pilih biller tujuan (menjadi primary)"
+        : "Kosong = primary";
+
+    private static string BillerLabel(ProductPostpaidBillerDto b)
+        => $"{b.Priority}. {b.NodeName} ({(b.FeeSharing.HasValue ? b.FeeSharing.Value.ToString("N0") : "sharing belum diisi")}{(b.Active ? "" : ", nonaktif")})";
+
+    // biller bisa langsung ditambahkan dari form, jadi produk baru bisa langsung memakai mode dynamic
+    private async Task AddBillerAsync()
+    {
+        var parameters = new DialogParameters<ProductPostpaidBillerFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.ProductId, _model.ProductId },
+            { x => x.ProductName, Products.FirstOrDefault(p => p.Key == _model.ProductId)?.Value },
+            { x => x.Nodes, Nodes },
+            { x => x.Existing, Billers }
+        };
+        var dialog = await DialogService.ShowAsync<ProductPostpaidBillerFormDialog>("Tambah Biller", parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            _billersLoadedFor = null;
+            await LoadBillersAsync();
+        }
+    }
+
+    private async Task OnProductChangedAsync(string productId)
+    {
+        _model.ProductId = productId;
+        _model.StaticNodeId = null;
+        await LoadBillersAsync();
+    }
+
+    private async Task LoadBillersAsync()
+    {
+        if (string.IsNullOrEmpty(_model.ProductId) || _billersLoadedFor == _model.ProductId) return;
+        _billersLoadedFor = _model.ProductId;
+        Billers = (await BillerManagement.GetAsync(_model.ProductId))?.Billers.ToList() ?? new();
+    }
+
+    // baris CA baru: fee diisi dari baris default, mode Ikuti Default (K5)
+    private void OnMerchantChanged(string? merchantId)
+    {
+        _model.MerchantId = merchantId;
+        if (IsEdit) return;
+
+        if (string.IsNullOrEmpty(merchantId))
+        {
+            _model.RoutingMode = RoutingModes.Static;
+            return;
+        }
+
+        _model.RoutingMode = FollowDefault;
+        var def = DefaultRow;
+        if (def == null) return;
+
+        _model.FeeType = def.FeeType;
+        _model.FixedFee = def.FixedFee;
+        _model.FixedFeeAcq = def.FixedFeeAcq;
+        _model.FixedFeeMer = def.FixedFeeMer;
+        _model.FixedFeeBil = def.FixedFeeBil;
+        _model.FixedFeeSwt = def.FixedFeeSwt;
+        _model.PercentFee = def.PercentFee;
+        _model.PercentFeeAcq = def.PercentFeeAcq;
+        _model.PercentFeeMer = def.PercentFeeMer;
+        _model.PercentFeeBil = def.PercentFeeBil;
+        _model.PercentFeeSwt = def.PercentFeeSwt;
+    }
+
+    private void OnModeChanged(string mode)
+    {
+        _model.RoutingMode = mode;
+        if (RoutingModes.IsDynamic(EffectiveMode)) _model.FeeType = "0";
+    }
+
+    private IEnumerable<string> DynamicPreview()
+    {
+        int total = _model.FixedFee ?? 0;
+        int deductions = (_model.FixedFeeAcq ?? 0) + (_model.FixedFeeMer ?? 0);
+        foreach (var b in Billers.Where(b => b.Active))
+        {
+            if (!b.FeeSharing.HasValue)
+            {
+                yield return $"{b.NodeName}: sharing fee belum diisi";
+                continue;
+            }
+            int bil = total - b.FeeSharing.Value;
+            int swt = b.FeeSharing.Value - deductions;
+            yield return $"{b.NodeName}: sharing {b.FeeSharing.Value:N0} → Fee Biller {bil:N0}, Fee Switch {swt:N0}{(bil < 0 || swt < 0 ? " ⚠ negatif" : "")}";
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchProducts(string? value, CancellationToken ct) => Task.FromResult(Search(Products, value));
+
+    private string? FormatProduct(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return code;
+        var match = Products.FirstOrDefault(p => p.Key == code);
+        return match == null ? code : $"{match.Key} — {match.Value}";
+    }
+
+    private string? FormatMerchant(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return id;
+        var match = Merchants.FirstOrDefault(m => m.Key == id);
+        return match == null || match.Value == id ? id : $"{match.Key} — {match.Value}";
+    }
+
+    private Task<IEnumerable<string>> SearchMerchants(string? value, CancellationToken ct) => Task.FromResult(Search(Merchants, value));
+
+    private static IEnumerable<string> Search(List<LookupItemDto> items, string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? items.Select(i => i.Key)
+            : items.Where(i => i.Key.Contains(value, StringComparison.OrdinalIgnoreCase)
+                               || i.Value.Contains(value, StringComparison.OrdinalIgnoreCase))
+                   .Select(i => i.Key);
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        string? mode = string.IsNullOrEmpty(_model.RoutingMode) ? null : _model.RoutingMode;
+        string feeType = IsDynamic ? "0" : _model.FeeType;
+        int? staticNode = EffectiveMode == RoutingModes.Static && mode == RoutingModes.Static ? _model.StaticNodeId : null;
+
+        if (staticNode.HasValue && Billers.All(b => b.NodeId != staticNode.Value))
+        {
+            var (added, addError) = await BillerManagement.CreateAsync(new CreateProductPostpaidBillerRequest
+            {
+                ProductId = _model.ProductId,
+                NodeId = staticNode.Value,
+                Active = true
+            });
+            if (!added)
+            {
+                _busy = false;
+                _error = addError ?? "Gagal menambahkan biller Static ke produk.";
+                return;
+            }
+
+            _billersLoadedFor = null;
+            await LoadBillersAsync();
+        }
+
+        if (IsEdit && Item != null)
+        {
+            var request = new UpdateProductPostpaidFeeRequest
+            {
+                FeeType = feeType,
+                RoutingMode = mode,
+                StaticNodeId = staticNode,
+                FixedFee = _model.FixedFee,
+                FixedFeeAcq = _model.FixedFeeAcq,
+                FixedFeeMer = _model.FixedFeeMer,
+                FixedFeeIss = Item.FixedFeeIss,
+                FixedFeeBil = _model.FixedFeeBil,
+                FixedFeeSwt = _model.FixedFeeSwt,
+                PercentFee = _model.PercentFee,
+                PercentFeeAcq = _model.PercentFeeAcq,
+                PercentFeeMer = _model.PercentFeeMer,
+                PercentFeeIss = Item.PercentFeeIss,
+                PercentFeeBil = _model.PercentFeeBil,
+                PercentFeeSwt = _model.PercentFeeSwt
+            };
+            var (success, error) = await FeeManagement.UpdateFeeAsync(Item.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateProductPostpaidFeeRequest
+            {
+                ProductId = _model.ProductId,
+                MerchantId = _model.MerchantId,
+                FeeType = feeType,
+                RoutingMode = mode,
+                StaticNodeId = staticNode,
+                FixedFee = _model.FixedFee,
+                FixedFeeAcq = _model.FixedFeeAcq,
+                FixedFeeMer = _model.FixedFeeMer,
+                FixedFeeBil = _model.FixedFeeBil,
+                FixedFeeSwt = _model.FixedFeeSwt,
+                PercentFee = _model.PercentFee,
+                PercentFeeAcq = _model.PercentFeeAcq,
+                PercentFeeMer = _model.PercentFeeMer,
+                PercentFeeBil = _model.PercentFeeBil,
+                PercentFeeSwt = _model.PercentFeeSwt
+            };
+            var (success, _, error) = await FeeManagement.CreateFeeAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan product fee.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string ProductId { get; set; } = string.Empty;
+        public string? MerchantId { get; set; }
+        public string FeeType { get; set; } = "0";
+        public string RoutingMode { get; set; } = "STATIC";
+        public int? StaticNodeId { get; set; }
+        public int? FixedFee { get; set; }
+        public int? FixedFeeAcq { get; set; }
+        public int? FixedFeeMer { get; set; }
+        public int? FixedFeeBil { get; set; }
+        public int? FixedFeeSwt { get; set; }
+        public decimal? PercentFee { get; set; }
+        public decimal? PercentFeeAcq { get; set; }
+        public decimal? PercentFeeMer { get; set; }
+        public decimal? PercentFeeBil { get; set; }
+        public decimal? PercentFeeSwt { get; set; }
+    }
+}

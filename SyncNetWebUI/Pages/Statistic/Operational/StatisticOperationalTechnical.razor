@@ -1,0 +1,203 @@
+@page "/statistic/operational/technical"
+@attribute [Authorize]
+@using ApexCharts
+@using SyncNetApi.Dtos.RouteMargins
+@implements IDisposable
+@inject ThemeState Theme
+
+<PageTitle>Rejected Transaction Trends</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Rejected Transaction Trends</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-3">Statistics &gt; Operational &gt; Technical.</MudText>
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" Icon="@Icons.Material.Filled.Info">
+    Data pada halaman ini masih simulasi.
+</MudAlert>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="3">
+            <MudSelect T="int" Label="Report Type" @bind-Value="_selectedReport" FullWidth="true">
+                <MudSelectItem Value="0">Harian</MudSelectItem>
+                <MudSelectItem Value="1">Bulanan</MudSelectItem>
+                <MudSelectItem Value="2">Tahunan</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+
+        @if (_selectedReport == ReportDaily)
+        {
+            <MudItem xs="12" sm="4">
+                <MudDatePicker Label="Tanggal laporan harian" @bind-Date="_selectedDate" DateFormat="dd-MM-yyyy" />
+            </MudItem>
+        }
+        else if (_selectedReport == ReportMonthly)
+        {
+            <MudItem xs="6" sm="2">
+                <MudNumericField T="int" Label="Bulan" @bind-Value="_selectedMonth" Min="1" Max="12" />
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <MudNumericField T="int" Label="Tahun" @bind-Value="_selectedYear" Min="2000" Max="2100" />
+            </MudItem>
+        }
+        else
+        {
+            <MudItem xs="12" sm="3">
+                <MudNumericField T="int" Label="Tahun" @bind-Value="_selectedYear" Min="2000" Max="2100" />
+            </MudItem>
+        }
+
+        <MudItem xs="12" sm="3">
+            <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="RefreshData"
+                       StartIcon="@Icons.Material.Filled.Refresh" Disabled="_isRefreshing">
+                Query
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="mt-3">@_error</MudAlert>
+    }
+</MudPaper>
+
+@if (_dataList.Count > 0)
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <ApexChart @ref="_chart" TItem="StatOpsRejected" Options="_chartOptions">
+            <ApexPointSeries TItem="StatOpsRejected" Items="_dataList"
+                             SeriesType="SeriesType.Area" XValue="@(e => e.RespCode)" YValue="@(e => e.TotalRejected)" />
+        </ApexChart>
+    </MudPaper>
+
+    <MudPaper Class="pa-4" Elevation="1">
+        <MudTable Items="_dataList" Dense="true" Hover="true" Bordered="true" Striped="true">
+            <HeaderContent>
+                <MudTh>Resp Code</MudTh>
+                <MudTh>Resp Description</MudTh>
+                <MudTh Style="text-align:right">Total</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.RespCode</MudTd>
+                <MudTd>@context.RespDesc</MudTd>
+                <MudTd Style="text-align:right">@context.TotalRejected.FormatAmount()</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+
+@code {
+    private const int ReportDaily = 0;
+    private const int ReportMonthly = 1;
+    private const int ReportYearly = 2;
+
+    // Deskripsi ISO 8583 umum untuk simulasi — bukan lookup ke tabel referensi database.
+    private static readonly Dictionary<string, string> RespCodeDescriptions = new()
+    {
+        ["00"] = "Approved",
+        ["01"] = "Refer to card issuer",
+        ["03"] = "Invalid merchant",
+        ["04"] = "Pick up card",
+        ["05"] = "Do not honor",
+        ["12"] = "Invalid transaction",
+        ["13"] = "Invalid amount",
+        ["14"] = "Invalid card number",
+        ["30"] = "Format error",
+        ["41"] = "Lost card",
+        ["43"] = "Stolen card",
+        ["51"] = "Insufficient funds",
+        ["54"] = "Expired card",
+        ["55"] = "Incorrect PIN",
+        ["57"] = "Transaction not permitted to cardholder",
+        ["58"] = "Transaction not permitted to terminal",
+        ["61"] = "Exceeds withdrawal amount limit",
+        ["62"] = "Restricted card",
+        ["65"] = "Exceeds withdrawal frequency limit",
+        ["68"] = "Response received too late",
+        ["75"] = "PIN tries exceeded",
+        ["91"] = "Issuer or switch inoperative",
+        ["96"] = "System malfunction"
+    };
+
+    private List<StatOpsRejected> _dataList = [];
+    private ApexChart<StatOpsRejected>? _chart;
+    private bool _isRefreshing;
+    private string? _error;
+
+    private DateTime? _selectedDate = DateTime.Now.AddDays(-1);
+    private int _selectedMonth = DateTime.Now.Month;
+    private int _selectedYear = DateTime.Now.Year;
+    private int _selectedReport = ReportDaily;
+
+    private readonly ApexChartOptions<StatOpsRejected> _chartOptions = new()
+    {
+        Colors = ["#F875AA", "#67C090", "#FFD166", "#118AB2", "#EF476F", "#06D6A0"],
+        Chart = new Chart { Type = ApexCharts.ChartType.Area, Toolbar = new Toolbar { Show = true }, Zoom = new Zoom { Enabled = false } },
+        Stroke = new Stroke { Curve = Curve.MonotoneCubic, Width = 3 },
+        Markers = new Markers { Size = 5, StrokeWidth = 2, FillOpacity = 0.9, Hover = new MarkersHover { Size = 7 } },
+        DataLabels = new DataLabels { Enabled = false },
+        Tooltip = new Tooltip { Enabled = true, Y = new TooltipY { Formatter = "function(val) { return val.toLocaleString(); }" } },
+        Legend = new Legend { Show = false },
+        Xaxis = new XAxis { Title = new AxisTitle { Text = "Response Code" } },
+        Yaxis = [new YAxis { Title = new AxisTitle { Text = "Number Rejected" } }]
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.Changed += StateHasChanged;
+        await RefreshData();
+    }
+
+    public void Dispose() => Theme.Changed -= StateHasChanged;
+
+    private async Task RefreshData()
+    {
+        if (_isRefreshing) return;
+        if (!Validate()) return;
+
+        _isRefreshing = true;
+        _error = null;
+
+        try
+        {
+            var random = new Random();
+            var selectedCodes = RespCodeDescriptions.Keys.OrderBy(_ => random.Next()).Take(15).ToList();
+
+            _dataList = selectedCodes.Select(code => new StatOpsRejected
+            {
+                RespCode = code,
+                RespDesc = RespCodeDescriptions[code],
+                TotalRejected = _selectedReport switch
+                {
+                    ReportDaily => random.Next(5, 15),
+                    ReportMonthly => random.Next(15, 100),
+                    ReportYearly => random.Next(1000, 3000),
+                    _ => 0
+                }
+            }).ToList();
+        }
+        finally
+        {
+            _isRefreshing = false;
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(1);
+            if (_chart != null) await _chart.UpdateSeriesAsync(true);
+        }
+    }
+
+    private bool Validate()
+    {
+        if (_selectedReport == ReportDaily && _selectedDate == null)
+        {
+            _error = "Tanggal pada laporan harian harus di-isi";
+            return false;
+        }
+
+        if (_selectedReport == ReportMonthly && (_selectedMonth is < 1 or > 12))
+        {
+            _error = "Bulan pada laporan bulanan harus valid (1-12)";
+            return false;
+        }
+
+        return true;
+    }
+}

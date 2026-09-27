@@ -1,0 +1,103 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Sell" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Brand" : "Tambah Brand")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Brand" @bind-Value="_model.Brand"
+                                  Disabled="_busy" Required="true" RequiredError="Brand wajib diisi" MaxLength="50" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Primary" Disabled="_busy">Aktif</MudSwitch>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private BrandManagementService BrandManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public BrandDto? Brand { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Brand != null)
+        {
+            _model.Id = Brand.Id;
+            _model.Brand = Brand.Brand ?? string.Empty;
+            _model.Active = Brand.Active;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await BrandManagement.UpdateBrandAsync(_model.Id, new UpdateBrandRequest
+            {
+                Brand = _model.Brand,
+                Active = _model.Active
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateBrandRequest { Brand = _model.Brand };
+            var (success, _, error) = await BrandManagement.CreateBrandAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan brand.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public int Id { get; set; }
+        public string Brand { get; set; } = string.Empty;
+        public bool Active { get; set; } = true;
+    }
+}

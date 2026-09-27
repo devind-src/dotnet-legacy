@@ -1,0 +1,181 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.QrCode2" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit QRIS Fees" : "Tambah QRIS Fees")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@Item?.Criteria</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Criteria" @bind-Value="_model.Criteria"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Criteria wajib diisi" MaxLength="30" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Notes" @bind-Value="_model.Notes" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal" Label="MDR (n% dari nominal transaksi)" @bind-Value="_model.Mdr" Disabled="_busy" Format="N2" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal" Label="Fee dari Bank (n% dari MDR)" @bind-Value="_model.FeeFromIssuer" Disabled="_busy" Format="N2" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal" Label="Fee dari Partner (n% dari fee Bank)" @bind-Value="_model.FeeFromPartner" Disabled="_busy" Format="N2" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal" Label="Fee untuk Merchant (n% dari fee Partner)" @bind-Value="_model.FeeToMerchant" Disabled="_busy" Format="N2" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal" Label="Fee untuk Sub Merchant (n%)" @bind-Value="_model.FeeToSubmerchant" Disabled="_busy" Format="N2" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal" Label="Fee untuk Switch (n%)" @bind-Value="_model.FeeToSwitch" Disabled="_busy" Format="N2" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Group Name" @bind-Value="_model.GroupName" Disabled="_busy">
+                        <MudSelectItem T="string" Value="@("")">- None -</MudSelectItem>
+                        @foreach (var g in Groups)
+                        {
+                            <MudSelectItem T="string" Value="@g">@g</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Sub Group Name" @bind-Value="_model.SubgroupName" Disabled="_busy">
+                        <MudSelectItem T="string" Value="@("")">- None -</MudSelectItem>
+                        @foreach (var g in Subgroups)
+                        {
+                            <MudSelectItem T="string" Value="@g">@g</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Style="opacity:.65">Urutan kalkulasi adalah sub group, group, dan default. Jika Sub Group Name diisi, Group Name otomatis dikosongkan saat disimpan.</MudText>
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private MerchantCriteriaManagementService CriteriaManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public MerchantCriteriaDto? Item { get; set; }
+    [Parameter] public List<string> Groups { get; set; } = new();
+    [Parameter] public List<string> Subgroups { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Item != null)
+        {
+            _model.Criteria = Item.Criteria;
+            _model.Mdr = Item.Mdr;
+            _model.FeeFromIssuer = Item.FeeFromIssuer;
+            _model.FeeFromPartner = Item.FeeFromPartner;
+            _model.FeeToMerchant = Item.FeeToMerchant;
+            _model.FeeToSubmerchant = Item.FeeToSubmerchant;
+            _model.FeeToSwitch = Item.FeeToSwitch;
+            _model.Notes = Item.Notes;
+            _model.GroupName = Item.GroupName;
+            _model.SubgroupName = Item.SubgroupName;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Item != null)
+        {
+            var request = new UpdateMerchantCriteriaRequest
+            {
+                Mdr = _model.Mdr,
+                FeeFromIssuer = _model.FeeFromIssuer,
+                FeeFromPartner = _model.FeeFromPartner,
+                FeeToMerchant = _model.FeeToMerchant,
+                FeeToSubmerchant = _model.FeeToSubmerchant,
+                FeeToSwitch = _model.FeeToSwitch,
+                Notes = _model.Notes,
+                GroupName = _model.GroupName,
+                SubgroupName = _model.SubgroupName
+            };
+            var (success, error) = await CriteriaManagement.UpdateCriteriaAsync(Item.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateMerchantCriteriaRequest
+            {
+                Criteria = _model.Criteria,
+                Mdr = _model.Mdr,
+                FeeFromIssuer = _model.FeeFromIssuer,
+                FeeFromPartner = _model.FeeFromPartner,
+                FeeToMerchant = _model.FeeToMerchant,
+                FeeToSubmerchant = _model.FeeToSubmerchant,
+                FeeToSwitch = _model.FeeToSwitch,
+                Notes = _model.Notes,
+                GroupName = _model.GroupName,
+                SubgroupName = _model.SubgroupName
+            };
+            var (success, _, error) = await CriteriaManagement.CreateCriteriaAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan QRIS fees.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string Criteria { get; set; } = string.Empty;
+        public decimal Mdr { get; set; }
+        public decimal FeeFromIssuer { get; set; }
+        public decimal FeeFromPartner { get; set; }
+        public decimal FeeToMerchant { get; set; }
+        public decimal FeeToSubmerchant { get; set; }
+        public decimal FeeToSwitch { get; set; }
+        public string Notes { get; set; } = string.Empty;
+        public string GroupName { get; set; } = string.Empty;
+        public string SubgroupName { get; set; } = string.Empty;
+    }
+}

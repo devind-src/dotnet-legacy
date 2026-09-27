@@ -1,0 +1,133 @@
+@page "/va-statement"
+@attribute [Authorize]
+@inject VaStatementManagementService StatementManagement
+@inject VaAccountManagementService AccountManagement
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Statement</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Statement</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Virtual Account > Statement.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="3">
+            <MudDatePicker Label="Date Start" @bind-Date="_dateStart" DateFormat="dd-MM-yyyy" />
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudDatePicker Label="Date End" @bind-Date="_dateEnd" DateFormat="dd-MM-yyyy" />
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudSelect T="string" @bind-Value="_vaName" Label="VA Name">
+                <MudSelectItem Value="@("")">All</MudSelectItem>
+                @foreach (var name in _vaNames)
+                {
+                    <MudSelectItem Value="@name">@name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search"
+                           OnClick="LoadAsync">View</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.FileDownload"
+                           OnClick="ExportAsync" Disabled="_items.Count == 0">Export</MudButton>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Tran Number</MudTh>
+            <MudTh>VA Name</MudTh>
+            <MudTh>VA Account</MudTh>
+            <MudTh>Trx Date</MudTh>
+            <MudTh>Tran Type</MudTh>
+            <MudTh>Product</MudTh>
+            <MudTh>Customer ID</MudTh>
+            <MudTh>Refnum</MudTh>
+            <MudTh Style="text-align:right">Debet</MudTh>
+            <MudTh Style="text-align:right">Credit</MudTh>
+            <MudTh Style="text-align:right">Balance</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Tran Number">@context.TranNr</MudTd>
+            <MudTd DataLabel="VA Name">@context.VaName</MudTd>
+            <MudTd DataLabel="VA Account">@context.VaAccount</MudTd>
+            <MudTd DataLabel="Trx Date">@context.TrxDate</MudTd>
+            <MudTd DataLabel="Tran Type">@context.TranType</MudTd>
+            <MudTd DataLabel="Product">@context.Product</MudTd>
+            <MudTd DataLabel="Customer ID">@context.ToAccount</MudTd>
+            <MudTd DataLabel="Refnum">@context.Refnum</MudTd>
+            <MudTd DataLabel="Debet" Style="text-align:right">@Debet(context).ToString("N0")</MudTd>
+            <MudTd DataLabel="Credit" Style="text-align:right">@Credit(context).ToString("N0")</MudTd>
+            <MudTd DataLabel="Balance" Style="text-align:right">@context.Balance.ToString("N0")</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada mutasi ditemukan untuk periode ini.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<VaStatementDto> _items = new();
+    private List<string> _vaNames = new();
+    private DateTime? _dateStart = DateTime.Today;
+    private DateTime? _dateEnd = DateTime.Today;
+    private string _vaName = "";
+    private bool _loading;
+    private string? _error;
+    private int _rowsPerPage = 10;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var accounts = await AccountManagement.GetAccountsAsync() ?? new();
+        _vaNames = accounts.Select(a => a.VaName).Where(n => !string.IsNullOrEmpty(n)).Distinct().OrderBy(n => n).ToList()!;
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var start = (_dateStart ?? DateTime.Today).Date;
+        var end = (_dateEnd ?? DateTime.Today).Date.AddDays(1).AddSeconds(-1);
+
+        var result = await StatementManagement.GetStatementAsync(start, end, string.IsNullOrEmpty(_vaName) ? null : _vaName);
+        if (result == null)
+        {
+            _error = "Gagal memuat statement.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    // Mirrors legacy's GetAmountDebet/GetAmountCredit render-time split: VCR/REV are credit
+    // transactions (show under Credit, 0 under Debet), everything else is debet.
+    private static decimal Debet(VaStatementDto row) => row.TranType is "VCR" or "REV" ? 0 : row.Amount;
+    private static decimal Credit(VaStatementDto row) => row.TranType is "VCR" or "REV" ? row.Amount : 0;
+
+    private async Task ExportAsync()
+    {
+        await SyncNetWasm.Common.CsvExporter.DownloadAsync(JsRuntime, "VAStatement", _items);
+    }
+}

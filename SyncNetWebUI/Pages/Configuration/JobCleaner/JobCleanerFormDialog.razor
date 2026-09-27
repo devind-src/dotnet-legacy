@@ -1,0 +1,131 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.CleaningServices" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Cleaner" : "Tambah Cleaner")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.Entity</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Entity Name" @bind-Value="_model.Entity"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Entity wajib diisi" MaxLength="30" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudNumericField T="int?" Label="Period (hari)" @bind-Value="_model.Period" Min="3"
+                                     Disabled="_busy" Required="true" RequiredError="Period wajib diisi, minimum 3 hari" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Description" @bind-Value="_model.Description"
+                                  Disabled="_busy" Required="true" RequiredError="Description wajib diisi" MaxLength="50" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Primary" Disabled="_busy">Aktif</MudSwitch>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private JobCleanerManagementService JobCleanerManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public JobCleanerDto? Cleaner { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Cleaner != null)
+        {
+            _model.Entity = Cleaner.Entity;
+            _model.Period = Cleaner.Period;
+            _model.Description = Cleaner.Description ?? string.Empty;
+            _model.Active = Cleaner.Active;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        if (_model.Period is null or < 3)
+        {
+            _error = "Minimum period 3 hari.";
+            return;
+        }
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await JobCleanerManagement.UpdateCleanerAsync(_model.Entity, new UpdateJobCleanerRequest
+            {
+                Period = _model.Period.Value,
+                Description = _model.Description,
+                Active = _model.Active
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateJobCleanerRequest
+            {
+                Entity = _model.Entity,
+                Period = _model.Period.Value,
+                Description = _model.Description
+            };
+            var (success, _, error) = await JobCleanerManagement.CreateCleanerAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan cleaner.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string Entity { get; set; } = string.Empty;
+        public int? Period { get; set; } = 3;
+        public string Description { get; set; } = string.Empty;
+        public bool Active { get; set; } = true;
+    }
+}

@@ -1,0 +1,364 @@
+﻿@page "/product/pricing-fees/prepaid-pricing"
+@attribute [Authorize]
+@inject ProductPrepaidPricingManagementService PriceManagement
+@inject NodeManagementService NodeManagement
+@inject LookupService Lookups
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Prepaid Pricing</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Prepaid Pricing</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">
+    Product > Pricing &amp; Fees > Prepaid Pricing (produk topup). Pilih produk untuk melihat harga supplier.
+</MudText>
+
+<ApplyChangesBar />
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari product" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Produk</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_products" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage"
+              T="TopupRoutingDto" OnRowClick="@(e => Select(e.Item!))"
+              RowClassFunc="@((item, _) => item.ProductId == _selected?.ProductId ? "mud-selected-item" : "")">
+        <HeaderContent>
+            <MudTh>Product</MudTh>
+            <MudTh>Routing Mode</MudTh>
+            <MudTh>Supplier Aktif</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Product">@context.ProductId — @context.ProductName</MudTd>
+            <MudTd DataLabel="Routing Mode">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                         Color="@(RoutingModes.IsDynamic(context.RoutingMode) ? Color.Primary : Color.Default)">
+                    @RoutingModes.Label(context.RoutingMode)@(context.RoutingMode == RoutingModes.Static && context.StaticNodeName != null ? $" ({context.StaticNodeName})" : "")
+                </MudChip>
+                @if (!context.HasRoute)
+                {
+                    <MudTooltip Text="Belum punya route margin: routing mengikuti Routing > Product seperti sebelumnya sampai Routing Mode disimpan.">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Warning" />
+                    </MudTooltip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Supplier Aktif">@context.ActiveSupplierCount</MudTd>
+            <MudTd DataLabel="Aksi">
+                <span @onclick:stopPropagation="true">
+                    @if (Session.UserManagementPermissions.CanEdit)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.AltRoute"
+                                   OnClick="@(() => OpenRoutingDialog(context))">Routing Mode</MudButton>
+                    }
+                </span>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Belum ada produk topup dengan harga supplier.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+
+    @if (_selected != null)
+    {
+        <MudPaper Class="pa-4 mt-4" Elevation="1">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-2">
+                <MudText Typo="Typo.h6">Supplier Prices: @_selected.ProductId — @_selected.ProductName</MudText>
+                <MudStack Row="true" Spacing="2">
+                    @if (Session.UserManagementPermissions.CanEdit)
+                    {
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.AltRoute"
+                                   OnClick="@(() => OpenRoutingDialog(_selected))">Atur Routing Mode</MudButton>
+                    }
+                    @if (Session.UserManagementPermissions.CanAdd)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="OpenAddPriceForSelected">Tambah Denom</MudButton>
+                    }
+                </MudStack>
+            </MudStack>
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                Routing Mode produk ini: <b>@RoutingModes.Label(_selected.RoutingMode)</b> (ubah lewat tombol <b>Atur Routing Mode</b>).
+                Priority dan LB Weight berlaku per denom; tombol <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" />
+                menyalin priority dan LB weight satu supplier ke semua denom-nya, tombol <b>Atur LB Weight</b> di tiap denom menyimpan bobot sekaligus (total 100%).
+            </MudAlert>
+            <MudTable Items="DetailRows" Dense="true" Hover="true" Elevation="0" GroupBy="_groupByDenom">
+                <HeaderContent>
+                    <MudTh>Supplier</MudTh>
+                    <MudTh>Denom</MudTh>
+                    <MudTh>Harga Beli</MudTh>
+                    <MudTh>Harga Jual</MudTh>
+                    <MudTh>Margin</MudTh>
+                    <MudTh>Prio</MudTh>
+                    <MudTh>LB Weight</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Aksi</MudTh>
+                </HeaderContent>
+                <GroupHeaderTemplate>
+                    <MudTh colspan="9">
+                        Denom @(((int?)context.Key)?.ToString("N0") ?? "-")
+                        @{ var total = context.Items.Where(i => i.Active).Sum(i => i.LbWeight ?? 0); }
+                        <MudText Typo="Typo.caption" Class="ml-2" Color="@(total == 100 ? Color.Success : Color.Warning)">
+                            LB Weight aktif @total%@(total == 100 ? " ✔" : (_selected.RoutingMode == RoutingModes.LoadBalance ? " ⚠ harus 100%" : ""))
+                        </MudText>
+                        @if (Session.UserManagementPermissions.CanEdit)
+                        {
+                            var denomRows = context.Items.ToList();
+                            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Balance" Class="ml-2"
+                                       OnClick="@(() => OpenWeightsDialog((int?)context.Key, denomRows))">Atur LB Weight</MudButton>
+                        }
+                    </MudTh>
+                </GroupHeaderTemplate>
+                <RowTemplate>
+                    <MudTd DataLabel="Supplier">@context.SupplierId</MudTd>
+                    <MudTd DataLabel="Denom">@context.Denom?.ToString("N0")</MudTd>
+                    <MudTd DataLabel="Harga Beli">@context.HargaBeli?.ToString("N0")</MudTd>
+                    <MudTd DataLabel="Harga Jual">@context.HargaJual?.ToString("N0")</MudTd>
+                    <MudTd DataLabel="Margin">@context.Margin?.ToString("N0")</MudTd>
+                    <MudTd DataLabel="Prio">@context.Priority</MudTd>
+                    <MudTd DataLabel="LB Weight">@(context.LbWeight.HasValue ? $"{context.LbWeight}%" : "-")</MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Size="Size.Small" Color="@(context.Active ? Color.Success : Color.Default)">
+                            @(context.Active ? "Aktif" : "Nonaktif")
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Aksi">
+                        @if (Session.UserManagementPermissions.CanEdit)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                           OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                            <MudIconButton Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small"
+                                           OnClick="@(() => ApplyToAllDenomsAsync(context))" title="Terapkan priority & LB weight ke semua denom" />
+                        }
+                        @if (Session.UserManagementPermissions.CanDelete)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                           OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                        }
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText Style="opacity:.65">Belum ada harga supplier untuk produk ini.</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </MudPaper>
+    }
+}
+
+@code {
+    private List<TopupRoutingDto> _products = new();
+    private List<ProductPrepaidPricingDto> _prices = new();
+    private List<NodeDto> _nodes = new();
+    private List<LookupItemDto> _topupProducts = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private TopupRoutingDto? _selected;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+    private static readonly DialogOptions SmallDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    private readonly TableGroupDefinition<ProductPrepaidPricingDto> _groupByDenom = new()
+    {
+        GroupName = "Denom",
+        Indentation = false,
+        Expandable = false,
+        Selector = p => p.Denom
+    };
+
+    private IEnumerable<ProductPrepaidPricingDto> DetailRows => _prices
+        .Where(p => p.BillerCode == _selected?.ProductId)
+        .OrderBy(p => p.Denom)
+        .ThenBy(p => p.Priority ?? int.MaxValue)
+        .ThenBy(p => p.SupplierId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _nodes = await NodeManagement.GetNodesAsync() ?? new();
+        _topupProducts = await Lookups.GetTopupProductsAsync() ?? new();
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var products = await PriceManagement.GetProductsAsync(_filter);
+        var prices = await PriceManagement.GetPricesAsync();
+        if (products == null || prices == null)
+        {
+            _error = "Gagal memuat daftar supplier price.";
+            _products = new();
+            _prices = new();
+        }
+        else
+        {
+            _products = products;
+            _prices = prices;
+        }
+
+        if (_selected != null)
+            _selected = _products.FirstOrDefault(p => p.ProductId == _selected.ProductId);
+
+        _loading = false;
+    }
+
+    private void Select(TopupRoutingDto item) => _selected = item;
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenRoutingDialog(TopupRoutingDto item)
+    {
+        var parameters = new DialogParameters<ProductTopupRoutingDialog>
+        {
+            { x => x.Item, item },
+            { x => x.Nodes, _nodes },
+            { x => x.SupplierNames, _prices.Where(p => p.BillerCode == item.ProductId && p.SupplierId != null)
+                                            .Select(p => p.SupplierId!).Distinct().ToList() },
+            { x => x.Prices, _prices.Where(p => p.BillerCode == item.ProductId).ToList() }
+        };
+        var dialog = await DialogService.ShowAsync<ProductTopupRoutingDialog>("Routing Mode", parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+            Snackbar.Add("Routing mode berhasil disimpan.", Severity.Success);
+        await LoadAsync();
+    }
+
+    // tombol atas: produk baru atau produk lain, field produk kosong
+    private Task OpenCreateDialog() => ShowCreateDialogAsync(null);
+
+    // tombol di detail: produk terkunci ke produk yang dipilih
+    private Task OpenAddPriceForSelected() => ShowCreateDialogAsync(_selected?.ProductId);
+
+    private async Task OpenWeightsDialog(int? denom, List<ProductPrepaidPricingDto> rows)
+    {
+        if (_selected == null) return;
+        var parameters = new DialogParameters<ProductSupplierWeightsDialog>
+        {
+            { x => x.ProductId, _selected.ProductId },
+            { x => x.Denom, denom },
+            { x => x.Items, rows }
+        };
+        var dialog = await DialogService.ShowAsync<ProductSupplierWeightsDialog>("Atur LB Weight", parameters, SmallDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("LB Weight berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ShowCreateDialogAsync(string? lockedProductId)
+    {
+        var parameters = new DialogParameters<ProductPrepaidPricingFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Nodes, _nodes },
+            { x => x.TopupProducts, _topupProducts },
+            { x => x.InitialProductId, lockedProductId },
+            { x => x.ProductLocked, lockedProductId != null }
+        };
+        var title = lockedProductId == null ? "Tambah Supplier Price" : $"Tambah Harga Supplier — {lockedProductId}";
+        var dialog = await DialogService.ShowAsync<ProductPrepaidPricingFormDialog>(title, parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Supplier price berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(ProductPrepaidPricingDto item)
+    {
+        var parameters = new DialogParameters<ProductPrepaidPricingFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Item, item },
+            { x => x.Nodes, _nodes },
+            { x => x.TopupProducts, _topupProducts }
+        };
+        var dialog = await DialogService.ShowAsync<ProductPrepaidPricingFormDialog>("Edit Supplier Price", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan supplier price berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ApplyToAllDenomsAsync(ProductPrepaidPricingDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Terapkan ke Semua Denom",
+            $"Salin priority {item.Priority} dan LB weight {(item.LbWeight.HasValue ? $"{item.LbWeight}%" : "-")} supplier '{item.SupplierId}' ke semua denom produk '{item.BillerCode}'?",
+            yesText: "Terapkan", cancelText: "Batal");
+        if (confirmed != true) return;
+
+        var (success, error) = await PriceManagement.ApplyToAllDenomsAsync(item.Id);
+        if (success)
+        {
+            Snackbar.Add("Priority dan LB weight disalin ke semua denom.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menyalin ke semua denom.", Severity.Error);
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(ProductPrepaidPricingDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Supplier Price",
+            $"Yakin ingin menghapus supplier price '{item.SupplierId} / {item.BillerCode}' denom {item.Denom:N0}? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await PriceManagement.DeletePriceAsync(item.Id);
+        if (success)
+        {
+            Snackbar.Add("Supplier price berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus supplier price.", Severity.Error);
+        }
+    }
+}

@@ -1,0 +1,167 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Speed" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Limit" : "Tambah Limit")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Limit Name" @bind-Value="_model.LimitName"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Limit name wajib diisi" MaxLength="30" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Group Name" @bind-Value="_model.GroupName" Disabled="_busy" Clearable="true">
+                        @foreach (var g in Groups)
+                        {
+                            <MudSelectItem T="string" Value="@g.GroupName">@g.GroupName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="long" Label="Min Withdrawal" @bind-Value="_model.MinWithdrawal" Format="N0" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="long" Label="Max Withdrawal" @bind-Value="_model.MaxWithdrawal" Format="N0" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="long" Label="Min Transfer" @bind-Value="_model.MinTransfer" Format="N0" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="long" Label="Max Transfer" @bind-Value="_model.MaxTransfer" Format="N0" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="long" Label="Min Purchase" @bind-Value="_model.MinPurchase" Format="N0" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="long" Label="Max Purchase" @bind-Value="_model.MaxPurchase" Format="N0" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="long" Label="Min Payment" @bind-Value="_model.MinPayment" Format="N0" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="long" Label="Max Payment" @bind-Value="_model.MaxPayment" Format="N0" Disabled="_busy" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private TerminalLimitManagementService LimitManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<MerchantGroupDto> Groups { get; set; } = new();
+    [Parameter] public TerminalLimitDto? Limit { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Limit != null)
+        {
+            _model.Id = Limit.Id;
+            _model.LimitName = Limit.LimitName;
+            _model.GroupName = Limit.GroupName ?? string.Empty;
+            _model.MinWithdrawal = Limit.MinWithdrawal;
+            _model.MaxWithdrawal = Limit.MaxWithdrawal;
+            _model.MinTransfer = Limit.MinTransfer;
+            _model.MaxTransfer = Limit.MaxTransfer;
+            _model.MinPurchase = Limit.MinPurchase;
+            _model.MaxPurchase = Limit.MaxPurchase;
+            _model.MinPayment = Limit.MinPayment;
+            _model.MaxPayment = Limit.MaxPayment;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var request = new UpdateTerminalLimitRequest
+            {
+                GroupName = _model.GroupName,
+                MinWithdrawal = _model.MinWithdrawal,
+                MaxWithdrawal = _model.MaxWithdrawal,
+                MinTransfer = _model.MinTransfer,
+                MaxTransfer = _model.MaxTransfer,
+                MinPurchase = _model.MinPurchase,
+                MaxPurchase = _model.MaxPurchase,
+                MinPayment = _model.MinPayment,
+                MaxPayment = _model.MaxPayment
+            };
+            var (success, error) = await LimitManagement.UpdateLimitAsync(_model.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateTerminalLimitRequest
+            {
+                LimitName = _model.LimitName,
+                GroupName = _model.GroupName,
+                MinWithdrawal = _model.MinWithdrawal,
+                MaxWithdrawal = _model.MaxWithdrawal,
+                MinTransfer = _model.MinTransfer,
+                MaxTransfer = _model.MaxTransfer,
+                MinPurchase = _model.MinPurchase,
+                MaxPurchase = _model.MaxPurchase,
+                MinPayment = _model.MinPayment,
+                MaxPayment = _model.MaxPayment
+            };
+            var (success, _, error) = await LimitManagement.CreateLimitAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan limit.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public long Id { get; set; }
+        public string LimitName { get; set; } = string.Empty;
+        public string GroupName { get; set; } = string.Empty;
+        public long MinWithdrawal { get; set; }
+        public long MaxWithdrawal { get; set; }
+        public long MinTransfer { get; set; }
+        public long MaxTransfer { get; set; }
+        public long MinPurchase { get; set; }
+        public long MaxPurchase { get; set; }
+        public long MinPayment { get; set; }
+        public long MaxPayment { get; set; }
+    }
+}

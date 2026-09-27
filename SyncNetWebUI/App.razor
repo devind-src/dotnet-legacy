@@ -1,0 +1,38 @@
+@* MudBlazor providers live here (not inside MainLayout) so both MainLayout (authenticated
+   shell) and AuthLayout (login/reset pages) get theme/dialog/snackbar support.
+   CloseButton: tombol X di pojok kanan atas semua dialog untuk tutup cepat (sama dengan Batal/Esc);
+   dialog peringatan sesi menimpanya dengan CloseButton = false. *@
+<MudThemeProvider Theme="_theme" IsDarkMode="Theme.IsDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider BackdropClick="false" CloseOnEscapeKey="true" CloseButton="true" />
+<MudSnackbarProvider />
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+    </Router>
+</CascadingAuthenticationState>
+
+@code {
+    [Inject] private ThemeState Theme { get; set; } = null!;
+
+    // #1b6ec2 is the legacy Blazor Server app's Bootstrap primary (site.css .btn-primary) —
+    // matches the original project's blue instead of MudBlazor's default purple.
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight { Primary = "#1b6ec2" },
+        PaletteDark = new PaletteDark { Primary = "#4d94d6" }
+    };
+
+    protected override void OnInitialized()
+    {
+        Theme.Changed += StateHasChanged;
+    }
+}

@@ -1,0 +1,109 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Calculate" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">Detail Approval</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Class="px-2 pt-4" Spacing="4">
+            <MudTextField T="string" Label="Account Number" Value="Request?.AccNr" Disabled="true" ReadOnly="true" />
+            <MudTextField T="string" Label="Group Name" Value="Request?.GroupName" Disabled="true" ReadOnly="true" />
+            <MudTextField T="string" Label="Tran Type" Value="Request?.TranTypeName" Disabled="true" ReadOnly="true" />
+            <MudTextField T="string" Label="Debet Credit" Value="Request?.DebetCredit" Disabled="true" ReadOnly="true" />
+            <MudTextField T="string" Label="Notes" Value="Request?.Description" Disabled="true" ReadOnly="true" />
+            <MudTextField T="string" Label="Amount" Value="@(Request?.Amount.ToString("N0"))" Disabled="true" ReadOnly="true" />
+
+            @if (IsPending && CanProcess)
+            {
+                <MudSelect T="string" Label="Approval Status" @bind-Value="_status">
+                    <MudSelectItem T="string" Value="@("0")">Pending</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("1")">Approved</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("2")">Rejected</MudSelectItem>
+                </MudSelect>
+            }
+            else
+            {
+                <MudTextField T="string" Label="Approval Status" Value="Request?.StatusName" Disabled="true" ReadOnly="true" />
+            }
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        @if (IsPending && CanProcess)
+        {
+            <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+                @if (_busy)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Simpan
+            </MudButton>
+        }
+        else
+        {
+            <MudButton OnClick="Cancel">Tutup</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private VaTransRequestManagementService RequestManagement { get; set; } = null!;
+    [Inject] private IDialogService DialogService { get; set; } = null!;
+    [Parameter] public VaTransRequestDto? Request { get; set; }
+    [Parameter] public bool CanProcess { get; set; }
+
+    private string _status = "0";
+    private bool _busy;
+    private string? _error;
+
+    private bool IsPending => Request?.Status == "0";
+
+    protected override void OnInitialized()
+    {
+        _status = Request?.Status ?? "0";
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (Request == null) return;
+
+        if (_status == "0")
+        {
+            _error = "Approval status mandatory";
+            return;
+        }
+
+        var isApprove = _status == "1";
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            isApprove ? "Approve Request" : "Reject Request",
+            isApprove
+                ? $"Setujui topup/adjustment {Request.Amount:N0} untuk account '{Request.AccNr}'? Saldo akan langsung berubah dan tidak bisa dibatalkan."
+                : $"Tolak request tran number {Request.TranNr}? Tindakan ini tidak bisa dibatalkan.",
+            yesText: isApprove ? "Approve" : "Reject", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        _busy = true;
+        _error = null;
+
+        var (success, error) = isApprove
+            ? await RequestManagement.ApproveAsync(Request.TranNr)
+            : await RequestManagement.RejectAsync(Request.TranNr);
+
+        _busy = false;
+
+        if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+        _error = error ?? "Gagal memproses request.";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

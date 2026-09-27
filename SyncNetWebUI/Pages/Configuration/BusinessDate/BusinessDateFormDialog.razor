@@ -1,0 +1,201 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Schedule" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Business Calendar" : "Tambah Business Calendar")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.BusinessCalendar</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Business Calendar" @bind-Value="_model.BusinessCalendar"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Business calendar wajib diisi" MaxLength="20" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSwitch T="bool" Value="_model.EnableClosing" ValueChanged="@(v => _model.EnableClosing = v)" Color="Color.Primary" Disabled="_busy">Enable Closing</MudSwitch>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField T="string" Label="Time Cutover" @bind-Value="_model.TimeCutover" Placeholder="HH:mm:ss"
+                                  Disabled="_busy" Required="true" Validation="@(new Func<string, string?>(ValidateTime))" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField T="string" Label="Time Start" @bind-Value="_model.TimeStart" Placeholder="HH:mm:ss"
+                                  Disabled="_busy" Required="true" Validation="@(new Func<string, string?>(ValidateTime))" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField T="string" Label="Time End" @bind-Value="_model.TimeEnd" Placeholder="HH:mm:ss"
+                                  Disabled="_busy" Required="true" Validation="@(new Func<string, string?>(ValidateTime))" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="6" sm="3">
+                        <MudTextField T="string?" Label="Current Bsn Date" Value="_currentBsnDate" Disabled="true" />
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudTextField T="string?" Label="Previous Bsn Date" Value="_previousBsnDate" Disabled="true" />
+                    </MudItem>
+                }
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Hari Kerja</MudText>
+                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="4">
+                        <MudCheckBox T="bool" Value="_model.Sun" ValueChanged="@(v => _model.Sun = v)" Label="Sun" Disabled="_busy" />
+                        <MudCheckBox T="bool" Value="_model.Mon" ValueChanged="@(v => _model.Mon = v)" Label="Mon" Disabled="_busy" />
+                        <MudCheckBox T="bool" Value="_model.Tue" ValueChanged="@(v => _model.Tue = v)" Label="Tue" Disabled="_busy" />
+                        <MudCheckBox T="bool" Value="_model.Wed" ValueChanged="@(v => _model.Wed = v)" Label="Wed" Disabled="_busy" />
+                        <MudCheckBox T="bool" Value="_model.Thu" ValueChanged="@(v => _model.Thu = v)" Label="Thu" Disabled="_busy" />
+                        <MudCheckBox T="bool" Value="_model.Fri" ValueChanged="@(v => _model.Fri = v)" Label="Fri" Disabled="_busy" />
+                        <MudCheckBox T="bool" Value="_model.Sat" ValueChanged="@(v => _model.Sat = v)" Label="Sat" Disabled="_busy" />
+                    </MudStack>
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Primary" Disabled="_busy">Aktif</MudSwitch>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private BusinessDateManagementService BusinessDateManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public BusinessDateDto? BusinessDate { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private string? _currentBsnDate;
+    private string? _previousBsnDate;
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && BusinessDate != null)
+        {
+            _model.BusinessCalendar = BusinessDate.BusinessCalendar;
+            _model.TimeCutover = BusinessDate.TimeCutover ?? "00:00:00";
+            _model.EnableClosing = BusinessDate.EnableClosing;
+            _model.TimeStart = BusinessDate.TimeStart ?? "00:00:00";
+            _model.TimeEnd = BusinessDate.TimeEnd ?? "00:00:00";
+            _model.Sun = BusinessDate.Sun;
+            _model.Mon = BusinessDate.Mon;
+            _model.Tue = BusinessDate.Tue;
+            _model.Wed = BusinessDate.Wed;
+            _model.Thu = BusinessDate.Thu;
+            _model.Fri = BusinessDate.Fri;
+            _model.Sat = BusinessDate.Sat;
+            _model.Active = BusinessDate.Active;
+            _currentBsnDate = BusinessDate.CurrentBsnDate;
+            _previousBsnDate = BusinessDate.PreviousBsnDate;
+        }
+    }
+
+    private static string? ValidateTime(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "Wajib diisi";
+        return System.Text.RegularExpressions.Regex.IsMatch(value, @"^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$")
+            ? null
+            : "Format harus HH:mm:ss";
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await BusinessDateManagement.UpdateBusinessDateAsync(_model.BusinessCalendar, new UpdateBusinessDateRequest
+            {
+                TimeCutover = _model.TimeCutover,
+                EnableClosing = _model.EnableClosing,
+                TimeStart = _model.TimeStart,
+                TimeEnd = _model.TimeEnd,
+                Sun = _model.Sun,
+                Mon = _model.Mon,
+                Tue = _model.Tue,
+                Wed = _model.Wed,
+                Thu = _model.Thu,
+                Fri = _model.Fri,
+                Sat = _model.Sat,
+                Active = _model.Active
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateBusinessDateRequest
+            {
+                BusinessCalendar = _model.BusinessCalendar,
+                TimeCutover = _model.TimeCutover,
+                EnableClosing = _model.EnableClosing,
+                TimeStart = _model.TimeStart,
+                TimeEnd = _model.TimeEnd,
+                Sun = _model.Sun,
+                Mon = _model.Mon,
+                Tue = _model.Tue,
+                Wed = _model.Wed,
+                Thu = _model.Thu,
+                Fri = _model.Fri,
+                Sat = _model.Sat
+            };
+            var (success, _, error) = await BusinessDateManagement.CreateBusinessDateAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan business calendar.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string BusinessCalendar { get; set; } = string.Empty;
+        public string TimeCutover { get; set; } = "00:00:00";
+        public bool EnableClosing { get; set; }
+        public string TimeStart { get; set; } = "00:00:00";
+        public string TimeEnd { get; set; } = "00:00:00";
+        public bool Sun { get; set; } = true;
+        public bool Mon { get; set; } = true;
+        public bool Tue { get; set; } = true;
+        public bool Wed { get; set; } = true;
+        public bool Thu { get; set; } = true;
+        public bool Fri { get; set; } = true;
+        public bool Sat { get; set; } = true;
+        public bool Active { get; set; } = true;
+    }
+}

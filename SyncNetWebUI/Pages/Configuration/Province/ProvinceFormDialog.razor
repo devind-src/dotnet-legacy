@@ -1,0 +1,111 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Map" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Province" : "Tambah Province")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Province" @bind-Value="_model.Province"
+                                  Disabled="_busy" Required="true" RequiredError="Province wajib diisi" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Capital" @bind-Value="_model.Capital" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Island" @bind-Value="_model.Island" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProvinceManagementService ProvinceManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public ProvinceDto? Province { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Province != null)
+        {
+            _model.Id = Province.Id;
+            _model.Province = Province.Province ?? string.Empty;
+            _model.Capital = Province.Capital;
+            _model.Island = Province.Island;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await ProvinceManagement.UpdateProvinceAsync(_model.Id, new UpdateProvinceRequest
+            {
+                Province = _model.Province,
+                Capital = _model.Capital,
+                Island = _model.Island
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateProvinceRequest
+            {
+                Province = _model.Province,
+                Capital = _model.Capital,
+                Island = _model.Island
+            };
+            var (success, _, error) = await ProvinceManagement.CreateProvinceAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan province.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public long Id { get; set; }
+        public string Province { get; set; } = string.Empty;
+        public string? Capital { get; set; }
+        public string? Island { get; set; }
+    }
+}

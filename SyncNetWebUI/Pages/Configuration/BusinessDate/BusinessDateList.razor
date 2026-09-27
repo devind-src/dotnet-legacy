@@ -1,0 +1,168 @@
+@page "/calendar-business-cal"
+@attribute [Authorize]
+@inject BusinessDateManagementService BusinessDateManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Business Date</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Business Date</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Konfigurasi > Calendar > Business Date.</MudText>
+
+<MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+    Kolom "Current Bsn Date" dan "Previous Bsn Date" dikelola otomatis oleh proses batch/EOD di luar dashboard ini — tidak bisa diubah lewat form.
+</MudAlert>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari business calendar" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Business Calendar</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Business Calendar</MudTh>
+            <MudTh>Time Cutover</MudTh>
+            <MudTh>Current Bsn Date</MudTh>
+            <MudTh>Previous Bsn Date</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Business Calendar">@context.BusinessCalendar</MudTd>
+            <MudTd DataLabel="Time Cutover">@context.TimeCutover</MudTd>
+            <MudTd DataLabel="Current Bsn Date">@context.CurrentBsnDate</MudTd>
+            <MudTd DataLabel="Previous Bsn Date">@context.PreviousBsnDate</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Color="@(context.Active ? Color.Success : Color.Default)">
+                    @(context.Active ? "Aktif" : "Nonaktif")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada business calendar ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<BusinessDateDto> _items = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await BusinessDateManagement.GetBusinessDatesAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar business calendar.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<BusinessDateFormDialog> { { x => x.IsEdit, false } };
+        var dialog = await DialogService.ShowAsync<BusinessDateFormDialog>("Tambah Business Calendar", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Business calendar berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(BusinessDateDto item)
+    {
+        var parameters = new DialogParameters<BusinessDateFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.BusinessDate, item }
+        };
+        var dialog = await DialogService.ShowAsync<BusinessDateFormDialog>("Edit Business Calendar", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan business calendar berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(BusinessDateDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Business Calendar",
+            $"Yakin ingin menghapus business calendar '{item.BusinessCalendar}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await BusinessDateManagement.DeleteBusinessDateAsync(item.BusinessCalendar);
+        if (success)
+        {
+            Snackbar.Add("Business calendar berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus business calendar.", Severity.Error);
+        }
+    }
+}

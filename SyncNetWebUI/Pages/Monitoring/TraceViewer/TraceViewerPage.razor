@@ -1,0 +1,205 @@
+@page "/mon-trace"
+@attribute [Authorize]
+@inject MonitoringManagementService Monitoring
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<PageTitle>Trace Viewer</PageTitle>
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-1">
+    <MudText Typo="Typo.h4">Trace Viewer</MudText>
+    <MudStack Row="true" Spacing="2">
+        <MudTextField T="string" @bind-Value="_search" Label="Cari" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Style="max-width:280px;" Disabled="@(_selectedFile == null)" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SearchAsync" Disabled="@(_selectedFile == null)">Cari</MudButton>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download" OnClick="DownloadAsync" Disabled="@(_selectedFile == null)">Download</MudButton>
+    </MudStack>
+</MudStack>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Monitoring > Loggers > Trace Viewer.</MudText>
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="3">
+        <MudText Typo="Typo.subtitle2" Class="mb-1">App Name</MudText>
+        <MudPaper Class="pa-2 mb-3" Elevation="1" Style="height:220px;overflow-y:auto">
+            @if (_apps.Count == 0)
+            {
+                <MudText Style="opacity:.65" Typo="Typo.body2" Class="pa-2">Tidak ada trace ditemukan.</MudText>
+            }
+            else
+            {
+                @foreach (var app in _apps)
+                {
+                    <MudButton FullWidth="true" Variant="@(app == _selectedApp ? Variant.Filled : Variant.Text)"
+                               Color="@(app == _selectedApp ? Color.Primary : Color.Default)"
+                               Class="justify-start mb-1" StartIcon="@Icons.Material.Filled.Folder"
+                               OnClick="@(() => SelectAppAsync(app))">@app</MudButton>
+                }
+            }
+        </MudPaper>
+
+        <MudText Typo="Typo.subtitle2" Class="mb-1">Trace Files</MudText>
+        <MudPaper Class="pa-2" Elevation="1" Style="height:260px;overflow-y:auto">
+            @if (_files.Count == 0)
+            {
+                <MudText Style="opacity:.65" Typo="Typo.body2" Class="pa-2">Pilih app name terlebih dahulu.</MudText>
+            }
+            else
+            {
+                @foreach (var file in _files)
+                {
+                    <MudButton FullWidth="true" Variant="@(file.FileName == _selectedFile ? Variant.Filled : Variant.Text)"
+                               Color="@(file.FileName == _selectedFile ? Color.Primary : Color.Default)"
+                               Class="justify-start mb-1" StartIcon="@Icons.Material.Filled.Description"
+                               OnClick="@(() => OpenFileAsync(file.FileName))">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2">@file.FileName</MudText>
+                            <MudText Typo="Typo.caption" Style="opacity:.65">@file.LastModified.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                        </MudStack>
+                    </MudButton>
+                }
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="9">
+        <MudText Typo="Typo.subtitle2" Class="mb-1">Trace Content</MudText>
+        <MudPaper Class="pa-3" Elevation="1" Style="height:520px;overflow-y:auto">
+            @if (_loading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else if (_error != null)
+            {
+                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+            }
+            else if (_lines.Count == 0)
+            {
+                <MudText Style="opacity:.65">Pilih file trace untuk melihat isinya.</MudText>
+            }
+            else
+            {
+                <pre style="margin:0;white-space:pre-wrap;word-break:break-all;font-family:Consolas,monospace;font-size:.85rem">@string.Join("\n", _lines)</pre>
+            }
+        </MudPaper>
+        <div class="d-flex justify-center mt-2">
+            @if (_selectedFile != null)
+            {
+                @if (_loadingMore)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                }
+                else if (_hasMore)
+                {
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ExpandMore" OnClick="LoadMoreAsync">Muat lagi</MudButton>
+                }
+                else if (_lines.Count > 0)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">--- Akhir file ---</MudText>
+                }
+            }
+        </div>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private List<string> _apps = new();
+    private List<MonitoringFileDto> _files = new();
+    private List<string> _lines = new();
+
+    private string? _selectedApp;
+    private string? _selectedFile;
+    private string _search = string.Empty;
+    private int _offset;
+    private bool _hasMore;
+    private bool _loading;
+    private bool _loadingMore;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var apps = await Monitoring.GetTraceAppsAsync();
+        _apps = apps ?? new();
+    }
+
+    private async Task SelectAppAsync(string app)
+    {
+        _selectedApp = app;
+        _selectedFile = null;
+        _lines = new();
+        _search = string.Empty;
+        _files = await Monitoring.GetTraceFilesAsync(app) ?? new();
+    }
+
+    private async Task OpenFileAsync(string fileName)
+    {
+        _selectedFile = fileName;
+        _search = string.Empty;
+        await LoadFirstPageAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        if (_selectedFile == null) return;
+        await LoadFirstPageAsync();
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SearchAsync();
+    }
+
+    private async Task LoadFirstPageAsync()
+    {
+        if (_selectedApp == null || _selectedFile == null) return;
+
+        _offset = 0;
+        _lines = new();
+        _hasMore = false;
+        _error = null;
+        _loading = true;
+
+        var content = await Monitoring.GetTraceContentAsync(_selectedApp, _selectedFile, 0, _search);
+        ApplyContent(content);
+
+        _loading = false;
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        if (_selectedApp == null || _selectedFile == null) return;
+
+        _loadingMore = true;
+        var content = await Monitoring.GetTraceContentAsync(_selectedApp, _selectedFile, _offset, _search);
+        ApplyContent(content);
+        _loadingMore = false;
+    }
+
+    private void ApplyContent(MonitoringFileContentDto? content)
+    {
+        if (content == null)
+        {
+            _error = "Gagal memuat isi trace.";
+            _hasMore = false;
+            return;
+        }
+
+        _lines.AddRange(content.Lines);
+        _offset = content.Offset + content.Lines.Count;
+        _hasMore = content.HasMore;
+    }
+
+    private async Task DownloadAsync()
+    {
+        if (_selectedApp == null || _selectedFile == null) return;
+
+        var (bytes, fileName) = await Monitoring.DownloadTraceFileAsync(_selectedApp, _selectedFile);
+        if (bytes == null)
+        {
+            Snackbar.Add("Gagal mengunduh trace file.", Severity.Error);
+            return;
+        }
+
+        await JS.InvokeVoidAsync("downloadBinaryFile", fileName ?? $"{_selectedFile}.zip", Convert.ToBase64String(bytes), "application/zip");
+    }
+}

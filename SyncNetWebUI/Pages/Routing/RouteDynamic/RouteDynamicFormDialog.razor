@@ -1,0 +1,128 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.AltRoute" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Route Dynamic" : "Tambah Route Dynamic")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@Route?.InstId</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Product ID" Value="@FormatProduct(_model.InstId)" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudAutocomplete T="string" Label="Product ID" @bind-Value="_model.InstId"
+                                         SearchFunc="SearchProducts" ToStringFunc="FormatProduct" Required="true" RequiredError="Product ID wajib diisi"
+                                         CoerceValue="true" Disabled="_busy" MaxLength="11" />
+                    }
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Notes" @bind-Value="_model.Notes"
+                                  Disabled="_busy" Required="true" RequiredError="Notes wajib diisi" MaxLength="50" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private RouteDynamicManagementService RouteDynamicManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public RouteDynamicDto? Route { get; set; }
+    [Parameter] public List<LookupItemDto> TopupProducts { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Route != null)
+        {
+            _model.InstId = Route.InstId;
+            _model.Notes = Route.Notes ?? string.Empty;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchProducts(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? TopupProducts.Select(p => p.Key)
+            : TopupProducts.Where(p => p.Key.Contains(value, StringComparison.OrdinalIgnoreCase)
+                                        || p.Value.Contains(value, StringComparison.OrdinalIgnoreCase))
+                            .Select(p => p.Key);
+        return Task.FromResult(matches);
+    }
+
+    private string? FormatProduct(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return code;
+        var match = TopupProducts.FirstOrDefault(p => p.Key == code);
+        return match == null ? code : $"{match.Key} — {match.Value}";
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Route != null)
+        {
+            var request = new UpdateRouteDynamicRequest { Notes = _model.Notes };
+            var (success, error) = await RouteDynamicManagement.UpdateRouteAsync(Route.InstId, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateRouteDynamicRequest { InstId = _model.InstId ?? string.Empty, Notes = _model.Notes };
+            var (success, _, error) = await RouteDynamicManagement.CreateRouteAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan route.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string? InstId { get; set; }
+        public string Notes { get; set; } = string.Empty;
+    }
+}

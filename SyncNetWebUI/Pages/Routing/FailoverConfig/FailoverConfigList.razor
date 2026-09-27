@@ -1,0 +1,250 @@
+@page "/route-failover-config"
+@attribute [Authorize]
+@inject RouteFailoverConfigManagementService ConfigManagement
+@inject LookupService Lookups
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Health Check Config</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Health Check Config</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Routing > Health Check Config — kondisi yang membuat biller diblokir sementara (link down, timeout, rc gagal, pending, latency). Topup = Margin, bill payment = Product.</MudText>
+
+<ApplyChangesBar Message="Perubahan rc code, ambang, cooldown, dan tombol darurat baru dipakai routing setelah klik Terapkan Perubahan." />
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudText Typo="Typo.subtitle1" Class="mb-1">Tombol darurat failover</MudText>
+    <MudText Typo="Typo.caption" Style="opacity:.65" Class="mb-2">
+        Mematikan failover satu kategori sekaligus tanpa mengubah toggle per produk. Saat OFF, semua transaksi kategori tersebut memakai rank 1 / node utama.
+    </MudText>
+    <MudStack Row="true" Spacing="6" Wrap="Wrap.Wrap">
+        @foreach (var sw in _switches)
+        {
+            <MudStack Spacing="0">
+                <MudSwitch T="bool" Value="@sw.Enabled" Color="Color.Success"
+                           Disabled="@(!Session.UserManagementPermissions.CanEdit || !sw.HasGlobalRow)"
+                           ValueChanged="@((bool v) => SetSwitchAsync(sw, v))">
+                    @SwitchLabel(sw.RoutingType): @(sw.Enabled ? "ON" : "OFF")
+                </MudSwitch>
+                @if (!sw.HasGlobalRow)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Warning">Baris config global belum ada — buat lewat Tambah Config (scope Global).</MudText>
+                }
+            </MudStack>
+        }
+    </MudStack>
+</MudPaper>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari routing type / product" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Config</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Kategori</MudTh>
+            <MudTh>Scope</MudTh>
+            <MudTh>Link Down</MudTh>
+            <MudTh>Timeout</MudTh>
+            <MudTh>RC Gagal</MudTh>
+            <MudTh>Pending</MudTh>
+            <MudTh>Latency</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Kategori">@SwitchLabel(context.RoutingType)</MudTd>
+            <MudTd DataLabel="Scope">@(context.InstId ?? "Global (semua produk)")</MudTd>
+            <MudTd DataLabel="Link Down">@Summary(context.RcLinkDown, null, context.LinkDownCooldownMinutes)</MudTd>
+            <MudTd DataLabel="Timeout">@Summary(context.RcSuspect, context.MaxConsecutiveSuspect, context.SuspectCooldownMinutes)</MudTd>
+            <MudTd DataLabel="RC Gagal">@Summary(context.RcFailed, context.MaxConsecutiveFailed, context.FailedCooldownMinutes)</MudTd>
+            <MudTd DataLabel="Pending">@Summary(context.RcPending, context.MaxConsecutivePending, context.PendingCooldownMinutes)</MudTd>
+            <MudTd DataLabel="Latency">@Summary(context.LatencyThresholdSeconds.HasValue ? $"> {context.LatencyThresholdSeconds:0.#} dtk" : null, context.MaxConsecutiveLatency, context.LatencyCooldownMinutes)</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Default)">
+                    @(context.IsActive ? "Aktif" : "Nonaktif")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Belum ada config. Tanpa config, sistem pakai default: link down 91,1091, timeout 68,1068 3x, tanpa auto-recovery; rc gagal, pending, latency nonaktif.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<RouteFailoverConfigDto> _items = new();
+    private List<LookupItemDto> _topupProducts = new();
+    private List<LookupItemDto> _billProducts = new();
+    private List<FailoverSwitchDto> _switches = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    // ringkasan satu kategori: "68,1068 · 3x · 5 mnt"; daftar kosong = Nonaktif
+    private static string Summary(string? codes, int? maxConsecutive, int? cooldown)
+    {
+        if (string.IsNullOrWhiteSpace(codes)) return "Nonaktif";
+
+        var parts = new List<string> { codes };
+        if (maxConsecutive.HasValue) parts.Add($"{maxConsecutive}x");
+        parts.Add(cooldown.HasValue ? $"{cooldown} mnt" : "manual");
+        return string.Join(" · ", parts);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var topup = await Lookups.GetTopupProductsAsync();
+        _topupProducts = topup ?? new();
+
+        var bill = await Lookups.GetProductsAvailableForRoutingAsync();
+        _billProducts = bill ?? new();
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await ConfigManagement.GetConfigsAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar health check config.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        var switches = await ConfigManagement.GetSwitchesAsync();
+        _switches = switches ?? new();
+
+        _loading = false;
+    }
+
+    private static string SwitchLabel(string routingType) => routingType switch
+    {
+        "MARGIN" => "Topup (Margin)",
+        "PRODUCT" => "Bill Payment (Product)",
+        _ => routingType
+    };
+
+    private async Task SetSwitchAsync(FailoverSwitchDto sw, bool enabled)
+    {
+        var (success, error) = await ConfigManagement.SetSwitchAsync(sw.RoutingType, enabled);
+        if (success)
+        {
+            Snackbar.Add($"Failover {SwitchLabel(sw.RoutingType)} {(enabled ? "diaktifkan" : "dimatikan")}.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal mengubah tombol darurat.", Severity.Error);
+        }
+        await LoadAsync();
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<FailoverConfigFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.TopupProducts, _topupProducts },
+            { x => x.BillProducts, _billProducts }
+        };
+        var dialog = await DialogService.ShowAsync<FailoverConfigFormDialog>("Tambah Health Check Config", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Health check config berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(RouteFailoverConfigDto item)
+    {
+        var parameters = new DialogParameters<FailoverConfigFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Item, item },
+            { x => x.TopupProducts, _topupProducts },
+            { x => x.BillProducts, _billProducts }
+        };
+        var dialog = await DialogService.ShowAsync<FailoverConfigFormDialog>("Edit Health Check Config", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan health check config berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(RouteFailoverConfigDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Health Check Config",
+            $"Yakin ingin menghapus config untuk '{item.InstId ?? "Global"}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await ConfigManagement.DeleteConfigAsync(item.Id);
+        if (success)
+        {
+            Snackbar.Add("Health check config berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus health check config.", Severity.Error);
+        }
+    }
+}

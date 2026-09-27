@@ -1,0 +1,175 @@
+@page "/posbase-merchant"
+@attribute [Authorize]
+@inject MerchantManagementService MerchantManagement
+@inject ParticipantManagementService ParticipantManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Merchant</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Merchant</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Kelola data merchant di bawah participant.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari merchant" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Merchant</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Merchant ID</MudTh>
+            <MudTh>Nama</MudTh>
+            <MudTh>Participant</MudTh>
+            <MudTh>Kota</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Merchant ID">@context.MerchantId</MudTd>
+            <MudTd DataLabel="Nama">@context.Name</MudTd>
+            <MudTd DataLabel="Participant">@context.ParticipantId</MudTd>
+            <MudTd DataLabel="Kota">@context.City</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Color="@(context.Active ? Color.Success : Color.Default)">
+                    @(context.Active ? "Aktif" : "Nonaktif")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada merchant ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<MerchantDto> _items = new();
+    private List<ParticipantDto> _participants = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Large, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _participants = await ParticipantManagement.GetParticipantsAsync() ?? new();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await MerchantManagement.GetMerchantsAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar merchant.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<MerchantFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Participants, _participants }
+        };
+        var dialog = await DialogService.ShowAsync<MerchantFormDialog>("Tambah Merchant", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Merchant berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(MerchantDto merchant)
+    {
+        var parameters = new DialogParameters<MerchantFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Participants, _participants },
+            { x => x.Merchant, merchant }
+        };
+        var dialog = await DialogService.ShowAsync<MerchantFormDialog>("Edit Merchant", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan merchant berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(MerchantDto merchant)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Merchant",
+            $"Yakin ingin menghapus merchant '{merchant.MerchantId}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await MerchantManagement.DeleteMerchantAsync(merchant.MerchantId);
+        if (success)
+        {
+            Snackbar.Add("Merchant berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus merchant.", Severity.Error);
+        }
+    }
+}

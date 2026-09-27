@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SyncNet Dashboard</title>
+    <base href="/" />
+    <link rel="preload" id="webassembly" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link href="SyncNetWasm.styles.css" rel="stylesheet" />
+    <script type="importmap"></script>
+</head>
+
+<body>
+    <div id="app">
+        <!--
+            <svg class="loading-progress">
+                <circle r="40%" cx="50%" cy="50%" />
+                <circle r="40%" cx="50%" cy="50%" />
+            </svg>
+            <div class="loading-progress-text"></div>
+        -->
+
+        <div class="loading-container">
+            <!-- Opsional: SVG/Logo Aplikasi -->
+            <svg class="loading-logo" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+
+            <!-- Progress Bar -->
+            <div class="progress-track">
+                <div class="progress-fill"></div>
+            </div>
+
+            <p style="margin-top: 16px; font-size: 0.875rem; color: #94a3b8;">Memuat aplikasi...</p>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        <span class="message">Maaf, terjadi kendala pada aplikasi. Silakan muat ulang halaman. Jika masalah berlanjut, hubungi administrator.</span>
+        <a href="." class="reload">Muat ulang</a>
+        <span class="dismiss" title="Tutup">🗙</span>
+    </div>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="js/download.js"></script>
+    <script src="js/idle-activity.js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+</body>
+
+</html>

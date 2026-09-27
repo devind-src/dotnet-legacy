@@ -1,0 +1,110 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Account Type" : "Tambah Account Type")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.AcctType</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Acct Type" @bind-Value="_model.AcctType"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Acct Type wajib diisi" MaxLength="2" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Name" @bind-Value="_model.Name"
+                                  Disabled="_busy" Required="true" RequiredError="Name wajib diisi" MaxLength="20" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Primary" Disabled="_busy">Aktif</MudSwitch>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private AccountTypeManagementService AccountTypeManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public AccountTypeDto? AccountType { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && AccountType != null)
+        {
+            _model.AcctType = AccountType.AcctType;
+            _model.Name = AccountType.Name ?? string.Empty;
+            _model.Active = AccountType.Active;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await AccountTypeManagement.UpdateAccountTypeAsync(_model.AcctType,
+                new UpdateAccountTypeRequest { Name = _model.Name, Active = _model.Active });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateAccountTypeRequest { AcctType = _model.AcctType, Name = _model.Name };
+            var (success, _, error) = await AccountTypeManagement.CreateAccountTypeAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan account type.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string AcctType { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public bool Active { get; set; } = true;
+    }
+}

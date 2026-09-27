@@ -1,0 +1,155 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.QrCode2" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit QRIS Static" : "Tambah QRIS Static")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@Item?.Nmid</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="NMID" @bind-Value="_model.Nmid"
+                                  Required="true" RequiredError="NMID wajib diisi" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudAutocomplete T="string" Label="Bank Name" Value="_model.BankName" ValueChanged="OnBankNameChanged"
+                                     SearchFunc="SearchBanks" Required="true" RequiredError="Bank name wajib diisi"
+                                     CoerceValue="true" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Bank Code" @bind-Value="_model.BankCode"
+                                  Required="true" RequiredError="Bank code wajib diisi" Disabled="_busy" MaxLength="6" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Account Number" @bind-Value="_model.AccNumber"
+                                  Required="true" RequiredError="Account number wajib diisi" Disabled="_busy" MaxLength="20" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Account Name" @bind-Value="_model.AccName" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private AgentBankManagementService AgentBankManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public AgentBankDto? Item { get; set; }
+    [Parameter] public List<BankDto> Banks { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    // Legacy leaves every field (including Nmid) editable on Update — no field is readonly on
+    // the legacy Edit form, so both Create and Edit share the same fully-editable layout here.
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Item != null)
+        {
+            _model.Nmid = Item.Nmid ?? string.Empty;
+            _model.BankName = Item.BankName ?? string.Empty;
+            _model.BankCode = Item.BankCode ?? string.Empty;
+            _model.AccNumber = Item.AccNumber ?? string.Empty;
+            _model.AccName = Item.AccName;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchBanks(string? value, CancellationToken ct)
+    {
+        var names = Banks.Select(b => b.Bank ?? string.Empty).Where(n => n.Length > 0);
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? names
+            : names.Where(n => n.Contains(value, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(matches);
+    }
+
+    // Mirrors legacy OnBankNameChange — selecting a known bank auto-fills Bank Code (still
+    // editable afterwards); an unrecognized value clears it.
+    private void OnBankNameChanged(string? value)
+    {
+        _model.BankName = value ?? string.Empty;
+        var match = Banks.FirstOrDefault(b => b.Bank == value);
+        _model.BankCode = match?.Cbc ?? string.Empty;
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Item != null)
+        {
+            var request = new UpdateAgentBankRequest
+            {
+                Nmid = _model.Nmid,
+                BankName = _model.BankName,
+                BankCode = _model.BankCode,
+                AccNumber = _model.AccNumber,
+                AccName = _model.AccName
+            };
+            var (success, error) = await AgentBankManagement.UpdateAsync(Item.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateAgentBankRequest
+            {
+                Nmid = _model.Nmid,
+                BankName = _model.BankName,
+                BankCode = _model.BankCode,
+                AccNumber = _model.AccNumber,
+                AccName = _model.AccName
+            };
+            var (success, _, error) = await AgentBankManagement.CreateAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan QRIS static account.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string Nmid { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public string BankCode { get; set; } = string.Empty;
+        public string AccNumber { get; set; } = string.Empty;
+        public string? AccName { get; set; }
+    }
+}

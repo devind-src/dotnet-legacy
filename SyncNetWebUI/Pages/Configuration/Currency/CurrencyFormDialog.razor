@@ -1,0 +1,138 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.AttachMoney" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Currency" : "Tambah Currency")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.CurrencyCode</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Currency Code" @bind-Value="_model.CurrencyCode"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Currency code wajib diisi" MaxLength="3" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Alpha Code" @bind-Value="_model.AlphaCode" Disabled="_busy" MaxLength="3" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Name" @bind-Value="_model.Name"
+                                  Disabled="_busy" Required="true" RequiredError="Name wajib diisi" MaxLength="20" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudNumericField T="int?" Label="Decimals" @bind-Value="_model.NrDecimals" Disabled="_busy" Required="true" RequiredError="Decimals wajib diisi" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudNumericField T="double?" Label="Rate" @bind-Value="_model.Rate" Format="N4" Disabled="_busy" Required="true" RequiredError="Rate wajib diisi" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Primary" Disabled="_busy">Aktif</MudSwitch>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private CurrencyManagementService CurrencyManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public CurrencyDto? Currency { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Currency != null)
+        {
+            _model.CurrencyCode = Currency.CurrencyCode;
+            _model.AlphaCode = Currency.AlphaCode;
+            _model.Name = Currency.Name;
+            _model.NrDecimals = Currency.NrDecimals;
+            _model.Rate = Currency.Rate;
+            _model.Active = Currency.Active;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await CurrencyManagement.UpdateCurrencyAsync(_model.CurrencyCode, new UpdateCurrencyRequest
+            {
+                AlphaCode = _model.AlphaCode,
+                Name = _model.Name,
+                NrDecimals = _model.NrDecimals ?? 0,
+                Rate = _model.Rate ?? 0,
+                Active = _model.Active
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateCurrencyRequest
+            {
+                CurrencyCode = _model.CurrencyCode,
+                AlphaCode = _model.AlphaCode,
+                Name = _model.Name,
+                NrDecimals = _model.NrDecimals ?? 0,
+                Rate = _model.Rate ?? 0
+            };
+            var (success, _, error) = await CurrencyManagement.CreateCurrencyAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan currency.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string CurrencyCode { get; set; } = string.Empty;
+        public string? AlphaCode { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int? NrDecimals { get; set; }
+        public double? Rate { get; set; }
+        public bool Active { get; set; } = true;
+    }
+}

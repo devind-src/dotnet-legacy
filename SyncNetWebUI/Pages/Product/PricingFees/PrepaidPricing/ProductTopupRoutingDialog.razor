@@ -1,0 +1,155 @@
+﻿<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Routing Mode — @Item.ProductId @Item.ProductName</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="4" Class="pt-2">
+            <MudItem xs="12" sm="6">
+                <MudSelect T="string" Label="Routing Mode" @bind-Value="_mode" Disabled="_busy">
+                    @foreach (var mode in RoutingModes.All)
+                    {
+                        <MudSelectItem T="string" Value="@mode">@RoutingModes.Label(mode)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                @if (_mode == RoutingModes.Static)
+                {
+                    <MudSelect T="int?" Label="Supplier (Static)" @bind-Value="_staticNodeId" Clearable="true" Disabled="_busy"
+                               HelperText="Kosong = margin terbesar">
+                        @foreach (var n in SupplierNodes)
+                        {
+                            <MudSelectItem T="int?" Value="@n.NodeId">@n.NodeName</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.body2" Style="opacity:.75">@Hint</MudText>
+            </MudItem>
+            @if (_mode == RoutingModes.LoadBalance)
+            {
+                <MudItem xs="12">
+                    @if (InvalidDenoms.Any())
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
+                            Load Balance butuh total LB Weight supplier aktif tepat 100% di <b>setiap denom</b>.
+                            Atur dulu denom bertanda ⚠ lewat tombol <b>Atur</b>, lalu Simpan.
+                        </MudAlert>
+                    }
+                    <MudSimpleTable Dense="true" Elevation="0">
+                        <thead>
+                            <tr><th>Denom</th><th>Supplier aktif (bobot)</th><th>Total</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var denom in Denoms)
+                            {
+                                var rows = _prices.Where(p => p.Denom == denom).ToList();
+                                int total = rows.Where(r => r.Active).Sum(r => r.LbWeight ?? 0);
+                                <tr>
+                                    <td>@(denom?.ToString("N0") ?? "-")</td>
+                                    <td>@string.Join(", ", rows.Where(r => r.Active).Select(r => $"{r.SupplierId} {r.LbWeight ?? 0}%"))</td>
+                                    <td><MudText Typo="Typo.body2" Color="@(total == 100 ? Color.Success : Color.Warning)">@total% @(total == 100 ? "✔" : "⚠")</MudText></td>
+                                    <td>
+                                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Balance"
+                                                   OnClick="@(() => OpenWeightsAsync(denom, rows))" Disabled="_busy">Atur</MudButton>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </MudItem>
+            }
+        </MudGrid>
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3" Dense="true">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync"
+                   Disabled="@(_busy || (_mode == RoutingModes.LoadBalance && InvalidDenoms.Any()))">Simpan</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductPrepaidPricingManagementService PriceManagement { get; set; } = null!;
+    [Parameter] public TopupRoutingDto Item { get; set; } = null!;
+    [Parameter] public List<NodeDto> Nodes { get; set; } = new();
+    /// <summary>Nama supplier yang punya harga untuk produk ini.</summary>
+    [Parameter] public List<string> SupplierNames { get; set; } = new();
+    /// <summary>Semua harga supplier produk ini (untuk status LB Weight per denom).</summary>
+    [Parameter] public List<ProductPrepaidPricingDto> Prices { get; set; } = new();
+    [Inject] private IDialogService DialogService { get; set; } = null!;
+
+    private List<ProductPrepaidPricingDto> _prices = new();
+
+    private IEnumerable<int?> Denoms => _prices.Select(p => p.Denom).Distinct().OrderBy(d => d);
+
+    // denom dengan supplier aktif yang total bobotnya belum 100
+    private IEnumerable<int?> InvalidDenoms => Denoms.Where(d =>
+    {
+        var active = _prices.Where(p => p.Denom == d && p.Active).ToList();
+        return active.Count > 0 && active.Sum(p => p.LbWeight ?? 0) != 100;
+    });
+
+    private async Task OpenWeightsAsync(int? denom, List<ProductPrepaidPricingDto> rows)
+    {
+        var parameters = new DialogParameters<ProductSupplierWeightsDialog>
+        {
+            { x => x.ProductId, Item.ProductId },
+            { x => x.Denom, denom },
+            { x => x.Items, rows }
+        };
+        var dialog = await DialogService.ShowAsync<ProductSupplierWeightsDialog>("Atur LB Weight", parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            var all = await PriceManagement.GetPricesAsync(Item.ProductId);
+            _prices = all?.Where(p => p.BillerCode == Item.ProductId).ToList() ?? _prices;
+        }
+    }
+
+    private string _mode = RoutingModes.Static;
+    private int? _staticNodeId;
+    private bool _busy;
+    private string? _error;
+
+    private IEnumerable<NodeDto> SupplierNodes => Nodes.Where(n => SupplierNames.Contains(n.NodeName ?? string.Empty)).OrderBy(n => n.NodeName);
+
+    private string Hint => _mode switch
+    {
+        RoutingModes.Priority => "Priority: supplier dengan priority terkecil (per denom) dipakai selama sehat, lalu berikutnya bila diblokir.",
+        RoutingModes.BestPrice => "Best Price: supplier dengan margin terbesar (harga jual − harga beli) dipakai lebih dulu.",
+        RoutingModes.LoadBalance => "Load Balance: dibagi acak berbobot sesuai LB Weight; total LB Weight supplier aktif per denom harus 100%.",
+        _ => "Static: selalu ke satu supplier tanpa failover."
+    };
+
+    protected override void OnInitialized()
+    {
+        _prices = Prices.ToList();
+        _mode = Item.RoutingMode;
+        _staticNodeId = Item.StaticNodeId;
+    }
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _error = null;
+
+        var (success, error) = await PriceManagement.UpdateRoutingAsync(Item.ProductId, new UpdateTopupRoutingRequest
+        {
+            RoutingMode = _mode,
+            StaticNodeId = _mode == RoutingModes.Static ? _staticNodeId : null
+        });
+
+        _busy = false;
+        if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+        _error = error ?? "Gagal menyimpan routing mode.";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

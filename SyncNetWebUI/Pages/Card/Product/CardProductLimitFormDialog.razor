@@ -1,0 +1,205 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Speed" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Limit" : "Tambah Limit")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2">
+            <MudGrid Spacing="5" Class="px-4 pt-4">
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Channel" @bind-Value="_model.Channel" Required="true" RequiredError="Channel wajib dipilih" Disabled="_busy">
+                        @foreach (var c in CardChannelHelper.Labels)
+                        {
+                            <MudSelectItem T="string" Value="@c.Key">@c.Key — @c.Value</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            <CardLimitTabs Model="_model.Values" Disabled="_busy" />
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private CardProductLimitManagementService LimitManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public int ProductId { get; set; }
+    [Parameter] public CardProductLimitDto? Limit { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Limit != null)
+        {
+            _model.Id = Limit.Id;
+            _model.Channel = Limit.Channel ?? string.Empty;
+            _model.Values.AmtPurchasePerTran = Limit.AmtPurchasePerTran;
+            _model.Values.AmtCashPerTran = Limit.AmtCashPerTran;
+            _model.Values.AmtPaymentPerTran = Limit.AmtPaymentPerTran;
+            _model.Values.AmtTransferPerTran = Limit.AmtTransferPerTran;
+            _model.Values.NrInquiryDaily = Limit.NrInquiryDaily;
+            _model.Values.NrPurchaseDaily = Limit.NrPurchaseDaily;
+            _model.Values.NrCashDaily = Limit.NrCashDaily;
+            _model.Values.NrPaymentDaily = Limit.NrPaymentDaily;
+            _model.Values.NrTransferDaily = Limit.NrTransferDaily;
+            _model.Values.AmtPurchaseDaily = Limit.AmtPurchaseDaily;
+            _model.Values.AmtCashDaily = Limit.AmtCashDaily;
+            _model.Values.AmtPaymentDaily = Limit.AmtPaymentDaily;
+            _model.Values.AmtTransferDaily = Limit.AmtTransferDaily;
+            _model.Values.NrInquiryWeekly = Limit.NrInquiryWeekly;
+            _model.Values.NrPurchaseWeekly = Limit.NrPurchaseWeekly;
+            _model.Values.NrCashWeekly = Limit.NrCashWeekly;
+            _model.Values.NrPaymentWeekly = Limit.NrPaymentWeekly;
+            _model.Values.NrTransferWeekly = Limit.NrTransferWeekly;
+            _model.Values.AmtPurchaseWeekly = Limit.AmtPurchaseWeekly;
+            _model.Values.AmtCashWeekly = Limit.AmtCashWeekly;
+            _model.Values.AmtPaymentWeekly = Limit.AmtPaymentWeekly;
+            _model.Values.AmtTransferWeekly = Limit.AmtTransferWeekly;
+            _model.Values.NrInquiryMonthly = Limit.NrInquiryMonthly;
+            _model.Values.NrPurchaseMonthly = Limit.NrPurchaseMonthly;
+            _model.Values.NrCashMonthly = Limit.NrCashMonthly;
+            _model.Values.NrPaymentMonthly = Limit.NrPaymentMonthly;
+            _model.Values.NrTransferMonthly = Limit.NrTransferMonthly;
+            _model.Values.AmtPurchaseMonthly = Limit.AmtPurchaseMonthly;
+            _model.Values.AmtCashMonthly = Limit.AmtCashMonthly;
+            _model.Values.AmtPaymentMonthly = Limit.AmtPaymentMonthly;
+            _model.Values.AmtTransferMonthly = Limit.AmtTransferMonthly;
+        }
+        else
+        {
+            _model.Channel = CardChannelHelper.Labels.Keys.First();
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        var v = _model.Values;
+
+        if (IsEdit)
+        {
+            var (success, error) = await LimitManagement.UpdateLimitAsync(_model.Id, new UpdateCardProductLimitRequest
+            {
+                Channel = _model.Channel,
+                AmtPurchasePerTran = v.AmtPurchasePerTran,
+                AmtCashPerTran = v.AmtCashPerTran,
+                AmtPaymentPerTran = v.AmtPaymentPerTran,
+                AmtTransferPerTran = v.AmtTransferPerTran,
+                NrInquiryDaily = v.NrInquiryDaily,
+                NrPurchaseDaily = v.NrPurchaseDaily,
+                NrCashDaily = v.NrCashDaily,
+                NrPaymentDaily = v.NrPaymentDaily,
+                NrTransferDaily = v.NrTransferDaily,
+                AmtPurchaseDaily = v.AmtPurchaseDaily,
+                AmtCashDaily = v.AmtCashDaily,
+                AmtPaymentDaily = v.AmtPaymentDaily,
+                AmtTransferDaily = v.AmtTransferDaily,
+                NrInquiryWeekly = v.NrInquiryWeekly,
+                NrPurchaseWeekly = v.NrPurchaseWeekly,
+                NrCashWeekly = v.NrCashWeekly,
+                NrPaymentWeekly = v.NrPaymentWeekly,
+                NrTransferWeekly = v.NrTransferWeekly,
+                AmtPurchaseWeekly = v.AmtPurchaseWeekly,
+                AmtCashWeekly = v.AmtCashWeekly,
+                AmtPaymentWeekly = v.AmtPaymentWeekly,
+                AmtTransferWeekly = v.AmtTransferWeekly,
+                NrInquiryMonthly = v.NrInquiryMonthly,
+                NrPurchaseMonthly = v.NrPurchaseMonthly,
+                NrCashMonthly = v.NrCashMonthly,
+                NrPaymentMonthly = v.NrPaymentMonthly,
+                NrTransferMonthly = v.NrTransferMonthly,
+                AmtPurchaseMonthly = v.AmtPurchaseMonthly,
+                AmtCashMonthly = v.AmtCashMonthly,
+                AmtPaymentMonthly = v.AmtPaymentMonthly,
+                AmtTransferMonthly = v.AmtTransferMonthly
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateCardProductLimitRequest
+            {
+                ProductId = ProductId,
+                Channel = _model.Channel,
+                AmtPurchasePerTran = v.AmtPurchasePerTran,
+                AmtCashPerTran = v.AmtCashPerTran,
+                AmtPaymentPerTran = v.AmtPaymentPerTran,
+                AmtTransferPerTran = v.AmtTransferPerTran,
+                NrInquiryDaily = v.NrInquiryDaily,
+                NrPurchaseDaily = v.NrPurchaseDaily,
+                NrCashDaily = v.NrCashDaily,
+                NrPaymentDaily = v.NrPaymentDaily,
+                NrTransferDaily = v.NrTransferDaily,
+                AmtPurchaseDaily = v.AmtPurchaseDaily,
+                AmtCashDaily = v.AmtCashDaily,
+                AmtPaymentDaily = v.AmtPaymentDaily,
+                AmtTransferDaily = v.AmtTransferDaily,
+                NrInquiryWeekly = v.NrInquiryWeekly,
+                NrPurchaseWeekly = v.NrPurchaseWeekly,
+                NrCashWeekly = v.NrCashWeekly,
+                NrPaymentWeekly = v.NrPaymentWeekly,
+                NrTransferWeekly = v.NrTransferWeekly,
+                AmtPurchaseWeekly = v.AmtPurchaseWeekly,
+                AmtCashWeekly = v.AmtCashWeekly,
+                AmtPaymentWeekly = v.AmtPaymentWeekly,
+                AmtTransferWeekly = v.AmtTransferWeekly,
+                NrInquiryMonthly = v.NrInquiryMonthly,
+                NrPurchaseMonthly = v.NrPurchaseMonthly,
+                NrCashMonthly = v.NrCashMonthly,
+                NrPaymentMonthly = v.NrPaymentMonthly,
+                NrTransferMonthly = v.NrTransferMonthly,
+                AmtPurchaseMonthly = v.AmtPurchaseMonthly,
+                AmtCashMonthly = v.AmtCashMonthly,
+                AmtPaymentMonthly = v.AmtPaymentMonthly,
+                AmtTransferMonthly = v.AmtTransferMonthly
+            };
+            var (success, _, error) = await LimitManagement.CreateLimitAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan limit.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public int Id { get; set; }
+        public string Channel { get; set; } = string.Empty;
+        public CardLimitValuesFormModel Values { get; set; } = new();
+    }
+}

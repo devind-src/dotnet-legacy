@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- https://go.microsoft.com/fwlink/?LinkID=208121. -->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>C:\SyncNet\API\Channel\Bin</_PublishTargetUrl>
+    <History>True|2026-09-18T09:24:29.7404432Z||;True|2026-08-23T11:35:22.4515115+07:00||;True|2026-08-22T13:44:16.3785048+07:00||;True|2026-08-21T22:52:28.3163378+07:00||;True|2026-08-21T22:36:42.2797000+07:00||;True|2026-08-21T09:24:35.7917022+07:00||;True|2026-08-18T13:19:39.5930809+07:00||;True|2026-08-14T10:51:26.3706852+07:00||;True|2026-08-07T09:01:56.9907234+07:00||;True|2026-07-21T08:59:27.8486020+07:00||;True|2026-07-16T11:48:16.9249306+07:00||;True|2026-07-10T13:49:03.6230515+07:00||;True|2026-07-10T13:16:40.7052049+07:00||;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+</Project>

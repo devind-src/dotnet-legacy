@@ -1,0 +1,124 @@
+@* Shared 4-tab limit value editor (Per Transaction/Daily/Weekly/Monthly) — used identically by
+   Card > Profile > Product > Limit and Card > Profile > Override Limit. The parent form places
+   its own header fields (Channel, plus ProductId or PAN) above this component, then renders
+   this for the 31 nr_*/amt_* fields so the markup isn't duplicated between the two forms. *@
+
+<MudTabs Elevation="0" Rounded="false" SliderColor="Color.Primary" TabPanelsClass="pa-6" Class="mt-2">
+    <MudTabPanel Text="Per Transaction" ToolTip="Per Transaction" Icon="@Icons.Material.Filled.Receipt">
+        <MudGrid Spacing="5">
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Purchase Per Tran" @bind-Value="Model.AmtPurchasePerTran" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Cash Per Tran" @bind-Value="Model.AmtCashPerTran" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Payment Per Tran" @bind-Value="Model.AmtPaymentPerTran" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Transfer Per Tran" @bind-Value="Model.AmtTransferPerTran" Disabled="Disabled" />
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+
+    <MudTabPanel Text="Daily" ToolTip="Daily" Icon="@Icons.Material.Filled.Today">
+        <MudGrid Spacing="5">
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Inquiry Daily" @bind-Value="Model.NrInquiryDaily" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Purchase Daily" @bind-Value="Model.AmtPurchaseDaily" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Purchase Daily" @bind-Value="Model.NrPurchaseDaily" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Cash Daily" @bind-Value="Model.AmtCashDaily" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Cash Daily" @bind-Value="Model.NrCashDaily" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Payment Daily" @bind-Value="Model.AmtPaymentDaily" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Payment Daily" @bind-Value="Model.NrPaymentDaily" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Transfer Daily" @bind-Value="Model.AmtTransferDaily" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Transfer Daily" @bind-Value="Model.NrTransferDaily" Disabled="Disabled" />
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+
+    <MudTabPanel Text="Weekly" ToolTip="Weekly" Icon="@Icons.Material.Filled.DateRange">
+        <MudGrid Spacing="5">
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Inquiry Weekly" @bind-Value="Model.NrInquiryWeekly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Purchase Weekly" @bind-Value="Model.AmtPurchaseWeekly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Purchase Weekly" @bind-Value="Model.NrPurchaseWeekly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Cash Weekly" @bind-Value="Model.AmtCashWeekly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Cash Weekly" @bind-Value="Model.NrCashWeekly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Payment Weekly" @bind-Value="Model.AmtPaymentWeekly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Payment Weekly" @bind-Value="Model.NrPaymentWeekly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Transfer Weekly" @bind-Value="Model.AmtTransferWeekly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Transfer Weekly" @bind-Value="Model.NrTransferWeekly" Disabled="Disabled" />
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+
+    <MudTabPanel Text="Monthly" ToolTip="Monthly" Icon="@Icons.Material.Filled.CalendarMonth">
+        <MudGrid Spacing="5">
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Inquiry Monthly" @bind-Value="Model.NrInquiryMonthly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Purchase Monthly" @bind-Value="Model.AmtPurchaseMonthly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Purchase Monthly" @bind-Value="Model.NrPurchaseMonthly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Cash Monthly" @bind-Value="Model.AmtCashMonthly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Cash Monthly" @bind-Value="Model.NrCashMonthly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Payment Monthly" @bind-Value="Model.AmtPaymentMonthly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Payment Monthly" @bind-Value="Model.NrPaymentMonthly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Amt Transfer Monthly" @bind-Value="Model.AmtTransferMonthly" Disabled="Disabled" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int?" Label="Nr Transfer Monthly" @bind-Value="Model.NrTransferMonthly" Disabled="Disabled" />
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    [Parameter] public CardLimitValuesFormModel Model { get; set; } = new();
+    [Parameter] public bool Disabled { get; set; }
+}

@@ -1,0 +1,97 @@
+@page "/queries-userlog"
+@attribute [Authorize]
+@using SyncNetApi.Dtos.RouteMargins
+@using SyncNetWasm.Common
+@inject QueryManagementService Queries
+
+<PageTitle>User Log</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">User Log</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Queries > User Log.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="6" md="2">
+            <MudDatePicker Label="Date Start" @bind-Date="_dateStart" DateFormat="dd-MM-yyyy" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="2">
+            <MudDatePicker Label="Date End" @bind-Date="_dateEnd" DateFormat="dd-MM-yyyy" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudTextField T="string" Label="User Name" @bind-Value="_userName" MaxLength="30" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="string" Label="State" @bind-Value="_state" Clearable="true">
+                <MudSelectItem Value="@("1")">Login</MudSelectItem>
+                <MudSelectItem Value="@("0")">Logout</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-1"
+                       StartIcon="@Icons.Material.Filled.Search" OnClick="SearchAsync">Cari</MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable ServerData="ServerReloadAsync" @ref="_table" Dense="true" Hover="true" Elevation="1" T="UserLogItemDto">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>User Name</MudTh>
+        <MudTh>State</MudTh>
+        <MudTh>Date Time</MudTh>
+        <MudTh>Host Address</MudTh>
+        <MudTh>Host Name</MudTh>
+        <MudTh>Device</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ID">@context.LogId</MudTd>
+        <MudTd DataLabel="User Name">@context.UserName</MudTd>
+        <MudTd DataLabel="State">
+            <MudChip T="string" Size="Size.Small" Color="@(context.State == "1" ? Color.Success : Color.Default)">
+                @QueryStatus.LoginStateLabel(context.State)
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Date Time">@(context.DateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudTd>
+        <MudTd DataLabel="Host Address">@context.HostAddress</MudTd>
+        <MudTd DataLabel="Host Name">@context.HostName</MudTd>
+        <MudTd DataLabel="Device">
+            <span title="@context.HostAgent">@QueryStatus.FriendlyUserAgent(context.HostAgent)</span>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Style="opacity:.65">Tidak ada user log ditemukan.</MudText>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private MudTable<UserLogItemDto> _table = null!;
+
+    private DateTime? _dateStart = DateTime.Today;
+    private DateTime? _dateEnd = DateTime.Today;
+    private string? _userName;
+    private string? _state;
+
+    private async Task<TableData<UserLogItemDto>> ServerReloadAsync(TableState state, CancellationToken ct)
+    {
+        var request = new UserLogSearchRequest
+        {
+            DateStart = _dateStart,
+            DateEnd = _dateEnd?.Date.AddDays(1).AddTicks(-1),
+            UserName = _userName,
+            State = _state,
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize
+        };
+
+        var result = await Queries.SearchUserLogsAsync(request, ct);
+
+        return result == null
+            ? new TableData<UserLogItemDto> { TotalItems = 0, Items = new List<UserLogItemDto>() }
+            : new TableData<UserLogItemDto> { TotalItems = (int)result.TotalRecords, Items = result.Items };
+    }
+
+    private Task SearchAsync() => _table.ReloadServerData();
+}

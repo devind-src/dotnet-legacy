@@ -1,0 +1,170 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.VolumeUp" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit SoundBox" : "Tambah SoundBox")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="NMID" @bind-Value="_model.Nmid"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="NMID wajib diisi" MaxLength="30" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Store Name" @bind-Value="_model.StoreName"
+                                  Required="true" RequiredError="Store name wajib diisi" MaxLength="100" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Alamat" @bind-Value="_model.Address" MaxLength="255" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudAutocomplete T="string" Label="Kota" @bind-Value="_model.City" SearchFunc="SearchCities" Disabled="_busy" Clearable="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Provider" @bind-Value="_model.Provider" Required="true" RequiredError="Provider wajib dipilih" Disabled="_busy">
+                        <MudSelectItem T="string" Value="@("newpos")">NewPos</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("visionet")">VisioNet</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Serial Number" @bind-Value="_model.SerialNumber"
+                                  Required="true" RequiredError="Serial number wajib diisi" MaxLength="50" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Group Name" @bind-Value="_model.GroupName" Disabled="_busy" Clearable="true">
+                        @foreach (var g in Groups)
+                        {
+                            <MudSelectItem T="string" Value="@g.GroupName">@g.GroupName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Sub Group Name" @bind-Value="_model.SubgroupName" Disabled="_busy" Clearable="true">
+                        @foreach (var g in SubGroups)
+                        {
+                            <MudSelectItem T="string" Value="@g.GroupName">@g.GroupName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private SoundBoxManagementService SoundBoxManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<LookupItemDto> Cities { get; set; } = new();
+    [Parameter] public List<MerchantGroupDto> Groups { get; set; } = new();
+    [Parameter] public List<SubMerchantGroupDto> SubGroups { get; set; } = new();
+    [Parameter] public SoundBoxDto? SoundBox { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new() { Provider = "newpos" };
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && SoundBox != null)
+        {
+            _model.Nmid = SoundBox.Nmid;
+            _model.StoreName = SoundBox.StoreName;
+            _model.Address = SoundBox.Address ?? string.Empty;
+            _model.City = SoundBox.City ?? string.Empty;
+            _model.Provider = SoundBox.Provider;
+            _model.SerialNumber = SoundBox.SerialNumber;
+            _model.GroupName = SoundBox.GroupName ?? string.Empty;
+            _model.SubgroupName = SoundBox.SubgroupName ?? string.Empty;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchCities(string value, CancellationToken ct)
+    {
+        var results = string.IsNullOrWhiteSpace(value)
+            ? Cities.Select(c => c.Value)
+            : Cities.Where(c => c.Value.Contains(value, StringComparison.OrdinalIgnoreCase)).Select(c => c.Value);
+        return Task.FromResult(results.Take(20));
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var request = new UpdateSoundBoxRequest
+            {
+                StoreName = _model.StoreName,
+                Address = _model.Address,
+                City = _model.City,
+                SerialNumber = _model.SerialNumber,
+                Provider = _model.Provider,
+                GroupName = _model.GroupName,
+                SubgroupName = _model.SubgroupName
+            };
+            var (success, error) = await SoundBoxManagement.UpdateSoundBoxAsync(_model.Nmid, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateSoundBoxRequest
+            {
+                Nmid = _model.Nmid,
+                StoreName = _model.StoreName,
+                Address = _model.Address,
+                City = _model.City,
+                SerialNumber = _model.SerialNumber,
+                Provider = _model.Provider,
+                GroupName = _model.GroupName,
+                SubgroupName = _model.SubgroupName
+            };
+            var (success, _, error) = await SoundBoxManagement.CreateSoundBoxAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan soundbox.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string Nmid { get; set; } = string.Empty;
+        public string StoreName { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Provider { get; set; } = "newpos";
+        public string SerialNumber { get; set; } = string.Empty;
+        public string GroupName { get; set; } = string.Empty;
+        public string SubgroupName { get; set; } = string.Empty;
+    }
+}

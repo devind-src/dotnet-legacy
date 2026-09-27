@@ -1,0 +1,121 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.CreditCard" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Hotcard" : "Tambah Hotcard")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Card Number" @bind-Value="_model.CardNr"
+                                  Disabled="_busy || IsEdit" Required="true" RequiredError="Card number wajib diisi"
+                                  Validation="@(new Func<string, string?>(ValidateCardNr))" MaxLength="16" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Resp Code" @bind-Value="_model.RespCode"
+                                  Disabled="_busy" Required="true" RequiredError="Resp code wajib diisi" MaxLength="2" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Auth ID Resp" @bind-Value="_model.AuthIdResp"
+                                  Disabled="_busy" Required="true" RequiredError="Auth ID resp wajib diisi" MaxLength="6" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Notes" @bind-Value="_model.Notes" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private CardHotcardManagementService HotcardManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public CardHotcardDto? Hotcard { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Hotcard != null)
+        {
+            _model.CardNr = Hotcard.CardNr;
+            _model.RespCode = Hotcard.RespCode ?? string.Empty;
+            _model.AuthIdResp = Hotcard.AuthIdResp ?? string.Empty;
+            _model.Notes = Hotcard.Notes;
+        }
+    }
+
+    private static string? ValidateCardNr(string value)
+        => string.IsNullOrEmpty(value) || value.Length == 16 ? null : "Card number must be exactly 16 characters.";
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await HotcardManagement.UpdateHotcardAsync(_model.CardNr, new UpdateCardHotcardRequest
+            {
+                RespCode = _model.RespCode,
+                AuthIdResp = _model.AuthIdResp,
+                Notes = _model.Notes
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateCardHotcardRequest
+            {
+                CardNr = _model.CardNr,
+                RespCode = _model.RespCode,
+                AuthIdResp = _model.AuthIdResp,
+                Notes = _model.Notes
+            };
+            var (success, _, error) = await HotcardManagement.CreateHotcardAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan hotcard.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string CardNr { get; set; } = string.Empty;
+        public string RespCode { get; set; } = string.Empty;
+        public string AuthIdResp { get; set; } = string.Empty;
+        public string? Notes { get; set; }
+    }
+}

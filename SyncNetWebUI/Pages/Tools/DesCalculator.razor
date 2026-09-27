@@ -1,0 +1,60 @@
+@page "/tools-des-calculator"
+@attribute [Authorize]
+@inject ToolsService Tools
+
+<PageTitle>DES Calculator</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">DES Calculator</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Tools > DES Calculator.</MudText>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudStack Spacing="4">
+        <MudTextField T="string" Label="Value" @bind-Value="_value" Variant="Variant.Outlined" MaxLength="48" Disabled="_busy" />
+        <MudTextField T="string" Label="Key" @bind-Value="_key" Variant="Variant.Outlined" MaxLength="48" Disabled="_busy" />
+        <MudTextField T="string" Value="_result" Label="Result" Variant="Variant.Outlined" ReadOnly="true" />
+
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="EncryptAsync" Disabled="_busy">Encrypt</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="DecryptAsync" Disabled="_busy">Decrypt</MudButton>
+        </MudStack>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    private string _value = string.Empty;
+    private string _key = string.Empty;
+    private string _result = string.Empty;
+    private string? _error;
+    private bool _busy;
+
+    private async Task EncryptAsync()
+    {
+        _error = null;
+        _busy = true;
+
+        var (result, error) = await Tools.DesEncryptAsync(_value, _key);
+
+        _busy = false;
+
+        if (result == null) { _error = error ?? "Gagal melakukan enkripsi."; return; }
+        _result = result;
+    }
+
+    private async Task DecryptAsync()
+    {
+        _error = null;
+        _busy = true;
+
+        var (result, error) = await Tools.DesDecryptAsync(_value, _key);
+
+        _busy = false;
+
+        if (result == null) { _error = error ?? "Gagal melakukan dekripsi."; return; }
+        _result = result;
+    }
+}

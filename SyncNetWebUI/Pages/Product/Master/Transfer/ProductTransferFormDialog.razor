@@ -1,0 +1,122 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.CompareArrows" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Transfer" : "Tambah Transfer")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">ID @Transfer?.Id</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudSelect T="string" Label="Node Name" @bind-Value="_model.Name"
+                               Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Node Name wajib dipilih">
+                        @foreach (var n in BillerNodes)
+                        {
+                            <MudSelectItem T="string" Value="@n.NodeName">@n.NodeName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Bank Code" @bind-Value="_model.BankCode"
+                                  Disabled="_busy" Required="true" RequiredError="Bank Code wajib diisi" MaxLength="6" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Bank Name" @bind-Value="_model.BankName"
+                                  Disabled="_busy" Required="true" RequiredError="Bank Name wajib diisi" MaxLength="50" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductTransferManagementService TransferManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public ProductTransferDto? Transfer { get; set; }
+    [Parameter] public List<NodeDto> Nodes { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    // Mirrors legacy NodeGetNodeBiller filter (category "0"/"2" = Both/Biller-Issuer).
+    private IEnumerable<NodeDto> BillerNodes => Nodes.Where(n => n.Category is "0" or "2");
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Transfer != null)
+        {
+            _model.Name = Transfer.Name ?? string.Empty;
+            _model.BankCode = Transfer.BankCode ?? string.Empty;
+            _model.BankName = Transfer.BankName ?? string.Empty;
+        }
+        else
+        {
+            // MudSelect<string> defaults to "" which is a valid "unselected" state here
+            // (no real node is named ""), so no first-item default needed unlike int selects.
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Transfer != null)
+        {
+            var request = new UpdateProductTransferRequest { BankCode = _model.BankCode, BankName = _model.BankName };
+            var (success, error) = await TransferManagement.UpdateTransferAsync(Transfer.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateProductTransferRequest { Name = _model.Name, BankCode = _model.BankCode, BankName = _model.BankName };
+            var (success, _, error) = await TransferManagement.CreateTransferAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan transfer.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string BankCode { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+    }
+}

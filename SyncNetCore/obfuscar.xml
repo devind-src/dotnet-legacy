@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Obfuscator>
+	<!-- Path input/output -->
+	<Var name="InPath" value="E:\VStudio\bin\SyncNetCore\Release\net10.0" />
+	<Var name="OutPath" value="E:\VStudio\bin\SyncNetCore\Obfuscated" />
+	<Var name="AssemblyName" value="SyncNetCore" />
+
+	<!-- Modul utama -->
+	<Module file="$(InPath)\$(AssemblyName).dll">
+		<Rename enable="true" />
+		<StringEncryption enable="true" />
+	</Module>
+
+	<!-- Opsi aman -->
+	<Var name="KeepPublicApi" value="true" />
+	<Var name="KeepTypeNames" value="true" />
+	<Var name="KeepMemberNames" value="true" />
+	
+	<Var name="RenameFields" value="false" />
+	<Var name="RenameProperties" value="false" />
+	
+	<Var name="HideStrings" value="true" />
+	<Var name="StringEncryption" value="true" />
+
+	<!-- Exclusion rules untuk stabilitas -->
+	<Exclude>
+		<!-- Entry point -->
+		<Class name="Program" />
+		<Class name="Startup" />
+		<Class name="AppConfig" />
+
+		<!-- Model/Repository untuk Dapper -->
+		<Namespace name="SyncNet.DbRepository" />
+		<Namespace name="SyncNet.Models" />
+		
+		<!-- Namespace penting ASP.NET Core -->
+		<Namespace name="Microsoft.Extensions" />
+		<Namespace name="Microsoft.AspNetCore.Hosting" />
+		<Namespace name="Microsoft.AspNetCore.Server.Kestrel" />
+		<Namespace name="System.Text.Json" />
+		<Namespace name="Newtonsoft.Json" />
+	</Exclude>
+</Obfuscator>

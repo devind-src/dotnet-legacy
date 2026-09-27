@@ -1,0 +1,174 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Timer" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Job" : "Tambah Job")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.JobName</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Job Name" @bind-Value="_model.JobName"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Job name wajib diisi" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Run at server" @bind-Value="_model.RunAt" Disabled="_busy">
+                        <MudSelectItem Value="@("MW")">Middleware</MudSelectItem>
+                        <MudSelectItem Value="@("BO")">Back Office</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Frequency" @bind-Value="_model.FreqFlag" Disabled="_busy">
+                        <MudSelectItem Value="@("0")">Occurs Once</MudSelectItem>
+                        <MudSelectItem Value="@("1")">Occurs Every</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Primary" Disabled="_busy">Aktif</MudSwitch>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Occurs once at" @bind-Value="_model.FreqOnce" Placeholder="HH:mm:ss"
+                                  Disabled="_busy" Required="true" Validation="@(new Func<string, string?>(ValidateTime))" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int?" Label="Occurs every (menit)" @bind-Value="_model.FreqNumber" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Starting at" @bind-Value="_model.FreqStart" Placeholder="HH:mm:ss"
+                                  Disabled="_busy" Required="true" Validation="@(new Func<string, string?>(ValidateTime))" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Ending at" @bind-Value="_model.FreqEnd" Placeholder="HH:mm:ss"
+                                  Disabled="_busy" Required="true" Validation="@(new Func<string, string?>(ValidateTime))" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Path Application" @bind-Value="_model.AppPath" Disabled="_busy" MaxLength="100" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private JobScheduleManagementService JobScheduleManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public JobScheduleDto? Job { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Job != null)
+        {
+            _model.JobId = Job.JobId;
+            _model.JobName = Job.JobName ?? string.Empty;
+            _model.FreqFlag = Job.FreqFlag ?? "0";
+            _model.FreqOnce = Job.FreqOnce ?? "00:00:00";
+            _model.FreqNumber = Job.FreqNumber;
+            _model.FreqStart = Job.FreqStart ?? "00:00:00";
+            _model.FreqEnd = Job.FreqEnd ?? "23:59:59";
+            _model.RunAt = Job.RunAt ?? "MW";
+            _model.AppPath = Job.AppPath;
+            _model.Active = Job.Active;
+        }
+    }
+
+    private static string? ValidateTime(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "Wajib diisi";
+        return System.Text.RegularExpressions.Regex.IsMatch(value, @"^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$")
+            ? null
+            : "Format harus HH:mm:ss";
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await JobScheduleManagement.UpdateJobAsync(_model.JobId, new UpdateJobScheduleRequest
+            {
+                FreqFlag = _model.FreqFlag,
+                FreqOnce = _model.FreqOnce,
+                FreqNumber = _model.FreqNumber,
+                FreqStart = _model.FreqStart,
+                FreqEnd = _model.FreqEnd,
+                RunAt = _model.RunAt,
+                AppPath = _model.AppPath,
+                Active = _model.Active
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateJobScheduleRequest
+            {
+                JobName = _model.JobName,
+                FreqFlag = _model.FreqFlag,
+                FreqOnce = _model.FreqOnce,
+                FreqNumber = _model.FreqNumber,
+                FreqStart = _model.FreqStart,
+                FreqEnd = _model.FreqEnd,
+                RunAt = _model.RunAt,
+                AppPath = _model.AppPath
+            };
+            var (success, _, error) = await JobScheduleManagement.CreateJobAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan job.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public int JobId { get; set; }
+        public string JobName { get; set; } = string.Empty;
+        public string FreqFlag { get; set; } = "0";
+        public string FreqOnce { get; set; } = "00:00:00";
+        public int? FreqNumber { get; set; }
+        public string FreqStart { get; set; } = "00:00:00";
+        public string FreqEnd { get; set; } = "23:59:59";
+        public string RunAt { get; set; } = "MW";
+        public string? AppPath { get; set; }
+        public bool Active { get; set; } = true;
+    }
+}

@@ -1,0 +1,52 @@
+@* Tombol "Terapkan Perubahan" (fase 1 K14/K22): kirim RESYNC ke aplikasi yang memakai routing
+   supaya perubahan fee, biller, dan routing mode langsung dipakai. Tidak dibatasi role. *@
+@inject RoutingManagementService Routing
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" Icon="@Icons.Material.Filled.Sync">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap" Spacing="2">
+        <span>@(string.IsNullOrEmpty(Message) ? "Perubahan di halaman ini baru dipakai routing setelah klik Terapkan Perubahan." : Message)</span>
+        <MudButton Variant="Variant.Filled" Color="Color.Info" Size="Size.Small" StartIcon="@Icons.Material.Filled.Sync"
+                   OnClick="ApplyAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Terapkan Perubahan
+        </MudButton>
+    </MudStack>
+</MudAlert>
+
+@code {
+    [Parameter] public string? Message { get; set; }
+
+    private bool _busy;
+
+    private async Task ApplyAsync()
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Terapkan Perubahan",
+            "Kirim RESYNC ke aplikasi channel? Konfigurasi routing dan fee dimuat ulang dari database dan langsung dipakai transaksi berikutnya.",
+            yesText: "Terapkan", cancelText: "Batal");
+        if (confirmed != true) return;
+
+        _busy = true;
+        var (result, error) = await Routing.ApplyAsync();
+        _busy = false;
+
+        if (result == null)
+        {
+            Snackbar.Add(error ?? "Gagal mengirim RESYNC.", Severity.Error);
+            return;
+        }
+
+        foreach (var item in result.Results)
+        {
+            Snackbar.Add(item.Success
+                    ? $"{item.AppName}: RESYNC terkirim ({item.Message})."
+                    : $"{item.AppName}: gagal — {item.Message}",
+                item.Success ? Severity.Success : Severity.Error);
+        }
+    }
+}

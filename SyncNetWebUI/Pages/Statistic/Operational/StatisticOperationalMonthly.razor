@@ -1,0 +1,127 @@
+@page "/statistic/operational/monthly"
+@attribute [Authorize]
+@using System.Globalization
+@using ApexCharts
+@using SyncNetApi.Dtos.RouteMargins
+@implements IDisposable
+@inject ThemeState Theme
+
+<PageTitle>Monthly Transaction Trends</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Monthly Transaction Trends</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-3">Statistics &gt; Operational &gt; Monthly.</MudText>
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" Icon="@Icons.Material.Filled.Info">
+    Data pada halaman ini masih simulasi.
+</MudAlert>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int" Label="Month" @bind-Value="_selectedMonth" FullWidth="true">
+                @for (var m = 1; m <= 12; m++)
+                {
+                    var currentMonth = m;
+                    <MudSelectItem Value="@currentMonth">@CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(currentMonth)</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int" Label="Year" @bind-Value="_selectedYear" FullWidth="true">
+                @for (var y = DateTime.Now.Year - 5; y <= DateTime.Now.Year; y++)
+                {
+                    var currentYear = y;
+                    <MudSelectItem Value="@currentYear">@currentYear</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="RefreshData"
+                       StartIcon="@Icons.Material.Filled.BarChart" Disabled="_isRefreshing">
+                Show
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <ApexChart @ref="_chart" TItem="StatOpsByDate" Options="_chartOptions">
+        <ApexPointSeries TItem="StatOpsByDate" Items="_dataList" Name="Success"
+                         SeriesType="SeriesType.Bar" XValue="@(e => e.DateTran)" YValue="@(e => e.SuccessTran)" />
+        <ApexPointSeries TItem="StatOpsByDate" Items="_dataList" Name="Failed"
+                         SeriesType="SeriesType.Bar" XValue="@(e => e.DateTran)" YValue="@(e => e.FailedTran)" />
+    </ApexChart>
+</MudPaper>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudTable Items="_dataList" Dense="true" Hover="true">
+        <HeaderContent>
+            <MudTh>Date</MudTh>
+            <MudTh Style="text-align:right">Success</MudTh>
+            <MudTh Style="text-align:right">Failed</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.DateTran.ToString("dd MMM yyyy")</MudTd>
+            <MudTd Style="text-align:right">@context.SuccessTran.FormatAmount()</MudTd>
+            <MudTd Style="text-align:right">@context.FailedTran.FormatAmount()</MudTd>
+        </RowTemplate>
+        <FooterContent>
+            <MudTd><b>Total</b></MudTd>
+            <MudTd Style="text-align:right"><b>@_dataList.Sum(x => x.SuccessTran).FormatAmount()</b></MudTd>
+            <MudTd Style="text-align:right"><b>@_dataList.Sum(x => x.FailedTran).FormatAmount()</b></MudTd>
+        </FooterContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<StatOpsByDate> _dataList = [];
+    private ApexChart<StatOpsByDate>? _chart;
+    private bool _isRefreshing;
+    private int _selectedMonth = DateTime.Now.Month;
+    private int _selectedYear = DateTime.Now.Year;
+
+    private readonly ApexChartOptions<StatOpsByDate> _chartOptions = new()
+    {
+        Colors = ["#67C090", "#F875AA"],
+        Chart = new Chart { Type = ApexCharts.ChartType.Bar, Stacked = true, Toolbar = new Toolbar { Show = true }, Zoom = new Zoom { Enabled = false } },
+        Stroke = new Stroke { Curve = Curve.Smooth, Width = 3 },
+        DataLabels = new DataLabels { Enabled = false },
+        Tooltip = new Tooltip { Enabled = true, Y = new TooltipY { Formatter = "function(val) { return val.toLocaleString(); }" } },
+        Legend = new Legend { Position = LegendPosition.Top },
+        Xaxis = new XAxis { Title = new AxisTitle { Text = "Date" } },
+        Yaxis = [new YAxis { Title = new AxisTitle { Text = "Number Transaction" } }]
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.Changed += StateHasChanged;
+        await RefreshData();
+    }
+
+    public void Dispose() => Theme.Changed -= StateHasChanged;
+
+    private async Task RefreshData()
+    {
+        if (_isRefreshing) return;
+        _isRefreshing = true;
+
+        try
+        {
+            var random = new Random();
+            var daysInMonth = DateTime.DaysInMonth(_selectedYear, _selectedMonth);
+            _dataList = Enumerable.Range(1, daysInMonth).Select(day => new StatOpsByDate
+            {
+                DateTran = new DateOnly(_selectedYear, _selectedMonth, day),
+                SuccessTran = random.Next(2000, 6000),
+                FailedTran = random.Next(15, 100)
+            }).ToList();
+        }
+        finally
+        {
+            _isRefreshing = false;
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(1);
+            if (_chart != null) await _chart.UpdateSeriesAsync(true);
+        }
+    }
+}

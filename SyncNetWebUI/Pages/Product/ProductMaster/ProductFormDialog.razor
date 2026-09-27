@@ -1,0 +1,133 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Product" : "Tambah Product")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.ProductCode</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Product Code" @bind-Value="_model.ProductCode"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Product code wajib diisi" MaxLength="15" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect T="string" Label="Category" @bind-Value="_model.Category" Disabled="_busy" Clearable="true">
+                        @foreach (var c in Categories)
+                        {
+                            <MudSelectItem T="string" Value="@c.Key">@c.Value</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Product Name" @bind-Value="_model.ProductName"
+                                  Disabled="_busy" Required="true" RequiredError="Product name wajib diisi" MaxLength="50" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Primary" Disabled="_busy">Aktif</MudSwitch>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductManagementService ProductManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public ProductDto? Product { get; set; }
+    [Parameter] public List<LookupItemDto> Categories { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Product != null)
+        {
+            _model.ProductCode = Product.ProductCode;
+            _model.ProductName = Product.ProductName ?? string.Empty;
+            _model.Category = Product.Category;
+            _model.Active = Product.Active;
+
+            if (!string.IsNullOrEmpty(_model.Category) && Categories.All(c => c.Key != _model.Category))
+                Categories = Categories.Append(new LookupItemDto(_model.Category, _model.Category)).ToList();
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await ProductManagement.UpdateProductAsync(_model.ProductCode, new UpdateProductRequest
+            {
+                ProductName = _model.ProductName,
+                Category = _model.Category,
+                Active = _model.Active
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateProductRequest
+            {
+                ProductCode = _model.ProductCode,
+                ProductName = _model.ProductName,
+                Category = _model.Category
+            };
+            var (success, _, error) = await ProductManagement.CreateProductAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan product.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string ProductCode { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public string? Category { get; set; }
+        public bool Active { get; set; } = true;
+    }
+}

@@ -1,0 +1,167 @@
+@page "/product/pricing-fees/additional-fees"
+@attribute [Authorize]
+@inject ProductAdditionalFeeManagementService FeeManagement
+@inject MerchantGroupManagementService MerchantGroupManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Additional Fees</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Additional Fees</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Product > Pricing & Fees > Additional Fees (untuk Withdrawal).</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari group" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Additional Fee</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Group Name</MudTh>
+            <MudTh>Fee</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Group Name">@context.GroupName</MudTd>
+            <MudTd DataLabel="Fee">@context.Fee.ToString("N0")</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada additional fee ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<ProductAdditionalFeeDto> _items = new();
+    private List<LookupItemDto> _groups = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var groups = await MerchantGroupManagement.GetGroupsAsync();
+        _groups = groups?.Select(g => new LookupItemDto(g.GroupName, g.GroupName)).ToList() ?? new();
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await FeeManagement.GetFeesAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar additional fee.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<ProductAdditionalFeeFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Groups, _groups }
+        };
+        var dialog = await DialogService.ShowAsync<ProductAdditionalFeeFormDialog>("Tambah Additional Fee", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Additional fee berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(ProductAdditionalFeeDto item)
+    {
+        var parameters = new DialogParameters<ProductAdditionalFeeFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Item, item },
+            { x => x.Groups, _groups }
+        };
+        var dialog = await DialogService.ShowAsync<ProductAdditionalFeeFormDialog>("Edit Additional Fee", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan additional fee berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(ProductAdditionalFeeDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Additional Fee",
+            $"Yakin ingin menghapus additional fee '{item.GroupName}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await FeeManagement.DeleteFeeAsync(item.Id);
+        if (success)
+        {
+            Snackbar.Add("Additional fee berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus additional fee.", Severity.Error);
+        }
+    }
+}

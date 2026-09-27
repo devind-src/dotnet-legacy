@@ -1,0 +1,108 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">Send Command</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="5" Class="px-2 pt-4">
+            <MudItem xs="12">
+                <MudTextField T="string" Label="Node Name" Value="@NodeName" ReadOnly="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string" Label="Application Name" Value="@AppName" ReadOnly="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudSelect T="string" Label="Command" @bind-Value="_command" Disabled="_busy">
+                    <MudSelectItem Value="@("VERSION")">VERSION</MudSelectItem>
+                    <MudSelectItem Value="@("ECHO")">ECHO</MudSelectItem>
+                    <MudSelectItem Value="@("SIGNON")">SIGNON</MudSelectItem>
+                    <MudSelectItem Value="@("SIGNOFF")">SIGNOFF</MudSelectItem>
+                    <MudSelectItem Value="@("KEYCHANGE")">KEYCHANGE</MudSelectItem>
+                    <MudSelectItem Value="@("OTHER")">OTHER</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            @if (_command == "OTHER")
+            {
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Other Command" @bind-Value="_otherCommand" Disabled="_busy" MaxLength="30" />
+                </MudItem>
+            }
+            <MudItem xs="12">
+                <MudTextField T="string" Label="Response" Value="@_response" ReadOnly="true" Lines="3" />
+            </MudItem>
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+                </MudItem>
+            }
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Disabled="_busy">Tutup</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SendAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Send
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private MonitoringManagementService Monitoring { get; set; } = null!;
+    [Inject] private IDialogService DialogService { get; set; } = null!;
+    [Inject] private ISnackbar Snackbar { get; set; } = null!;
+    [Parameter] public int NodeId { get; set; }
+    [Parameter] public string NodeName { get; set; } = string.Empty;
+    [Parameter] public string AppName { get; set; } = string.Empty;
+
+    private string _command = "VERSION";
+    private string _otherCommand = string.Empty;
+    private string _response = string.Empty;
+    private bool _busy;
+    private string? _error;
+
+    private async Task SendAsync()
+    {
+        if (_command == "OTHER" && string.IsNullOrWhiteSpace(_otherCommand))
+        {
+            Snackbar.Add("Other Command wajib diisi.", Severity.Warning);
+            return;
+        }
+
+        // VERSION is a harmless read-only probe (also the default selection here and in the
+        // legacy form) — SIGNOFF/KEYCHANGE in particular can disrupt a live connection, so
+        // everything except VERSION gets an extra confirmation step, same spirit as the
+        // Approve/Reject confirmation added for VA Approval (§7.21) beyond what legacy required.
+        if (_command != "VERSION")
+        {
+            var confirmed = await DialogService.ShowMessageBoxAsync(
+                "Kirim Command",
+                $"Yakin ingin mengirim command '{_command}' ke node live '{NodeName}' ({AppName})? Tindakan ini bisa memengaruhi koneksi yang sedang berjalan.",
+                yesText: "Kirim", cancelText: "Batal");
+
+            if (confirmed != true) return;
+        }
+
+        _busy = true;
+        _error = null;
+        _response = string.Empty;
+
+        var (success, response, error) = await Monitoring.SendInterfaceCommandAsync(NodeId, _command, _command == "OTHER" ? _otherCommand : null);
+        _busy = false;
+
+        if (success)
+            _response = string.IsNullOrEmpty(response) ? "No Response" : response;
+        else
+            _error = error ?? "Gagal mengirim command.";
+    }
+
+    private void Close() => MudDialog.Cancel();
+}

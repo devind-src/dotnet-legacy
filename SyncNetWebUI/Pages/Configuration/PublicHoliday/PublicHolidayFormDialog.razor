@@ -1,0 +1,124 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Celebration" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Holiday" : "Tambah Holiday")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Holiday Date" Value="_model.HolidayDate" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudDatePicker Label="Holiday Date" @bind-Date="_holidayDate" DateFormat="dd-MM-yyyy" Disabled="_busy" Required="true" RequiredError="Holiday date wajib diisi" />
+                    }
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Holiday Name" @bind-Value="_model.HolidayName"
+                                  Disabled="_busy" Required="true" RequiredError="Holiday name wajib diisi" MaxLength="20" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Primary" Disabled="_busy">Aktif</MudSwitch>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private PublicHolidayManagementService HolidayManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public PublicHolidayDto? Holiday { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private DateTime? _holidayDate = DateTime.Today;
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Holiday != null)
+        {
+            _model.HolidayDate = Holiday.HolidayDate;
+            _model.HolidayName = Holiday.HolidayName ?? string.Empty;
+            _model.Active = Holiday.Active;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        if (!IsEdit && _holidayDate == null)
+        {
+            _error = "Holiday date wajib diisi.";
+            return;
+        }
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await HolidayManagement.UpdateHolidayAsync(_model.HolidayDate, new UpdatePublicHolidayRequest
+            {
+                HolidayName = _model.HolidayName,
+                Active = _model.Active
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreatePublicHolidayRequest
+            {
+                HolidayDate = _holidayDate!.Value.ToString("yyyy-MM-dd"),
+                HolidayName = _model.HolidayName
+            };
+            var (success, _, error) = await HolidayManagement.CreateHolidayAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan holiday.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string HolidayDate { get; set; } = string.Empty;
+        public string HolidayName { get; set; } = string.Empty;
+        public bool Active { get; set; } = true;
+    }
+}

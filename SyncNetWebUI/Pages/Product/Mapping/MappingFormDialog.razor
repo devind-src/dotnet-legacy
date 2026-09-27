@@ -1,0 +1,166 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.SyncAlt" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Mapping" : "Tambah Mapping")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">ID @Mapping?.Id</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Application" @bind-Value="_model.AppName"
+                               Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Application wajib dipilih">
+                        @foreach (var a in Apps)
+                        {
+                            <MudSelectItem T="string" Value="@a.Key">@a.Value</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudAutocomplete T="string" Label="Product" @bind-Value="_model.SourceBillerCode"
+                                     SearchFunc="SearchProducts" ToStringFunc="FormatProduct" Required="true" RequiredError="Product wajib diisi"
+                                     CoerceValue="true" Disabled="_busy" MaxLength="15" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int?" Label="Denom" @bind-Value="_model.Denom" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Supplier Biller Code" @bind-Value="_model.DestBillerCode"
+                                  Disabled="_busy" Required="true" RequiredError="Supplier Biller Code wajib diisi" MaxLength="30" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSwitch T="bool" Value="_model.IsDeposit" ValueChanged="@(v => _model.IsDeposit = v)" Color="Color.Primary" Disabled="_busy">
+                        @(_model.IsDeposit ? "Deposit" : "Bukan Deposit")
+                    </MudSwitch>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Notes" @bind-Value="_model.Notes"
+                                  Disabled="_busy" Required="true" RequiredError="Notes wajib diisi" MaxLength="50" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductMappingManagementService MappingManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public ProductMappingDto? Mapping { get; set; }
+    [Parameter] public List<LookupItemDto> Apps { get; set; } = new();
+    [Parameter] public List<LookupItemDto> Products { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Mapping != null)
+        {
+            _model.AppName = Mapping.AppName ?? string.Empty;
+            _model.SourceBillerCode = Mapping.SourceBillerCode;
+            _model.Denom = Mapping.Denom;
+            _model.DestBillerCode = Mapping.DestBillerCode ?? string.Empty;
+            _model.IsDeposit = Mapping.IsDeposit;
+            _model.Notes = Mapping.Notes ?? string.Empty;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchProducts(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? Products.Select(p => p.Key)
+            : Products.Where(p => p.Key.Contains(value, StringComparison.OrdinalIgnoreCase)
+                                   || p.Value.Contains(value, StringComparison.OrdinalIgnoreCase))
+                      .Select(p => p.Key);
+        return Task.FromResult(matches);
+    }
+
+    private string? FormatProduct(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return code;
+        var match = Products.FirstOrDefault(p => p.Key == code);
+        return match == null ? code : $"{match.Key} — {match.Value}";
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Mapping != null)
+        {
+            var request = new UpdateProductMappingRequest
+            {
+                SourceBillerCode = _model.SourceBillerCode ?? string.Empty,
+                Denom = _model.Denom,
+                DestBillerCode = _model.DestBillerCode,
+                IsDeposit = _model.IsDeposit,
+                Notes = _model.Notes
+            };
+            var (success, error) = await MappingManagement.UpdateMappingAsync(Mapping.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateProductMappingRequest
+            {
+                AppName = _model.AppName,
+                SourceBillerCode = _model.SourceBillerCode ?? string.Empty,
+                Denom = _model.Denom,
+                DestBillerCode = _model.DestBillerCode,
+                IsDeposit = _model.IsDeposit,
+                Notes = _model.Notes
+            };
+            var (success, _, error) = await MappingManagement.CreateMappingAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan mapping.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string AppName { get; set; } = string.Empty;
+        public string? SourceBillerCode { get; set; }
+        public int? Denom { get; set; }
+        public string DestBillerCode { get; set; } = string.Empty;
+        public bool IsDeposit { get; set; }
+        public string Notes { get; set; } = string.Empty;
+    }
+}

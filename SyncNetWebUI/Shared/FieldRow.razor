@@ -1,0 +1,9 @@
+<div class="mb-3">
+    <MudText Typo="Typo.caption" Style="opacity:.6">@Label</MudText>
+    <MudText Typo="Typo.body2" Style="word-break:break-word;white-space:pre-wrap">@(string.IsNullOrEmpty(Value) ? "-" : Value)</MudText>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Value { get; set; }
+}

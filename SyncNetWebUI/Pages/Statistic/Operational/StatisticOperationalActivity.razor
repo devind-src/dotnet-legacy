@@ -1,0 +1,260 @@
+@page "/statistic/operational/activity"
+@attribute [Authorize]
+@using ApexCharts
+@using SyncNetApi.Dtos.RouteMargins
+@implements IDisposable
+@inject ThemeState Theme
+
+<PageTitle>Merchant Activity</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Merchant Activity</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-3">Statistics &gt; Operational &gt; Merchant Activity.</MudText>
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" Icon="@Icons.Material.Filled.Info">
+    Data pada halaman ini masih simulasi.
+</MudAlert>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="3">
+            <MudSelect T="int" Label="Periode" @bind-Value="_selectedPeriod" FullWidth="true">
+                <MudSelectItem Value="0">Bulan</MudSelectItem>
+                <MudSelectItem Value="1">Tahun</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+  
+        @if (_selectedPeriod == PeriodBulan)
+        {
+            <MudItem xs="6" sm="2">
+                <MudSelect T="int" Label="Bulan" @bind-Value="_selectedMonth">
+                    <MudSelectItem Value="1">Januari</MudSelectItem>
+                    <MudSelectItem Value="2">Februari</MudSelectItem>
+                    <MudSelectItem Value="3">Maret</MudSelectItem>
+                    <MudSelectItem Value="4">April</MudSelectItem>
+                    <MudSelectItem Value="5">Mei</MudSelectItem>
+                    <MudSelectItem Value="6">Juni</MudSelectItem>
+                    <MudSelectItem Value="7">Juli</MudSelectItem>
+                    <MudSelectItem Value="8">Agustus</MudSelectItem>
+                    <MudSelectItem Value="9">September</MudSelectItem>
+                    <MudSelectItem Value="10">Oktober</MudSelectItem>
+                    <MudSelectItem Value="11">November</MudSelectItem>
+                    <MudSelectItem Value="12">Desember</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        }
+
+        <MudItem xs="6" sm="2">
+            <MudNumericField T="int" Label="Tahun" @bind-Value="_selectedYear" Min="2000" Max="2100" />
+        </MudItem>
+
+        <MudItem xs="12" sm="3">
+            <MudSelect T="int" Label="Group By" @bind-Value="_selectedGroupBy" FullWidth="true">
+                <MudSelectItem Value="0">Merchant</MudSelectItem>
+                <MudSelectItem Value="1">Terminal</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" sm="2">
+            <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="RefreshData"
+                       StartIcon="@Icons.Material.Filled.Refresh" Disabled="_isRefreshing">
+                Show
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudGrid Spacing="3" Class="mb-4">
+    <MudItem xs="12" sm="6">
+        <MudPaper Class="pa-4 equal-height" Elevation="1">
+            <MudText Typo="Typo.subtitle2" Align="MudBlazor.Align.Center" Class="mud-text-secondary mb-5">Top 5 Merchant Leaderboard</MudText>
+            <ApexChart @ref="_refChartDonut" TItem="StatOpsTopFive" Options="_chartOptionDonut">
+                <ApexPointSeries TItem="StatOpsTopFive" Items="_dataTopFive" Name="Transactions"
+                                 XValue="@(e => e.Name)" YValue="@(e => e.TotalTrans)" SeriesType="SeriesType.Donut" />
+            </ApexChart>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6">
+        <MudPaper Class="pa-4 equal-height" Elevation="1">
+            <MudText Typo="Typo.subtitle2" Align="MudBlazor.Align.Center" Class="mud-text-secondary mb-5">Top 5 Loket Leaderboard</MudText>
+
+            @{
+                var maxTrans = _dataTopFive.FirstOrDefault()?.TotalTrans ?? 1;
+            }
+            @foreach (var (item, index) in _dataTopFive.Select((value, i) => (value, i)))
+            {
+                <div class="d-flex align-center mb-3">
+                    <div style="width: 30px;" class="d-flex justify-center mr-2">
+                        @if (index == 0)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="MudBlazor.Color.Warning" Size="MudBlazor.Size.Small" />
+                        }
+                        else if (index == 1)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Style="color: #C0C0C0;" Size="MudBlazor.Size.Small" />
+                        }
+                        else if (index == 2)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Style="color: #CD7F32;" Size="MudBlazor.Size.Small" />
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">@(index + 1)</MudText>
+                        }
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-space-between align-center">
+                            <MudText Typo="Typo.body2" Style="font-weight: 600;">@item.Name</MudText>
+                            <MudText Typo="Typo.caption" Style="font-weight: bold;">@item.TotalTrans.FormatAmount()</MudText>
+                        </div>
+                        <MudProgressLinear Color="MudBlazor.Color.Success" Value="@((double)item.TotalTrans / maxTrans * 100)"
+                                           Class="mt-1" Style="height: 6px; border-radius: 3px;" />
+                    </div>
+                </div>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <div style="overflow-x:auto">
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+            <thead>
+                <tr>
+                    <th style="text-align:left; padding:6px;">@(_onSelectedGroupBy == GroupByMerchant ? "Merchant" : "Terminal")</th>
+                    @if (_onSelectedGroupBy == GroupByTerminal)
+                    {
+                        <th style="text-align:left; padding:6px;">Loket Name</th>
+                    }
+                    @foreach (var col in _columns)
+                    {
+                        <th style="text-align:right; padding:6px;">@col</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _dataset)
+                {
+                    <tr>
+                        <td style="padding:6px;">@(_onSelectedGroupBy == GroupByMerchant ? row.GroupName : row.TerminalId)</td>
+                        @if (_onSelectedGroupBy == GroupByTerminal)
+                        {
+                            <td style="padding:6px;">@row.LoketName</td>
+                        }
+                        @foreach (var col in _columns)
+                        {
+                            <td style="text-align:right; padding:6px;">@row.ListRecord[col].FormatAmount()</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr style="border-top: 2px solid #ccc; font-weight: bold;">
+                    <td style="padding:6px;">Total</td>
+                    @if (_onSelectedGroupBy == GroupByTerminal)
+                    {
+                        <td></td>
+                    }
+                    @foreach (var col in _columns)
+                    {
+                        <td style="text-align:right; padding:6px;">
+                            @_dataset.Sum(row => row.ListRecord.ContainsKey(col) ? row.ListRecord[col] : 0).FormatAmount()
+                        </td>
+                    }
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</MudPaper>
+
+@code {
+    private const int PeriodBulan = 0;
+    private const int PeriodTahun = 1;
+    private const int GroupByMerchant = 0;
+    private const int GroupByTerminal = 1;
+
+    private static readonly string[] Weeks = ["W1", "W2", "W3", "W4"];
+    private static readonly string[] Months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    private static readonly string[] MerchantNames =
+    [
+        "Agen Pulsa Sejahtera", "Counter Seluler Mandiri", "Warung PPOB Nusantara",
+        "Gerai TopUp Prima", "Kios Data Digital", "Agen Token Listrik",
+        "Loket Pembayaran Cepat", "Konter Pulsa Jaya", "Gerai Transaksi Online",
+        "Agen MultiPay", "Kios Bayar Tagihan", "Counter Pulsa Abadi",
+        "Warung Isi Ulang", "Gerai PPOB Sentosa", "Agen Pulsa Digital"
+    ];
+
+    private List<StatOpsActivity> _dataset = [];
+    private List<StatOpsTopFive> _dataTopFive = [];
+    private string[] _columns = Weeks;
+
+    private bool _isRefreshing;
+    private int _selectedPeriod = PeriodTahun;
+    private int _selectedGroupBy = GroupByMerchant;
+    private int _selectedMonth = DateTime.Now.Month;
+    private int _selectedYear = DateTime.Now.Year;
+    private int _onSelectedGroupBy = GroupByMerchant;
+
+    private ApexChart<StatOpsTopFive>? _refChartDonut;
+    private readonly ApexChartOptions<StatOpsTopFive> _chartOptionDonut = new()
+    {
+        Colors = ["#A2CB8B", "#E81123", "#4A90E2", "#F5A623", "#9013FE"],
+        Chart = new Chart { Type = ApexCharts.ChartType.Donut, Height = "100%" },
+        Stroke = new Stroke { Width = 2 },
+        DataLabels = new DataLabels { Enabled = false },
+        Tooltip = new Tooltip { Enabled = true, Y = new TooltipY { Formatter = "function(val) { return val.toLocaleString(); }" } },
+        Legend = new Legend { Show = true, Position = LegendPosition.Bottom }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.Changed += StateHasChanged;
+        await RefreshData();
+    }
+
+    public void Dispose() => Theme.Changed -= StateHasChanged;
+
+    private async Task RefreshData()
+    {
+        if (_isRefreshing) return;
+        _isRefreshing = true;
+        _onSelectedGroupBy = _selectedGroupBy;
+        _columns = _selectedPeriod == PeriodBulan ? Weeks : Months;
+
+        try
+        {
+            var random = new Random();
+            var activities = new List<StatOpsActivity>();
+
+            for (var i = 1; i <= 50; i++)
+            {
+                var tid = random.Next(100000, 900000);
+                var merchantName = MerchantNames[random.Next(MerchantNames.Length)];
+                var record = _columns.ToDictionary(c => c, _ => (long)(_selectedPeriod == PeriodBulan ? random.Next(250, 2500) : random.Next(1000, 10000)));
+
+                activities.Add(new StatOpsActivity
+                {
+                    GroupName = merchantName,
+                    TerminalId = $"T{tid:D7}",
+                    LoketName = $"Loket {merchantName}",
+                    ListRecord = record
+                });
+            }
+
+            _dataset = activities;
+            _dataTopFive = activities
+                .Select(a => new StatOpsTopFive { Name = a.GroupName, TotalTrans = a.ListRecord.Values.Sum() })
+                .OrderByDescending(x => x.TotalTrans)
+                .Take(5)
+                .ToList();
+        }
+        finally
+        {
+            _isRefreshing = false;
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(1);
+            if (_refChartDonut != null) await _refChartDonut.UpdateSeriesAsync(true);
+        }
+    }
+}

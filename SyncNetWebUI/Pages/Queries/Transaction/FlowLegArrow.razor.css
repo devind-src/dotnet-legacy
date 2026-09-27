@@ -1,0 +1,29 @@
+.flow-leg {
+    display: flex;
+    align-items: center;
+}
+
+.flow-leg-vertical {
+    flex-direction: column;
+    margin: 4px 0;
+}
+
+.flow-leg-horizontal {
+    flex-direction: column;
+    min-width: 110px;
+    padding: 0 6px;
+    text-align: center;
+}
+
+.flow-leg-caption {
+    white-space: nowrap;
+}
+
+.flow-leg-detail {
+    font-size: .68rem;
+    white-space: nowrap;
+}
+
+.flow-leg-empty {
+    opacity: .15;
+}

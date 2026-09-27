@@ -1,0 +1,543 @@
+﻿@page "/product/pricing-fees/postpaid-fees"
+@attribute [Authorize]
+@inject ProductPostpaidFeeManagementService FeeManagement
+@inject ProductPostpaidBillerManagementService BillerManagement
+@inject MerchantManagementService MerchantManagement
+@inject NodeManagementService NodeManagement
+@inject LookupService Lookups
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Postpaid Fees</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Postpaid Fees</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">
+    Product > Pricing &amp; Fees > Postpaid Fees (Bill Payment &amp; Purchase). Pilih baris untuk mengatur biller produk itu.
+</MudText>
+
+<ApplyChangesBar />
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari product / merchant" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Postpaid Fee</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage"
+              T="ProductPostpaidFeeDto" OnRowClick="@(e => SelectAsync(e.Item!))"
+              RowClassFunc="@((item, _) => item.Id == _selected?.Id ? "mud-selected-item" : "")">
+        <HeaderContent>
+            <MudTh>Product</MudTh>
+            <MudTh>Merchant (CA)</MudTh>
+            <MudTh>Routing Mode</MudTh>
+            <MudTh>Biller</MudTh>
+            <MudTh>Type</MudTh>
+            <MudTh>Total</MudTh>
+            <MudTh>Loket</MudTh>
+            <MudTh>Mitra</MudTh>
+            <MudTh>Biller Fee</MudTh>
+            <MudTh>Switch</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Product">@context.ProductId — @context.ProductName</MudTd>
+            <MudTd DataLabel="Merchant (CA)">@(string.IsNullOrEmpty(context.MerchantId) ? "(default)" : $"{context.MerchantId} {context.MerchantName}")</MudTd>
+            <MudTd DataLabel="Routing Mode">
+                @if (context.RoutingMode == null)
+                {
+                    <MudText Typo="Typo.body2" Style="opacity:.7">Ikuti Default (@RoutingModes.Label(context.EffectiveRoutingMode))</MudText>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                             Color="@(RoutingModes.IsDynamic(context.RoutingMode) ? Color.Primary : Color.Default)">@RoutingModes.Label(context.RoutingMode)</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Biller">@(context.RoutingMode == RoutingModes.Static ? (context.StaticNodeName ?? "primary") : "-")</MudTd>
+            <MudTd DataLabel="Type">@(context.FeeType == "0" ? "Fixed" : "Percent")</MudTd>
+            @if (context.FeeType == "0")
+            {
+                <MudTd DataLabel="Total">@context.FixedFee?.ToString("N0")</MudTd>
+                <MudTd DataLabel="Loket">@context.FixedFeeAcq?.ToString("N0")</MudTd>
+                <MudTd DataLabel="Mitra">@context.FixedFeeMer?.ToString("N0")</MudTd>
+                @if (RoutingModes.IsDynamic(context.EffectiveRoutingMode))
+                {
+                    <MudTd DataLabel="Biller Fee" Style="opacity:.6">per biller</MudTd>
+                    <MudTd DataLabel="Switch" Style="opacity:.6">per biller</MudTd>
+                }
+                else
+                {
+                    <MudTd DataLabel="Biller Fee">@context.FixedFeeBil?.ToString("N0")</MudTd>
+                    <MudTd DataLabel="Switch">@context.FixedFeeSwt?.ToString("N0")</MudTd>
+                }
+            }
+            else
+            {
+                <MudTd DataLabel="Total">@(context.PercentFee?.ToString("N2"))%</MudTd>
+                <MudTd DataLabel="Loket">@(context.PercentFeeAcq?.ToString("N2"))%</MudTd>
+                <MudTd DataLabel="Mitra">@(context.PercentFeeMer?.ToString("N2"))%</MudTd>
+                <MudTd DataLabel="Biller Fee">@(context.PercentFeeBil?.ToString("N2"))%</MudTd>
+                <MudTd DataLabel="Switch">@(context.PercentFeeSwt?.ToString("N2"))%</MudTd>
+            }
+            <MudTd DataLabel="Aksi">
+                <span @onclick:stopPropagation="true">
+                    @if (Session.UserManagementPermissions.CanEdit)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                       OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                    }
+                    @if (Session.UserManagementPermissions.CanDelete)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                       OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                    }
+                </span>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada postpaid fee ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+
+    @if (_selected != null)
+    {
+        <MudPaper Class="pa-4 mt-4" Elevation="1">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-2">
+                <MudText Typo="Typo.h6">Biller Produk: @_selected.ProductId — @_selected.ProductName</MudText>
+                <MudStack Row="true" Spacing="2">
+                    @if (Session.UserManagementPermissions.CanEdit && _billers.Count > 1)
+                    {
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Balance" OnClick="OpenWeightsDialog">Atur LB Weight</MudButton>
+                    }
+                    @if (Session.UserManagementPermissions.CanAdd)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="OpenBillerCreateDialog">Tambah Biller</MudButton>
+                    }
+                </MudStack>
+            </MudStack>
+
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                Baris terpilih: <b>@RowLabel(_selected)</b>, mode <b>@RoutingModes.Label(_selected.EffectiveRoutingMode)</b>. @ModeText(_selected.EffectiveRoutingMode)
+            </MudAlert>
+            @if (_hasSourceRule)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                    Produk ini punya rule di Routing > Source, sehingga mode dynamic tidak bisa dipakai.
+                </MudAlert>
+            }
+
+            @if (_billerLoading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else
+            {
+                <MudTable Items="_billers" Dense="true" Hover="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Prio</MudTh>
+                        <MudTh>Biller</MudTh>
+                        <MudTh>Kode Biller</MudTh>
+                        <MudTh>Sharing Fee</MudTh>
+                        <MudTh>Fee Biller*</MudTh>
+                        <MudTh>Fee Switch*</MudTh>
+                        <MudTh>LB Weight</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Aktif</MudTh>
+                        <MudTh>Aksi</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Prio">@context.Priority@(context.IsPrimary ? " (primary)" : "")</MudTd>
+                        <MudTd DataLabel="Biller">@context.NodeName</MudTd>
+                        <MudTd DataLabel="Kode Biller">
+                            @if (string.IsNullOrEmpty(context.BillerProductCode))
+                            {
+                                <MudTooltip Text="Belum ada di Product > Master > Mapping untuk aplikasi biller ini"><MudText Typo="Typo.body2" Color="Color.Warning">-</MudText></MudTooltip>
+                            }
+                            else
+                            {
+                                @context.BillerProductCode
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Sharing Fee">
+                            @if (context.FeeSharing.HasValue)
+                            {
+                                @context.FeeSharing.Value.ToString("N0")
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Warning">belum diisi</MudText>
+                            }
+                        </MudTd>
+                        @{ var (bil, swt) = ComputedFees(context); }
+                        <MudTd DataLabel="Fee Biller">@bil</MudTd>
+                        <MudTd DataLabel="Fee Switch">@swt</MudTd>
+                        <MudTd DataLabel="LB Weight">@(context.LbWeight.HasValue ? $"{context.LbWeight}%" : "-")</MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.HealthStatus)">@context.HealthStatus</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Aktif">
+                            <MudChip T="string" Size="Size.Small" Color="@(context.Active ? Color.Success : Color.Default)">@(context.Active ? "Ya" : "Tidak")</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Aksi">
+                            @if (Session.UserManagementPermissions.CanEdit)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                               OnClick="@(() => OpenBillerEditDialog(context))" title="Edit" />
+                                @if (!context.IsPrimary)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Star" Size="Size.Small" Color="Color.Warning"
+                                                   OnClick="@(() => MakePrimaryAsync(context))" title="Jadikan Primary" />
+                                }
+                            }
+                            @if (Session.UserManagementPermissions.CanDelete)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                               OnClick="@(() => ConfirmBillerDeleteAsync(context))" title="Hapus" />
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent>
+                        <MudText Style="opacity:.65">Belum ada biller. Biller pertama yang ditambahkan menjadi primary.</MudText>
+                    </NoRecordsContent>
+                </MudTable>
+                <MudStack Row="true" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap" Class="mt-2">
+                    <MudText Typo="Typo.caption" Style="opacity:.65">* dihitung untuk baris terpilih: Fee Biller = Total − Sharing, Fee Switch = Sharing − Loket − Mitra.</MudText>
+                    @if (_billers.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Color="@(ActiveWeight == 100 ? Color.Success : Color.Warning)">
+                            Total LB Weight aktif: @ActiveWeight% @(ActiveWeight == 100 ? "✔" : (_selected.EffectiveRoutingMode == RoutingModes.LoadBalance ? "⚠ harus 100%" : ""))
+                        </MudText>
+                    }
+                </MudStack>
+            }
+        </MudPaper>
+    }
+}
+
+@code {
+    private List<ProductPostpaidFeeDto> _items = new();
+    private List<LookupItemDto> _products = new();
+    private List<LookupItemDto> _merchants = new();
+    private List<NodeDto> _nodes = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private ProductPostpaidFeeDto? _selected;
+    private List<ProductPostpaidBillerDto> _billers = new();
+    private bool _hasSourceRule;
+    private bool _billerLoading;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+    private static readonly DialogOptions SmallDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    private int ActiveWeight => _billers.Where(b => b.Active).Sum(b => b.LbWeight ?? 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _products = await Lookups.GetNonTopupProductsAsync() ?? new();
+
+        var merchants = await MerchantManagement.GetMerchantsAsync();
+        _merchants = merchants?.Select(m => new LookupItemDto(m.MerchantId, m.Name ?? m.MerchantId)).ToList() ?? new();
+
+        _nodes = await NodeManagement.GetNodesAsync() ?? new();
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await FeeManagement.GetFeesAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar postpaid fee.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        // detail tetap mengikuti baris yang dipilih (atau ditutup bila barisnya hilang)
+        if (_selected != null)
+        {
+            _selected = _items.FirstOrDefault(i => i.Id == _selected.Id);
+            if (_selected == null) _billers = new();
+        }
+
+        _loading = false;
+    }
+
+    private async Task SelectAsync(ProductPostpaidFeeDto item)
+    {
+        bool sameProduct = _selected?.ProductId == item.ProductId;
+        _selected = item;
+        if (!sameProduct) await LoadBillersAsync();
+    }
+
+    private async Task LoadBillersAsync()
+    {
+        if (_selected?.ProductId == null) return;
+        _billerLoading = true;
+
+        var dto = await BillerManagement.GetAsync(_selected.ProductId);
+        _billers = dto?.Billers.ToList() ?? new();
+        _hasSourceRule = dto?.HasSourceRule ?? false;
+
+        _billerLoading = false;
+    }
+
+    private (string Bil, string Swt) ComputedFees(ProductPostpaidBillerDto biller)
+    {
+        if (_selected == null || !RoutingModes.IsDynamic(_selected.EffectiveRoutingMode) || _selected.FeeType != "0")
+            return ("-", "-");
+        if (!biller.FeeSharing.HasValue) return ("?", "?");
+
+        int total = _selected.FixedFee ?? 0;
+        int bil = total - biller.FeeSharing.Value;
+        int swt = biller.FeeSharing.Value - (_selected.FixedFeeAcq ?? 0) - (_selected.FixedFeeMer ?? 0) - (_selected.FixedFeeIss ?? 0);
+        return (Fmt(bil), Fmt(swt));
+    }
+
+    private static string Fmt(int value) => value < 0 ? $"{value:N0} ⚠" : value.ToString("N0");
+
+    private static string RowLabel(ProductPostpaidFeeDto item) => string.IsNullOrEmpty(item.MerchantId) ? "default produk" : $"CA {item.MerchantId}";
+
+    private static string ModeText(string mode) => mode switch
+    {
+        RoutingModes.Priority => "Biller priority terkecil dipakai selama sehat (primary-backup, bukan load balancer).",
+        RoutingModes.BestPrice => "Biller dengan sharing fee terbesar dipakai lebih dulu; bila diblokir pindah ke sharing fee berikutnya.",
+        RoutingModes.LoadBalance => "Transaksi dibagi acak berbobot sesuai LB Weight; biller yang diblokir dilewati.",
+        _ => "Selalu ke satu biller tanpa failover."
+    };
+
+    private static Color StatusColor(string status) => status.ToUpperInvariant() switch
+    {
+        "ACTIVE" => Color.Success,
+        "SUSPECT" => Color.Warning,
+        "DOWN" => Color.Error,
+        _ => Color.Default
+    };
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<ProductPostpaidFeeFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Products, _products },
+            { x => x.Merchants, _merchants },
+            { x => x.AllFees, _items },
+            { x => x.Nodes, _nodes }
+        };
+        var dialog = await DialogService.ShowAsync<ProductPostpaidFeeFormDialog>("Tambah Postpaid Fee", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Postpaid fee berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+            await LoadBillersAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(ProductPostpaidFeeDto item)
+    {
+        var parameters = new DialogParameters<ProductPostpaidFeeFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Item, item },
+            { x => x.AllFees, _items },
+            { x => x.Nodes, _nodes }
+        };
+        var dialog = await DialogService.ShowAsync<ProductPostpaidFeeFormDialog>("Edit Postpaid Fee", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan postpaid fee berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+            await LoadBillersAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(ProductPostpaidFeeDto item)
+    {
+        // biller disimpan per produk: bila ini baris fee terakhir produk dan masih ada biller, tawarkan ikut dihapus
+        var allRows = await FeeManagement.GetFeesAsync(item.ProductId) ?? new();
+        bool lastRow = allRows.All(r => r.ProductId != item.ProductId || r.Id == item.Id);
+        int billerCount = lastRow && item.ProductId != null
+            ? (await BillerManagement.GetAsync(item.ProductId))?.Billers.Count ?? 0
+            : 0;
+
+        bool deleteBillers = false;
+        if (billerCount > 0)
+        {
+            var choice = await DialogService.ShowMessageBoxAsync(
+                "Hapus Postpaid Fee",
+                $"Ini baris fee terakhir produk '{item.ProductId}'. Produk ini masih punya {billerCount} biller (routing). " +
+                "Hapus juga biller-nya supaya produk bersih? Tindakan ini tidak bisa dibatalkan.",
+                yesText: "Hapus fee & biller", noText: "Hapus fee saja", cancelText: "Batal");
+            if (choice == null) return;
+            deleteBillers = choice == true;
+        }
+        else
+        {
+            var confirmed = await DialogService.ShowMessageBoxAsync(
+                "Hapus Postpaid Fee",
+                $"Yakin ingin menghapus postpaid fee {RowLabel(item)} untuk '{item.ProductId}'? Tindakan ini tidak bisa dibatalkan.",
+                yesText: "Hapus", cancelText: "Batal");
+            if (confirmed != true) return;
+        }
+
+        var (success, error) = await FeeManagement.DeleteFeeAsync(item.Id, deleteBillers);
+        if (success)
+        {
+            Snackbar.Add(deleteBillers ? "Postpaid fee dan biller produk berhasil dihapus." : "Postpaid fee berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+            if (_selected == null) _billers = new();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus postpaid fee.", Severity.Error);
+        }
+    }
+
+    private async Task OpenBillerCreateDialog()
+    {
+        if (_selected?.ProductId == null) return;
+        var parameters = new DialogParameters<ProductPostpaidBillerFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.ProductId, _selected.ProductId },
+            { x => x.ProductName, _selected.ProductName },
+            { x => x.Nodes, _nodes },
+            { x => x.Existing, _billers }
+        };
+        await ShowBillerDialogAsync(parameters, "Tambah Biller", "Biller berhasil ditambahkan.");
+    }
+
+    private async Task OpenBillerEditDialog(ProductPostpaidBillerDto biller)
+    {
+        if (_selected?.ProductId == null) return;
+        var parameters = new DialogParameters<ProductPostpaidBillerFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.ProductId, _selected.ProductId },
+            { x => x.ProductName, _selected.ProductName },
+            { x => x.Item, biller },
+            { x => x.Nodes, _nodes },
+            { x => x.Existing, _billers }
+        };
+        await ShowBillerDialogAsync(parameters, "Edit Biller", "Perubahan biller berhasil disimpan.");
+    }
+
+    private async Task ShowBillerDialogAsync(DialogParameters<ProductPostpaidBillerFormDialog> parameters, string title, string okMessage)
+    {
+        var dialog = await DialogService.ShowAsync<ProductPostpaidBillerFormDialog>(title, parameters, SmallDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add(okMessage, Severity.Success);
+            await LoadBillersAsync();
+        }
+    }
+
+    private async Task OpenWeightsDialog()
+    {
+        if (_selected?.ProductId == null) return;
+        var parameters = new DialogParameters<ProductPostpaidBillerWeightsDialog>
+        {
+            { x => x.ProductId, _selected.ProductId },
+            { x => x.Items, _billers }
+        };
+        var dialog = await DialogService.ShowAsync<ProductPostpaidBillerWeightsDialog>("Atur LB Weight", parameters, SmallDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("LB Weight berhasil disimpan.", Severity.Success);
+            await LoadBillersAsync();
+        }
+    }
+
+    // tukar dengan primary: biller ini menjadi priority 1, primary lama mengambil slot priority-nya
+    private async Task MakePrimaryAsync(ProductPostpaidBillerDto biller)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Jadikan Primary",
+            $"Jadikan '{biller.NodeName}' primary (priority 1) untuk produk '{biller.ProductId}'? Primary lama pindah ke priority {biller.Priority}.",
+            yesText: "Jadikan Primary", cancelText: "Batal");
+        if (confirmed != true) return;
+
+        var (success, error) = await BillerManagement.UpdateAsync(biller.ProductId, biller.NodeId, new UpdateProductPostpaidBillerRequest
+        {
+            Priority = 1,
+            FeeSharing = biller.FeeSharing,
+            LbWeight = biller.LbWeight,
+            Notes = biller.Notes,
+            Active = true
+        });
+        if (success)
+        {
+            Snackbar.Add($"{biller.NodeName} sekarang primary.", Severity.Success);
+            await LoadBillersAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal mengubah primary.", Severity.Error);
+        }
+    }
+
+    private async Task ConfirmBillerDeleteAsync(ProductPostpaidBillerDto biller)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Biller",
+            $"Yakin ingin menghapus biller '{biller.NodeName}' dari produk '{biller.ProductId}'?",
+            yesText: "Hapus", cancelText: "Batal");
+        if (confirmed != true) return;
+
+        var (success, error) = await BillerManagement.DeleteAsync(biller.ProductId, biller.NodeId);
+        if (success)
+        {
+            Snackbar.Add("Biller berhasil dihapus.", Severity.Success);
+            await LoadBillersAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus biller.", Severity.Error);
+        }
+    }
+}

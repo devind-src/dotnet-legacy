@@ -1,0 +1,36 @@
+@if (Down)
+{
+    <div class="flow-leg flow-leg-vertical">
+        <MudText Typo="Typo.body2" Color="Color.Primary">@Caption</MudText>
+        @if (!string.IsNullOrEmpty(Detail))
+        {
+            <MudText Typo="Typo.caption" Style="opacity:.65">@Detail</MudText>
+        }
+        <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Primary" />
+    </div>
+}
+else if (Visible)
+{
+    <div class="flow-leg flow-leg-horizontal">
+        <MudText Typo="Typo.caption" Color="Color.Primary" Class="flow-leg-caption">@Caption</MudText>
+        @if (!string.IsNullOrEmpty(Detail))
+        {
+            <MudText Typo="Typo.caption" Class="flow-leg-detail" Style="opacity:.55">@Detail</MudText>
+        }
+        <MudIcon Icon="@(Reverse ? Icons.Material.Filled.ArrowBack : Icons.Material.Filled.ArrowForward)" Color="Color.Primary" Size="Size.Small" />
+    </div>
+}
+else
+{
+    <div class="flow-leg flow-leg-horizontal flow-leg-empty">
+        <MudIcon Icon="@(Reverse ? Icons.Material.Filled.ArrowBack : Icons.Material.Filled.ArrowForward)" Size="Size.Small" />
+    </div>
+}
+
+@code {
+    [Parameter] public string? Caption { get; set; }
+    [Parameter] public string? Detail { get; set; }
+    [Parameter] public bool Down { get; set; }
+    [Parameter] public bool Visible { get; set; } = true;
+    [Parameter] public bool Reverse { get; set; }
+}

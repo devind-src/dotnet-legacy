@@ -1,0 +1,119 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.AddCard" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Additional Fee" : "Tambah Additional Fee")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@Item?.GroupName</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Group Name" @bind-Value="_model.GroupName" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudAutocomplete T="string" Label="Group Name" @bind-Value="_model.GroupName"
+                                         SearchFunc="SearchGroups" Required="true" RequiredError="Group Name wajib diisi"
+                                         CoerceValue="true" Disabled="_busy" MaxLength="50" />
+                    }
+                </MudItem>
+                <MudItem xs="12">
+                    <MudNumericField T="int" Label="Additional Fee" @bind-Value="_model.Fee" Disabled="_busy"
+                                      Required="true" RequiredError="Fee wajib diisi" Min="1" Max="100000" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductAdditionalFeeManagementService FeeManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public ProductAdditionalFeeDto? Item { get; set; }
+    [Parameter] public List<LookupItemDto> Groups { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Item != null)
+        {
+            _model.GroupName = Item.GroupName ?? string.Empty;
+            _model.Fee = Item.Fee;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchGroups(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? Groups.Select(g => g.Key)
+            : Groups.Where(g => g.Key.Contains(value, StringComparison.OrdinalIgnoreCase)).Select(g => g.Key);
+        return Task.FromResult(matches);
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Item != null)
+        {
+            var request = new UpdateProductAdditionalFeeRequest { Fee = _model.Fee };
+            var (success, error) = await FeeManagement.UpdateFeeAsync(Item.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateProductAdditionalFeeRequest { GroupName = _model.GroupName, Fee = _model.Fee };
+            var (success, _, error) = await FeeManagement.CreateFeeAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan additional fee.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string GroupName { get; set; } = string.Empty;
+        public int Fee { get; set; }
+    }
+}

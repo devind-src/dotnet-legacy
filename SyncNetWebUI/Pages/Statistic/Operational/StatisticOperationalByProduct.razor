@@ -1,0 +1,304 @@
+@page "/statistic/operational/product"
+@attribute [Authorize]
+@using ApexCharts
+@using SyncNetApi.Dtos.RouteMargins
+@implements IDisposable
+@inject ThemeState Theme
+
+<PageTitle>Product Activity</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Product Activity</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-3">Statistics &gt; Operational &gt; By Product.</MudText>
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" Icon="@Icons.Material.Filled.Info">
+    Data pada halaman ini masih simulasi.
+</MudAlert>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="3">
+            <MudSelect T="int" Label="Periode" @bind-Value="_selectedPeriod" FullWidth="true">
+                <MudSelectItem Value="0">Bulan</MudSelectItem>
+                <MudSelectItem Value="1">Tahun</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+
+        @if (_selectedPeriod == PeriodBulan)
+        {
+            <MudItem xs="6" sm="2">
+                <MudSelect T="int" Label="Bulan" @bind-Value="_selectedMonth">
+                    <MudSelectItem Value="1">Januari</MudSelectItem>
+                    <MudSelectItem Value="2">Februari</MudSelectItem>
+                    <MudSelectItem Value="3">Maret</MudSelectItem>
+                    <MudSelectItem Value="4">April</MudSelectItem>
+                    <MudSelectItem Value="5">Mei</MudSelectItem>
+                    <MudSelectItem Value="6">Juni</MudSelectItem>
+                    <MudSelectItem Value="7">Juli</MudSelectItem>
+                    <MudSelectItem Value="8">Agustus</MudSelectItem>
+                    <MudSelectItem Value="9">September</MudSelectItem>
+                    <MudSelectItem Value="10">Oktober</MudSelectItem>
+                    <MudSelectItem Value="11">November</MudSelectItem>
+                    <MudSelectItem Value="12">Desember</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        }
+
+        <MudItem xs="6" sm="2">
+            <MudNumericField T="int" Label="Tahun" @bind-Value="_selectedYear" Min="2000" Max="2100" />
+        </MudItem>
+
+        <MudItem xs="12" sm="3">
+            <MudSelect T="int" Label="Group By" @bind-Value="_selectedGroupBy" FullWidth="true">
+                <MudSelectItem Value="0">Product</MudSelectItem>
+                <MudSelectItem Value="1">Category</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" sm="2">
+            <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="RefreshData"
+                       StartIcon="@Icons.Material.Filled.Refresh" Disabled="_isRefreshing">
+                Show
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudGrid Spacing="3" Class="mb-4">
+    <MudItem xs="12" sm="6">
+        <MudPaper Class="pa-4 equal-height" Elevation="1">
+            <MudText Typo="Typo.subtitle2" Align="MudBlazor.Align.Center" Class="mud-text-secondary mb-5">
+                Top 5 @(_selectedGroupBy == GroupByProduct ? "Product" : "Category") Leaderboard
+            </MudText>
+
+            @* @key forces a full remount when Group By changes — ApexChart's UpdateSeriesAsync only
+       refreshes series values, not a donut's slice labels, so switching the label dimension
+       (Product name vs Category name) needs a fresh chart instance rather than an in-place
+       update. *@
+            <ApexChart @key="_onSelectedGroupBy" @ref="_refChartDonut" TItem="StatOpsTopFive" Options="_chartOptionDonut">
+                <ApexPointSeries TItem="StatOpsTopFive" Items="_dataTopFive" Name="Transactions"
+                                 XValue="@(e => e.Name)" YValue="@(e => e.TotalTrans)" SeriesType="SeriesType.Donut" />
+            </ApexChart>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6">
+        <MudPaper Class="pa-4 equal-height" Elevation="1">
+            <MudText Typo="Typo.subtitle2" Align="MudBlazor.Align.Center" Class="mud-text-secondary mb-5">Top 5 Product Leaderboard</MudText>
+
+            @{
+                var maxTrans = _dataTopFive.FirstOrDefault()?.TotalTrans ?? 1;
+            }
+            @foreach (var (item, index) in _dataTopFive.Select((value, i) => (value, i)))
+            {
+                <div class="d-flex align-center mb-3">
+                    <div style="width: 30px;" class="d-flex justify-center mr-2">
+                        @if (index == 0)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="MudBlazor.Color.Warning" Size="MudBlazor.Size.Small" />
+                        }
+                        else if (index == 1)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Style="color: #C0C0C0;" Size="MudBlazor.Size.Small" />
+                        }
+                        else if (index == 2)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Style="color: #CD7F32;" Size="MudBlazor.Size.Small" />
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">@(index + 1)</MudText>
+                        }
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-space-between align-center">
+                            <MudText Typo="Typo.body2" Style="font-weight: 600;">@item.Name</MudText>
+                            <MudText Typo="Typo.caption" Style="font-weight: bold;">@item.TotalTrans.FormatAmount()</MudText>
+                        </div>
+                        <MudProgressLinear Color="MudBlazor.Color.Success" Value="@((double)item.TotalTrans / maxTrans * 100)"
+                                           Class="mt-1" Style="height: 6px; border-radius: 3px;" />
+                    </div>
+                </div>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <div style="overflow-x:auto">
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+            <thead>
+                <tr>
+                    @if (_onSelectedGroupBy == GroupByProduct)
+                    {
+                        <th style="text-align:left; padding:6px;">Code</th>
+                        <th style="text-align:left; padding:6px;">Product</th>
+                        <th style="text-align:left; padding:6px;">Category</th>
+                    }
+                    else
+                    {
+                        <th style="text-align:left; padding:6px;">Category</th>
+                    }
+                    @foreach (var col in _columns)
+                    {
+                        <th style="text-align:right; padding:6px;">@col</th>
+                    }
+                    <th style="text-align:right; padding:6px;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _dataset)
+                {
+                    <tr>
+                        @if (_onSelectedGroupBy == GroupByProduct)
+                        {
+                            <td style="padding:6px;">@row.ProductCode</td>
+                            <td style="padding:6px;">@row.ProductName</td>
+                            <td style="padding:6px;">@row.Category</td>
+                        }
+                        else
+                        {
+                            <td style="padding:6px;">@row.Category</td>
+                        }
+                        @foreach (var col in _columns)
+                        {
+                            <td style="text-align:right; padding:6px;">@row.ListRecord[col].FormatAmount()</td>
+                        }
+                        <td style="text-align:right; padding:6px;"><b>@row.Total.FormatAmount()</b></td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr style="border-top: 2px solid #ccc; font-weight: bold;">
+                    <td style="padding:6px;">Total</td>
+                    @if (_onSelectedGroupBy == GroupByProduct)
+                    {
+                        <td></td>
+                        <td></td>
+                    }
+                    @foreach (var col in _columns)
+                    {
+                        <td style="text-align:right; padding:6px;">
+                            @_dataset.Sum(row => row.ListRecord.ContainsKey(col) ? row.ListRecord[col] : 0).FormatAmount()
+                        </td>
+                    }
+                    <td style="text-align:right; padding:6px;">
+                        @_dataset.Sum(row => row.Total).FormatAmount()
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</MudPaper>
+
+@code {
+    private const int PeriodBulan = 0;
+    private const int PeriodTahun = 1;
+    private const int GroupByProduct = 0;
+    private const int GroupByCategory = 1;
+
+    private static readonly string[] Weeks = ["W1", "W2", "W3", "W4"];
+    private static readonly string[] Months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    // Same product catalog as Configuration > Product > Master (Category-nya juga sama) —
+    // hanya nama/kategorinya yang nyata, angka transaksinya tetap 100% simulasi.
+    private static readonly (string Code, string Name, string Category)[] Products =
+    [
+        ("1212", "ISAT Paket Data", "Telco"),
+        ("30", "Balance Inquiry", "Mini ATM"),
+        ("40", "Transfer", "Mini ATM"),
+        ("501", "PLN Postpaid", "Bill Payment"),
+        ("502", "PLN Prepaid", "Topup"),
+        ("503", "PLN NonTaglis", "Bill Payment"),
+        ("701001", "TSel", "Telco"),
+        ("701002", "ISAT", "Telco"),
+        ("701003", "XL", "Telco"),
+        ("801008", "Emoney Bank Mandiri", "Emoney"),
+        ("801014", "Flash BCA", "Emoney"),
+        ("999001", "Test Product", "Bill Payment")
+    ];
+
+    private List<StatOpsByProduct> _dataset = [];
+    private List<StatOpsTopFive> _dataTopFive = [];
+    private string[] _columns = Weeks;
+
+    private bool _isRefreshing;
+    private int _selectedPeriod = PeriodTahun;
+    private int _selectedGroupBy = GroupByProduct;
+    private int _selectedMonth = DateTime.Now.Month;
+    private int _selectedYear = DateTime.Now.Year;
+    private int _onSelectedGroupBy = GroupByProduct;
+
+    private ApexChart<StatOpsTopFive>? _refChartDonut;
+    private readonly ApexChartOptions<StatOpsTopFive> _chartOptionDonut = new()
+    {
+        Colors = ["#A2CB8B", "#E81123", "#4A90E2", "#F5A623", "#9013FE"],
+        Chart = new Chart { Type = ApexCharts.ChartType.Donut, Height = "100%" },
+        Stroke = new Stroke { Width = 2 },
+        DataLabels = new DataLabels { Enabled = false },
+        Tooltip = new Tooltip { Enabled = true, Y = new TooltipY { Formatter = "function(val) { return val.toLocaleString(); }" } },
+        Legend = new Legend { Show = true, Position = LegendPosition.Bottom }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.Changed += StateHasChanged;
+        await RefreshData();
+    }
+
+    public void Dispose() => Theme.Changed -= StateHasChanged;
+
+    private async Task RefreshData()
+    {
+        if (_isRefreshing) return;
+        _isRefreshing = true;
+        _onSelectedGroupBy = _selectedGroupBy;
+        _columns = _selectedPeriod == PeriodBulan ? Weeks : Months;
+
+        try
+        {
+            var random = new Random();
+
+            var byProduct = Products.Select(p => new StatOpsByProduct
+            {
+                ProductCode = p.Code,
+                ProductName = p.Name,
+                Category = p.Category,
+                ListRecord = _columns.ToDictionary(c => c, _ => (long)(_selectedPeriod == PeriodBulan ? random.Next(50, 1500) : random.Next(500, 15000)))
+            }).ToList();
+
+            if (_onSelectedGroupBy == GroupByProduct)
+            {
+                _dataset = byProduct;
+            }
+            else
+            {
+                _dataset = byProduct
+                    .GroupBy(p => p.Category)
+                    .Select(g => new StatOpsByProduct
+                    {
+                        Category = g.Key,
+                        ListRecord = _columns.ToDictionary(c => c, c => g.Sum(p => p.ListRecord[c]))
+                    })
+                    .OrderBy(p => p.Category)
+                    .ToList();
+            }
+
+            _dataTopFive = _dataset
+                .Select(p => new StatOpsTopFive
+                {
+                    Name = _onSelectedGroupBy == GroupByProduct ? p.ProductName : p.Category,
+                    TotalTrans = p.Total
+                })
+                .OrderByDescending(x => x.TotalTrans)
+                .Take(5)
+                .ToList();
+        }
+        finally
+        {
+            _isRefreshing = false;
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(1);
+            if (_refChartDonut != null) await _refChartDonut.UpdateSeriesAsync(true);
+        }
+    }
+}

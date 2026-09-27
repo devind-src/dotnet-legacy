@@ -1,0 +1,209 @@
+@page "/usermgmt-user"
+@attribute [Authorize]
+@inject UserManagementService UserManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>User Management</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">User Management</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Kelola akun pengguna dashboard.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari user" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadUsersAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd"
+                           OnClick="OpenCreateDialog">Tambah User</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_users" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Username</MudTh>
+            <MudTh>Nama Lengkap</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Role</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Login Terakhir</MudTh>
+            <MudTh>Ganti Password?</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Username">@context.UserName</MudTd>
+            <MudTd DataLabel="Nama Lengkap">@context.FullName</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Role">@context.RoleName</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Color="@(context.Status == "1" ? Color.Success : Color.Default)">
+                    @(context.Status == "1" ? "Aktif" : "Nonaktif")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Login Terakhir">@(context.LastLogin?.ToString("dd/MM/yyyy HH:mm") ?? "-")</MudTd>
+            <MudTd DataLabel="Ganti Password?">
+                @if (context.MustChangePassword)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">Ya</MudChip>
+                }
+                else
+                {
+                    <MudText Style="opacity:.5">-</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                    <MudIconButton Icon="@Icons.Material.Filled.LockReset" Size="Size.Small"
+                                   OnClick="@(() => OpenResetPasswordDialog(context))" title="Reset Password" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada user ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<UserDto> _users = new();
+    private List<RoleDto> _roles = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _roles = await UserManagement.GetRolesAsync() ?? new();
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await UserManagement.GetUsersAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar user.";
+            _users = new();
+        }
+        else
+        {
+            _users = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadUsersAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<UserFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Roles, _roles }
+        };
+        var dialog = await DialogService.ShowAsync<UserFormDialog>("Tambah User", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("User berhasil ditambahkan.", Severity.Success);
+            await LoadUsersAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(UserDto user)
+    {
+        var parameters = new DialogParameters<UserFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Roles, _roles },
+            { x => x.User, user }
+        };
+        var dialog = await DialogService.ShowAsync<UserFormDialog>("Edit User", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan user berhasil disimpan.", Severity.Success);
+            await LoadUsersAsync();
+        }
+    }
+
+    private async Task OpenResetPasswordDialog(UserDto user)
+    {
+        var parameters = new DialogParameters<ResetPasswordDialog> { { x => x.UserName, user.UserName } };
+       
+        // Custom options khusus untuk dialog ini
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<ResetPasswordDialog>("Reset Password", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Password berhasil direset.", Severity.Success);
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(UserDto user)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus User",
+            $"Yakin ingin menghapus user '{user.UserName}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await UserManagement.DeleteUserAsync(user.UserName);
+        if (success)
+        {
+            Snackbar.Add("User berhasil dihapus.", Severity.Success);
+            await LoadUsersAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus user.", Severity.Error);
+        }
+    }
+}

@@ -1,0 +1,141 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.CreditCard" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Product" : "Tambah Product")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudSelect T="string" Label="Issuer" @bind-Value="_model.Issuer" Required="true" RequiredError="Issuer wajib dipilih" Disabled="_busy">
+                        @foreach (var i in Issuers)
+                        {
+                            <MudSelectItem T="string" Value="@i.Issuer">@i.Issuer</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Product" @bind-Value="_model.Product"
+                                  Disabled="_busy" Required="true" RequiredError="Product wajib diisi" MaxLength="30" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="PAN Prefix" @bind-Value="_model.PanPrefix"
+                                  Disabled="_busy" Required="true" RequiredError="PAN Prefix wajib diisi" MaxLength="12" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudNumericField T="short" Label="PAN Length" @bind-Value="_model.PanLength"
+                                     Disabled="_busy" Required="true" RequiredError="PAN Length wajib diisi" Min="1" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect T="string" Label="Card Type" @bind-Value="_model.CardType" Required="true" RequiredError="Card Type wajib dipilih" Disabled="_busy">
+                        <MudSelectItem T="string" Value="@("Magstripe")">Magstripe</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Contact")">Contact</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Contactless")">Contactless</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private CardProductManagementService ProductManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<CardIssuerDto> Issuers { get; set; } = new();
+    [Parameter] public CardProductDto? Product { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Product != null)
+        {
+            _model.Id = Product.Id;
+            _model.Issuer = Product.Issuer ?? string.Empty;
+            _model.Product = Product.Product ?? string.Empty;
+            _model.PanPrefix = Product.PanPrefix ?? string.Empty;
+            _model.PanLength = Product.PanLength ?? 0;
+            _model.CardType = Product.CardType ?? "Magstripe";
+        }
+        else if (Issuers.Count > 0)
+        {
+            _model.Issuer = Issuers[0].Issuer;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await ProductManagement.UpdateProductAsync(_model.Id, new UpdateCardProductRequest
+            {
+                Issuer = _model.Issuer,
+                Product = _model.Product,
+                PanPrefix = _model.PanPrefix,
+                PanLength = _model.PanLength,
+                CardType = _model.CardType
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateCardProductRequest
+            {
+                Issuer = _model.Issuer,
+                Product = _model.Product,
+                PanPrefix = _model.PanPrefix,
+                PanLength = _model.PanLength,
+                CardType = _model.CardType
+            };
+            var (success, _, error) = await ProductManagement.CreateProductAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan product.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public int Id { get; set; }
+        public string Issuer { get; set; } = string.Empty;
+        public string Product { get; set; } = string.Empty;
+        public string PanPrefix { get; set; } = string.Empty;
+        public short PanLength { get; set; }
+        public string CardType { get; set; } = "Magstripe";
+    }
+}

@@ -1,0 +1,105 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Info" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.FactCheck" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">Cek Jadwal</MudText>
+                <MudText Typo="Typo.caption" Style="opacity:.65">Biller buka/tutup dan biller terpilih pada tanggal-jam tertentu (aturan tersimpan)</MudText>
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="3" Class="px-2 pt-2">
+            <MudItem xs="6" sm="3">
+                <MudDatePicker Label="Tanggal" @bind-Date="_date" DateFormat="dd-MM-yyyy" />
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <MudTimePicker Label="Jam" @bind-Time="_time" AmPm="false" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudSelect T="string" Label="Produk" @bind-Value="_productId" Clearable="true">
+                    @foreach (var p in Products)
+                    {
+                        <MudSelectItem T="string" Value="@p.Key">@p.Key — @p.Value</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="2">
+                <MudSelect T="string" Label="Biller" @bind-Value="_nodeId" Clearable="true">
+                    @foreach (var b in Billers)
+                    {
+                        <MudSelectItem T="string" Value="@b.Key">@b.Value</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <MudNumericField T="int?" Label="Denom topup" @bind-Value="_denom" HelperText="Kosong = terkecil" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.Search" OnClick="CheckAsync" Disabled="_busy">Cek</MudButton>
+                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Schedule" OnClick="SetNowAsync" Disabled="_busy" Class="ml-2"
+                           title="Isi tanggal dan jam dengan waktu saat ini lalu cek">Kembali ke waktu sekarang</MudButton>
+            </MudItem>
+            <MudItem xs="12">
+                @if (_busy)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else if (_error != null)
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+                }
+                else if (_result != null)
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Hasil pada @_result.At.ToString("dd-MM-yyyy HH:mm")</MudText>
+                    <ScheduleCheckResultView Result="_result" />
+                }
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Tutup</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private RouteScheduleManagementService Schedules { get; set; } = null!;
+    [Parameter] public List<LookupItemDto> Billers { get; set; } = new();
+    [Parameter] public List<LookupItemDto> Products { get; set; } = new();
+
+    private DateTime? _date = DateTime.Today;
+    private TimeSpan? _time = new(DateTime.Now.Hour, DateTime.Now.Minute, 0);
+    private string? _productId;
+    private string? _nodeId;
+    private int? _denom;
+    private bool _busy;
+    private string? _error;
+    private ScheduleCheckResultDto? _result;
+
+    protected override Task OnInitializedAsync() => CheckAsync();
+
+    private Task SetNowAsync()
+    {
+        _date = DateTime.Today;
+        _time = new(DateTime.Now.Hour, DateTime.Now.Minute, 0);
+        return CheckAsync();
+    }
+
+    private async Task CheckAsync()
+    {
+        _busy = true;
+        _error = null;
+        var at = (_date ?? DateTime.Today).Date + (_time ?? TimeSpan.Zero);
+        int? node = int.TryParse(_nodeId, out var n) ? n : null;
+
+        var (result, error) = await Schedules.CheckAsync(at, _productId, node, _denom);
+        _result = result;
+        _error = result == null ? error ?? "Gagal cek jadwal." : null;
+        _busy = false;
+    }
+
+    private void Close() => MudDialog.Close();
+}

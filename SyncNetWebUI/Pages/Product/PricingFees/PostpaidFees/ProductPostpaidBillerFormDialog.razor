@@ -1,0 +1,167 @@
+﻿<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Hub" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Biller" : "Tambah Biller")</MudText>
+                <MudText Typo="Typo.caption" Style="opacity:.65">Produk: @ProductId @ProductName</MudText>
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Class="px-2 pt-4">
+            <MudGrid Spacing="4">
+                <MudItem xs="12" sm="8">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Biller" Value="@Item?.NodeName" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudSelect T="int?" Label="Biller" @bind-Value="_nodeId" Required="true" RequiredError="Biller wajib dipilih"
+                                   Placeholder="Pilih biller" Disabled="_busy">
+                            @foreach (var n in AvailableNodes)
+                            {
+                                <MudSelectItem T="int?" Value="@n.NodeId">@n.NodeName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int?" Label="Priority" @bind-Value="_priority" Min="1" Disabled="_busy"
+                                     HelperText="@(IsFirst ? "Biller pertama = primary" : "1 = primary, kosong = berikutnya")" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int?" Label="Sharing Fee (Rp)" @bind-Value="_feeSharing" Min="0" Disabled="_busy"
+                                     HelperText="Fee yang diterima dari biller per transaksi" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    @* LB Weight hanya diatur lewat tombol Atur LB Weight supaya total selalu 100% *@
+                    <MudTextField T="string" Label="LB Weight" Disabled="true"
+                                  Value="@(Item?.LbWeight is int w ? $"{w}%" : "-")"
+                                  HelperText="Diatur lewat tombol Atur LB Weight" />
+                </MudItem>
+                @if (IsEdit && !string.IsNullOrEmpty(Item?.BillerProductCode))
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Kode Biller" Value="@Item.BillerProductCode" Disabled="true"
+                                      HelperText="Dari Product > Master > Mapping" />
+                    </MudItem>
+                }
+                <MudItem xs="12" sm="@(IsEdit && !string.IsNullOrEmpty(Item?.BillerProductCode) ? 6 : 12)">
+                    <MudTextField T="string" Label="Notes" @bind-Value="_notes" MaxLength="50" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSwitch T="bool" @bind-Value="_active" Color="Color.Success" Disabled="@(_busy || (Item?.IsPrimary ?? false))">
+                        @(_active ? "Aktif" : "Nonaktif (dilewati routing)")
+                    </MudSwitch>
+                    @if (Item?.IsPrimary ?? false)
+                    {
+                        <MudText Typo="Typo.caption" Style="opacity:.65">Primary selalu aktif. Untuk mengganti primary, klik ★ (Jadikan Primary) pada biller lain.</MudText>
+                    }
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductPostpaidBillerManagementService Billers { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public string ProductId { get; set; } = string.Empty;
+    [Parameter] public string? ProductName { get; set; }
+    [Parameter] public ProductPostpaidBillerDto? Item { get; set; }
+    [Parameter] public List<NodeDto> Nodes { get; set; } = new();
+    [Parameter] public List<ProductPostpaidBillerDto> Existing { get; set; } = new();
+
+    private MudForm _form = null!;
+    private int? _nodeId;
+    private int? _priority;
+    private int? _feeSharing;
+    private string? _notes;
+    private bool _active = true;
+    private bool _busy;
+    private string? _error;
+
+    private bool IsFirst => !IsEdit && Existing.Count == 0;
+
+    // biller node (kategori 0 = both, 2 = biller) yang belum dipakai produk ini
+    private IEnumerable<NodeDto> AvailableNodes => Nodes
+        .Where(n => n.Category == "0" || n.Category == "2")
+        .Where(n => Existing.All(e => e.NodeId != n.NodeId))
+        .OrderBy(n => n.NodeName);
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Item != null)
+        {
+            _nodeId = Item.NodeId;
+            _priority = Item.Priority;
+            _feeSharing = Item.FeeSharing;
+            _notes = Item.Notes;
+            _active = Item.Active;
+        }
+        else if (IsFirst)
+        {
+            _priority = 1;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        if (!IsEdit && !_nodeId.HasValue)
+        {
+            _error = "Biller wajib dipilih.";
+            return;
+        }
+
+        _busy = true;
+        _error = null;
+
+        (bool success, string? error) result = IsEdit && Item != null
+            ? await Billers.UpdateAsync(ProductId, Item.NodeId, new UpdateProductPostpaidBillerRequest
+            {
+                Priority = _priority ?? Item.Priority,
+                FeeSharing = _feeSharing,
+                LbWeight = Item.LbWeight,
+                Notes = _notes,
+                Active = _active
+            })
+            : await Billers.CreateAsync(new CreateProductPostpaidBillerRequest
+            {
+                ProductId = ProductId,
+                NodeId = _nodeId!.Value,
+                Priority = _priority,
+                FeeSharing = _feeSharing,
+                Notes = _notes,
+                Active = _active
+            });
+
+        _busy = false;
+        if (result.success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+        _error = result.error ?? "Gagal menyimpan biller.";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

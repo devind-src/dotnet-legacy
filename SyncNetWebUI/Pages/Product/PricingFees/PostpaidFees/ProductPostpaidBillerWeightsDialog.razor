@@ -1,0 +1,79 @@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Atur LB Weight — @ProductId</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3" Style="opacity:.75">
+            Transaksi dibagi acak berbobot ke biller aktif yang sehat. Total bobot biller aktif harus tepat 100%.
+        </MudText>
+        <MudSimpleTable Dense="true" Elevation="0">
+            <thead>
+                <tr><th>Biller</th><th>Aktif</th><th style="width:140px">LB Weight (%)</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _rows)
+                {
+                    <tr>
+                        <td>@row.Name</td>
+                        <td>@(row.Active ? "Ya" : "Tidak")</td>
+                        <td><MudNumericField T="int" @bind-Value="row.Weight" Min="0" Max="100" Margin="Margin.Dense" Disabled="_busy" /></td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+        <MudText Typo="Typo.subtitle2" Class="mt-3" Color="@(ActiveTotal == 100 ? Color.Success : Color.Warning)">
+            Total bobot biller aktif: @ActiveTotal% @(ActiveTotal == 100 ? "✔" : "— harus 100%")
+        </MudText>
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3" Dense="true">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="@(_busy || ActiveTotal != 100)">Simpan</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductPostpaidBillerManagementService Billers { get; set; } = null!;
+    [Parameter] public string ProductId { get; set; } = string.Empty;
+    [Parameter] public List<ProductPostpaidBillerDto> Items { get; set; } = new();
+
+    private List<Row> _rows = new();
+    private bool _busy;
+    private string? _error;
+
+    private int ActiveTotal => _rows.Where(r => r.Active).Sum(r => r.Weight);
+
+    protected override void OnInitialized()
+    {
+        _rows = Items.Select(i => new Row { NodeId = i.NodeId, Name = i.NodeName, Active = i.Active, Weight = i.LbWeight ?? 0 }).ToList();
+    }
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _error = null;
+
+        var (success, error) = await Billers.UpdateWeightsAsync(ProductId, new UpdateProductPostpaidBillerWeightsRequest
+        {
+            Weights = _rows.Select(r => new ProductPostpaidBillerWeight { NodeId = r.NodeId, LbWeight = r.Weight }).ToList()
+        });
+
+        _busy = false;
+        if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+        _error = error ?? "Gagal menyimpan bobot.";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class Row
+    {
+        public int NodeId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public bool Active { get; set; }
+        public int Weight { get; set; }
+    }
+}

@@ -1,0 +1,13 @@
+.flow-node {
+    padding: 8px 16px;
+    margin: 4px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 140px;
+}
+
+.flow-node-faded {
+    opacity: .35;
+    font-weight: 400;
+}

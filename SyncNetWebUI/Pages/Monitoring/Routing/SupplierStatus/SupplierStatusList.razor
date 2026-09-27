@@ -1,0 +1,148 @@
+﻿@page "/mon-route-supplier-status"
+@attribute [Authorize]
+@inject RouteSupplierStatusManagementService StatusManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Supplier Status</PageTitle>
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" Icon="@Icons.Material.Filled.Info">
+    Baris di halaman ini diisi otomatis oleh sistem switching sesuai Routing > Health Check Config: link down,
+    timeout, rc gagal, pending, atau respons lambat berturut-turut dari node. DOWN dan SUSPECT sama-sama berarti
+    biller dilewati untuk siklus baru; kolom Alasan menunjukkan penyebabnya. Status per node dipakai bersama oleh
+    topup (margin) dan bill payment (product). Tidak ada "Tambah" manual maupun "Tandai DOWN" manual.
+</MudAlert>
+
+<ApplyChangesBar Message="Setelah Reset ke Active, klik Terapkan Perubahan agar status di memori aplikasi channel ikut ter-reset." />
+
+<MudText Typo="Typo.h4" Class="mb-1">Supplier Status</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Monitoring > Routing > Supplier Status — status kesehatan supplier/biller (node) untuk failover routing margin dan product.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari supplier ID" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync" title="Refresh" />
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Supplier ID</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Alasan</MudTh>
+            <MudTh>Last RC</MudTh>
+            <MudTh>Last Latency</MudTh>
+            <MudTh><MudTooltip Text="Counter berturut-turut: Timeout / RC Gagal / Pending / Latency">Counter T / G / P / L</MudTooltip></MudTh>
+            <MudTh>Retry Count</MudTh>
+            <MudTh>Blocked Since</MudTh>
+            <MudTh>Blocked Until</MudTh>
+            <MudTh>Last Update</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Supplier ID">@context.SupplierId</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)">@context.Status</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Alasan">@(context.Status == "ACTIVE" ? "" : HealthCheckReasons.Label(context.BlockReason))</MudTd>
+            <MudTd DataLabel="Last RC">@context.LastRcCode</MudTd>
+            <MudTd DataLabel="Last Latency">@(context.LastLatencyMs.HasValue ? $"{context.LastLatencyMs / 1000m:0.0} dtk" : "")</MudTd>
+            <MudTd DataLabel="Counter T / G / P / L">
+                @context.ConsecutiveSuspectCount / @context.ConsecutiveFailedCount / @context.ConsecutivePendingCount / @context.ConsecutiveLatencyCount
+            </MudTd>
+            <MudTd DataLabel="Retry Count">@context.RetryCount</MudTd>
+            <MudTd DataLabel="Blocked Since">@context.BlockedSince?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+            <MudTd DataLabel="Blocked Until">@(context.BlockedUntil?.ToString("yyyy-MM-dd HH:mm") ?? (context.Status == "ACTIVE" ? "" : "manual"))</MudTd>
+            <MudTd DataLabel="Last Update">@context.UpdatedDt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (context.Status != "ACTIVE" && Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                               OnClick="@(() => ConfirmResetAsync(context))">Reset ke Active</MudButton>
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Belum ada supplier yang tercatat bermasalah.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<RouteSupplierStatusDto> _items = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await StatusManagement.GetStatusesAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar supplier status.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private static Color StatusColor(string status) => status switch
+    {
+        "ACTIVE" => Color.Success,
+        "SUSPECT" => Color.Warning,
+        "DOWN" => Color.Error,
+        _ => Color.Default
+    };
+
+    private async Task ConfirmResetAsync(RouteSupplierStatusDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Reset Supplier Status",
+            $"Reset status supplier '{item.SupplierId}' ke ACTIVE sekarang juga, sebelum cooldown selesai?",
+            yesText: "Reset", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await StatusManagement.ResetAsync(item.SupplierId);
+        if (success)
+        {
+            Snackbar.Add($"Status supplier '{item.SupplierId}' berhasil di-reset ke ACTIVE.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal reset status supplier.", Severity.Error);
+        }
+    }
+}

@@ -1,0 +1,16 @@
+@page "/not-found"
+@layout Layout.MainLayout
+@attribute [Authorize]
+
+<PageTitle>Halaman Tidak Ditemukan</PageTitle>
+
+<MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="mt-16" Spacing="3">
+    <MudIcon Icon="@Icons.Material.Filled.Construction" Style="font-size:4rem; opacity:.4;" />
+    <MudText Typo="Typo.h5">Modul ini belum tersedia</MudText>
+    <MudText Typo="Typo.body1" Style="opacity:.65; max-width:420px;" Class="text-center">
+        Halaman untuk menu ini sedang dalam pengembangan dan akan menyusul di fase berikutnya.
+    </MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/" Class="mt-2">
+        Kembali ke Dashboard
+    </MudButton>
+</MudStack>

@@ -1,0 +1,145 @@
+@inject MenuManagementService MenuManagement
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(IsEdit ? "Edit Menu" : "Tambah Menu")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" Label="Menu ID" @bind-Value="_model.MenuId"
+                                     Disabled="@(IsEdit || _busy)" Required="true" Min="1" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Icon" @bind-Value="_model.Icon" Disabled="_busy"
+                                  HelperText="Contoh: oi oi-person" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Level 1" @bind-Value="_model.Level1"
+                                  Required="true" RequiredError="Level 1 wajib diisi" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Level 2" @bind-Value="_model.Level2"
+                                  Required="true" RequiredError="Level 2 wajib diisi" Disabled="_busy" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Level 3" @bind-Value="_model.Level3" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Level 4" @bind-Value="_model.Level4" Disabled="_busy" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="URL" @bind-Value="_model.Url"
+                                  Required="true" RequiredError="URL wajib diisi" Disabled="_busy" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public MenuDto? Menu { get; set; }
+    [Parameter] public int NextSuggestedId { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Menu != null)
+        {
+            _model.MenuId = Menu.MenuId;
+            _model.Level1 = Menu.Level1;
+            _model.Level2 = Menu.Level2;
+            _model.Level3 = Menu.Level3;
+            _model.Level4 = Menu.Level4;
+            _model.Icon = Menu.Icon;
+            _model.Url = Menu.Url;
+        }
+        else
+        {
+            _model.MenuId = NextSuggestedId;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var request = new UpdateMenuRequest
+            {
+                Level1 = _model.Level1,
+                Level2 = _model.Level2,
+                Level3 = _model.Level3,
+                Level4 = _model.Level4,
+                Icon = _model.Icon,
+                Url = _model.Url
+            };
+            var (success, error) = await MenuManagement.UpdateMenuAsync(_model.MenuId, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateMenuRequest
+            {
+                MenuId = _model.MenuId,
+                Level1 = _model.Level1,
+                Level2 = _model.Level2,
+                Level3 = _model.Level3,
+                Level4 = _model.Level4,
+                Icon = _model.Icon,
+                Url = _model.Url
+            };
+            var (success, _, error) = await MenuManagement.CreateMenuAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan menu.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public int MenuId { get; set; }
+        public string Level1 { get; set; } = string.Empty;
+        public string Level2 { get; set; } = string.Empty;
+        public string Level3 { get; set; } = string.Empty;
+        public string Level4 { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public string Url { get; set; } = string.Empty;
+    }
+}

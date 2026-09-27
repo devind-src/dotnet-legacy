@@ -1,0 +1,164 @@
+@page "/mon-log"
+@attribute [Authorize]
+@inject MonitoringManagementService Monitoring
+
+<PageTitle>Log Viewer</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Log Viewer</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Monitoring > Loggers > Log Viewer.</MudText>
+
+<MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+    Isi file dibaca bertahap (maksimal beberapa ratus baris per halaman), bukan file utuh
+    sekaligus — file log produksi bisa berukuran besar.
+</MudAlert>
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="3">
+        <MudText Typo="Typo.subtitle2" Class="mb-1">Log Name</MudText>
+        <MudPaper Class="pa-2 mb-3" Elevation="1" Style="height:220px;overflow-y:auto">
+            @if (_apps.Count == 0)
+            {
+                <MudText Style="opacity:.65" Typo="Typo.body2" Class="pa-2">Tidak ada log ditemukan.</MudText>
+            }
+            else
+            {
+                @foreach (var app in _apps)
+                {
+                    <MudButton FullWidth="true" Variant="@(app == _selectedApp ? Variant.Filled : Variant.Text)"
+                               Color="@(app == _selectedApp ? Color.Primary : Color.Default)"
+                               Class="justify-start mb-1" StartIcon="@Icons.Material.Filled.Folder"
+                               OnClick="@(() => SelectAppAsync(app))">@app</MudButton>
+                }
+            }
+        </MudPaper>
+
+        <MudText Typo="Typo.subtitle2" Class="mb-1">Log Files</MudText>
+        <MudPaper Class="pa-2" Elevation="1" Style="height:260px;overflow-y:auto">
+            @if (_files.Count == 0)
+            {
+                <MudText Style="opacity:.65" Typo="Typo.body2" Class="pa-2">Pilih log name terlebih dahulu.</MudText>
+            }
+            else
+            {
+                @foreach (var file in _files)
+                {
+                    <MudButton FullWidth="true" Variant="@(file.FileName == _selectedFile ? Variant.Filled : Variant.Text)"
+                               Color="@(file.FileName == _selectedFile ? Color.Primary : Color.Default)"
+                               Class="justify-start mb-1" StartIcon="@Icons.Material.Filled.Description"
+                               OnClick="@(() => OpenFileAsync(file.FileName))">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2">@file.FileName</MudText>
+                            <MudText Typo="Typo.caption" Style="opacity:.65">@file.LastModified.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                        </MudStack>
+                    </MudButton>
+                }
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="9">
+        <MudText Typo="Typo.subtitle2" Class="mb-1">Log Content</MudText>
+        <MudPaper Class="pa-3" Elevation="1" Style="height:520px;overflow-y:auto">
+            @if (_loading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else if (_error != null)
+            {
+                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+            }
+            else if (_lines.Count == 0)
+            {
+                <MudText Style="opacity:.65">Pilih file log untuk melihat isinya.</MudText>
+            }
+            else
+            {
+                <pre style="margin:0;white-space:pre-wrap;word-break:break-all;font-family:Consolas,monospace;font-size:.85rem">@string.Join("\n", _lines)</pre>
+            }
+        </MudPaper>
+        <div class="d-flex justify-center mt-2">
+            @if (_selectedFile != null)
+            {
+                @if (_loadingMore)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                }
+                else if (_hasMore)
+                {
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ExpandMore" OnClick="LoadMoreAsync">Muat lagi</MudButton>
+                }
+                else if (_lines.Count > 0)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">--- Akhir file ---</MudText>
+                }
+            }
+        </div>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private List<string> _apps = new();
+    private List<MonitoringFileDto> _files = new();
+    private List<string> _lines = new();
+
+    private string? _selectedApp;
+    private string? _selectedFile;
+    private int _offset;
+    private bool _hasMore;
+    private bool _loading;
+    private bool _loadingMore;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var apps = await Monitoring.GetLogAppsAsync();
+        _apps = apps ?? new();
+    }
+
+    private async Task SelectAppAsync(string app)
+    {
+        _selectedApp = app;
+        _selectedFile = null;
+        _lines = new();
+        _files = await Monitoring.GetLogFilesAsync(app) ?? new();
+    }
+
+    private async Task OpenFileAsync(string fileName)
+    {
+        _selectedFile = fileName;
+        _offset = 0;
+        _lines = new();
+        _hasMore = false;
+        _error = null;
+        _loading = true;
+
+        var content = await Monitoring.GetLogContentAsync(fileName, 0);
+        ApplyContent(content);
+
+        _loading = false;
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        if (_selectedFile == null) return;
+
+        _loadingMore = true;
+        var content = await Monitoring.GetLogContentAsync(_selectedFile, _offset);
+        ApplyContent(content);
+        _loadingMore = false;
+    }
+
+    private void ApplyContent(MonitoringFileContentDto? content)
+    {
+        if (content == null)
+        {
+            _error = "Gagal memuat isi log.";
+            _hasMore = false;
+            return;
+        }
+
+        _lines.AddRange(content.Lines);
+        _offset = content.Offset + content.Lines.Count;
+        _hasMore = content.HasMore;
+    }
+}

@@ -1,0 +1,89 @@
+@page "/mon-jobs-log"
+@attribute [Authorize]
+@inject MonitoringManagementService Monitoring
+
+<PageTitle>Job Log</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Job Logs</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Monitoring > Jobs > Log.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari job log" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync" title="Refresh" />
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage" T="JobLogMonitorDto">
+        <HeaderContent>
+            <MudTh></MudTh>
+            <MudTh>Job Nr</MudTh>
+            <MudTh>Job Name</MudTh>
+            <MudTh>Time Start</MudTh>
+            <MudTh>Time End</MudTh>
+            <MudTh>Result Value</MudTh>
+            <MudTh>Status</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel=""><MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@(context.Status == "1" ? Color.Success : Color.Error)" /></MudTd>
+            <MudTd DataLabel="Job Nr">@context.JobNr</MudTd>
+            <MudTd DataLabel="Job Name">@context.JobName</MudTd>
+            <MudTd DataLabel="Time Start">@(context.DatetimeBegin?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudTd>
+            <MudTd DataLabel="Time End">@(context.DatetimeEnd?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudTd>
+            <MudTd DataLabel="Result Value">@context.ResultValue</MudTd>
+            <MudTd DataLabel="Status">@context.Status</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada job log ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<JobLogMonitorDto> _items = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await Monitoring.GetJobLogsAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar job log.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+}

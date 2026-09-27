@@ -1,0 +1,180 @@
+@page "/route-source"
+@attribute [Authorize]
+@inject RouteSourceManagementService RouteSourceManagement
+@inject NodeManagementService NodeManagement
+@inject ProductManagementService ProductManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Route by Source</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Route by Source</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Routing > Source.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari notes / product" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Route</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Sumber</MudTh>
+            <MudTh>Tujuan</MudTh>
+            <MudTh>Product ID</MudTh>
+            <MudTh>Notes</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Sumber">@NodeName(context.NodeIdIn)</MudTd>
+            <MudTd DataLabel="Tujuan">@NodeName(context.NodeIdOut)</MudTd>
+            <MudTd DataLabel="Product ID">@context.InstId</MudTd>
+            <MudTd DataLabel="Notes">@context.Notes</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada route ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<RouteSourceDto> _items = new();
+    private List<NodeDto> _nodes = new();
+    private List<LookupItemDto> _products = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var nodes = await NodeManagement.GetNodesAsync();
+        _nodes = nodes ?? new();
+
+        var products = await ProductManagement.GetProductsAsync();
+        _products = products?.Select(p => new LookupItemDto(p.ProductCode, p.ProductName ?? p.ProductCode)).ToList() ?? new();
+
+        await LoadAsync();
+    }
+
+    private string NodeName(int nodeId) => _nodes.FirstOrDefault(n => n.NodeId == nodeId)?.NodeName ?? nodeId.ToString();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await RouteSourceManagement.GetRoutesAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar route.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<RouteSourceFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Nodes, _nodes },
+            { x => x.Products, _products }
+        };
+        var dialog = await DialogService.ShowAsync<RouteSourceFormDialog>("Tambah Route by Source", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Route berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(RouteSourceDto item)
+    {
+        var parameters = new DialogParameters<RouteSourceFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Route, item },
+            { x => x.Nodes, _nodes },
+            { x => x.Products, _products }
+        };
+        var dialog = await DialogService.ShowAsync<RouteSourceFormDialog>("Edit Route by Source", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan route berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(RouteSourceDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Route",
+            $"Yakin ingin menghapus route by source '{item.Id}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await RouteSourceManagement.DeleteRouteAsync(item.Id);
+        if (success)
+        {
+            Snackbar.Add("Route berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus route.", Severity.Error);
+        }
+    }
+}

@@ -1,0 +1,114 @@
+@page "/queries-audit"
+@attribute [Authorize]
+@inject QueryManagementService Queries
+@inject IDialogService DialogService
+
+<PageTitle>Audit Trail</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Audit Trail</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Queries > Audit Trail.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="6" md="2">
+            <MudDatePicker Label="Date Start" @bind-Date="_dateStart" DateFormat="dd-MM-yyyy" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="2">
+            <MudDatePicker Label="Date End" @bind-Date="_dateEnd" DateFormat="dd-MM-yyyy" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudTextField T="string" Label="Table Name" @bind-Value="_tableName" MaxLength="30" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudTextField T="string" Label="User Name" @bind-Value="_userName" MaxLength="30" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-1"
+                       StartIcon="@Icons.Material.Filled.Search" OnClick="SearchAsync">Cari</MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable ServerData="ServerReloadAsync" @ref="_table" Dense="true" Hover="true" Elevation="1" T="AuditListItemDto">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>Type</MudTh>
+        <MudTh>Table Name</MudTh>
+        <MudTh>Updated By</MudTh>
+        <MudTh>Updated Date</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ID">@context.Id</MudTd>
+        <MudTd DataLabel="Type">
+            <MudChip T="string" Size="Size.Small" 
+                Color="@(context.Type switch
+                 {
+                     "D" => Color.Error,   // merah
+                     "U" => Color.Primary, // biru
+                     "I" => Color.Success, // hijau
+                     _   => Color.Default  // fallback
+                 })">                @TypeLabel(context.Type)
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Table Name">@context.TableName</MudTd>
+        <MudTd DataLabel="Updated By">@context.UserName</MudTd>
+        <MudTd DataLabel="Updated Date">@(context.UpdateDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudTd>
+        <MudTd DataLabel="Aksi">
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" title="Detail"
+                           OnClick="@(() => OpenDetailAsync(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Style="opacity:.65">Tidak ada audit ditemukan.</MudText>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private MudTable<AuditListItemDto> _table = null!;
+
+    private DateTime? _dateStart = DateTime.Today;
+    private DateTime? _dateEnd = DateTime.Today;
+    private string? _tableName;
+    private string? _userName;
+
+    private async Task<TableData<AuditListItemDto>> ServerReloadAsync(TableState state, CancellationToken ct)
+    {
+        var request = new AuditSearchRequest
+        {
+            DateStart = _dateStart,
+            DateEnd = _dateEnd?.Date.AddDays(1).AddTicks(-1),
+            TableName = _tableName,
+            UserName = _userName,
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize
+        };
+
+        var result = await Queries.SearchAuditsAsync(request, ct);
+
+        return result == null
+            ? new TableData<AuditListItemDto> { TotalItems = 0, Items = new List<AuditListItemDto>() }
+            : new TableData<AuditListItemDto> { TotalItems = (int)result.TotalRecords, Items = result.Items };
+    }
+
+    private Task SearchAsync() => _table.ReloadServerData();
+
+    private static string TypeLabel(string? type) => type switch
+    {
+        "I" => "Insert",
+        "U" => "Update",
+        "D" => "Delete",
+        _ => type ?? "-"
+    };
+
+    private async Task OpenDetailAsync(long id)
+    {
+        var parameters = new DialogParameters<AuditDetailDialog> { { x => x.Id, id } };
+        var dialog = await DialogService.ShowAsync<AuditDetailDialog>("Query Audit", parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        await dialog.Result;
+    }
+}

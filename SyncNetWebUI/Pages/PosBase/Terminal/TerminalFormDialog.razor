@@ -1,0 +1,515 @@
+@inject LookupService LookupManagement
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.PointOfSale" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Terminal" : "Tambah Terminal")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.TermId</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2">
+            <MudTabs Elevation="0" Rounded="false" SliderColor="Color.Primary" TabPanelsClass="pa-6" Class="mt-2">
+                <MudTabPanel Text="General" ToolTip="General" Icon="@Icons.Material.Filled.Info">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Terminal ID" @bind-Value="_model.TermId"
+                                          Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Terminal ID wajib diisi" MaxLength="16" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudAutocomplete T="string" Label="Merchant" Value="_model.MerchantId" ValueChanged="OnMerchantChanged"
+                                             SearchFunc="SearchMerchants" ToStringFunc="@(id => MerchantLabel(id))"
+                                             Required="true" RequiredError="Merchant wajib dipilih" Disabled="_busy"
+                                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                                             CoerceValue="true" ResetValueOnEmptyText="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudAutocomplete T="string" Label="Sub Merchant (opsional)" @bind-Value="_model.SubMerchantId"
+                                             SearchFunc="SearchSubMerchants" ToStringFunc="@(id => SubMerchantLabel(id))"
+                                             Disabled="_busy" Clearable="true"
+                                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                                             CoerceValue="true" ResetValueOnEmptyText="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudAutocomplete T="string" Label="Store (opsional)" @bind-Value="_model.StoreId"
+                                             SearchFunc="SearchStores" ToStringFunc="@(id => StoreLabel(id))"
+                                             Disabled="_busy" Clearable="true"
+                                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                                             CoerceValue="true" ResetValueOnEmptyText="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Loket Name" @bind-Value="_model.LoketName" MaxLength="50" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Location" @bind-Value="_model.Location" MaxLength="100" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudAutocomplete T="string" Label="City" @bind-Value="_model.City" SearchFunc="SearchCities"
+                                             Disabled="_busy" Clearable="true"
+                                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                                             CoerceValue="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Phone" @bind-Value="_model.Phone" MaxLength="50" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Success" Disabled="_busy">
+                                @(_model.Active ? "Active" : "Not Active")
+                            </MudSwitch>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Group" ToolTip="Group" Icon="@Icons.Material.Filled.Groups">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Group Name" @bind-Value="_model.GroupName" Disabled="_busy" Clearable="true">
+                                @foreach (var g in _groups)
+                                {
+                                    <MudSelectItem T="string" Value="@g.GroupName">@g.GroupName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Sub Group Name" @bind-Value="_model.SubgroupName" Disabled="_busy" Clearable="true">
+                                @foreach (var g in _subGroups)
+                                {
+                                    <MudSelectItem T="string" Value="@g.GroupName">@g.GroupName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Criteria" @bind-Value="_model.Criteria" Disabled="_busy" Clearable="true">
+                                @foreach (var c in _criteria)
+                                {
+                                    <MudSelectItem T="string" Value="@c.Value">@c.Value</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="NMID" @bind-Value="_model.Nmid" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="MPAN" @bind-Value="_model.Mpan" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Chat ID" @bind-Value="_model.ChatId" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Device" ToolTip="Device" Icon="@Icons.Material.Filled.PointOfSale">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Brand Terminal" @bind-Value="_model.Brand" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Type Terminal" @bind-Value="_model.Type" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Serial Number" @bind-Value="_model.SerialNumber"
+                                          Required="true" RequiredError="Serial number wajib diisi" MaxLength="50" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker Label="Inst Date" @bind-Date="_instDate" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="bool" Label="Enable Init" @bind-Value="_model.EnableInit" Disabled="_busy">
+                                <MudSelectItem T="bool" Value="false">No</MudSelectItem>
+                                <MudSelectItem T="bool" Value="true">Yes</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="ID Init" @bind-Value="_model.InitId" MaxLength="16" Disabled="_busy" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Security" ToolTip="Security" Icon="@Icons.Material.Filled.Security">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="bool" Label="Security" @bind-Value="_model.Security" Disabled="_busy">
+                                <MudSelectItem T="bool" Value="false">None</MudSelectItem>
+                                <MudSelectItem T="bool" Value="true">Yes</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" />
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="IP Address" @bind-Value="_model.IpAddress" MaxLength="15" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="MAC Address" @bind-Value="_model.MacAddress" MaxLength="15" Disabled="_busy" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Bank" ToolTip="Bank" Icon="@Icons.Material.Filled.AccountBalance">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Bank Name" @bind-Value="_model.BankName" Disabled="_busy" Clearable="true">
+                                @foreach (var b in _banks)
+                                {
+                                    <MudSelectItem T="string" Value="@b.Value">@b.Value</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Branch" @bind-Value="_model.BankBranch" MaxLength="50" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Bank Code" @bind-Value="_model.BankCode" MaxLength="6" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Account Number" @bind-Value="_model.BankAccNumber" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Account Owner" @bind-Value="_model.BankAccName" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Virtual Account" @bind-Value="_model.VirtualAccount" Disabled="_busy" Clearable="true"
+                                       ToStringFunc="@(accNr => VaLabel(accNr))">
+                                @foreach (var va in _vaAccounts)
+                                {
+                                    <MudSelectItem T="string" Value="@va.Key">@va.Value</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Key Management" ToolTip="Key Management" Icon="@Icons.Material.Filled.VpnKey">
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+                        Tombol Generate di bawah menjalankan kalkulasi kriptografis nyata (DES/3DES di bawah LMK, sama seperti HSM &gt; Console) —
+                        bukan lagi nilai acak placeholder. Belum ada integrasi ke HSM fisik/jaringan (protocol TCP/IP) — kalkulasi selalu berjalan lokal.
+                    </MudAlert>
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Key Length" @bind-Value="_model.KeyLength" Disabled="_busy">
+                                <MudSelectItem T="string" Value="@("1")">Single</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("2")">Double</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("3")">Triple</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="PIN Block Format" @bind-Value="_model.PinblockFormat" Disabled="_busy">
+                                <MudSelectItem T="string" Value="@("01")">Format 01 ANSI X9.8/VISA-1</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("02")">Format 02 Docutel ATMs</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("03")">Format 03 IBM Diebold</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("04")">Format 04 PLUS Network</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Master Key" @bind-Value="_model.MasterKey" MaxLength="48" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Master Key Check Value" @bind-Value="_model.MasterKcv" MaxLength="16" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" Class="d-flex align-center">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Autorenew"
+                                       OnClick="GenerateMasterKeyAsync" Disabled="_busy">Generate Master Key</MudButton>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" />
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Session Key Under LMK" @bind-Value="_model.KeyUnderLmk" MaxLength="48" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Session Key Under ZMK" @bind-Value="_model.KeyUnderZmk" MaxLength="48" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Session Key Check Value" @bind-Value="_model.KeyCheckValue" MaxLength="16" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" Class="d-flex align-center">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Autorenew"
+                                       OnClick="GenerateSessionKeyAsync" Disabled="_busy">Generate Session Key</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private TerminalManagementService TerminalManagement { get; set; } = null!;
+    [Inject] private MerchantGroupManagementService MerchantGroupManagement { get; set; } = null!;
+    [Inject] private SubMerchantGroupManagementService SubMerchantGroupManagement { get; set; } = null!;
+    [Inject] private KeyManagementService KeyManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<MerchantDto> Merchants { get; set; } = new();
+    [Parameter] public List<SubMerchantDto> SubMerchants { get; set; } = new();
+    [Parameter] public List<StoreDto> Stores { get; set; } = new();
+    [Parameter] public TerminalDto? Terminal { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private DateTime? _instDate;
+    private bool _busy;
+    private string? _error;
+
+    private List<LookupItemDto> _cities = new();
+    private List<LookupItemDto> _banks = new();
+    private List<LookupItemDto> _vaAccounts = new();
+    private List<LookupItemDto> _criteria = new();
+    private List<MerchantGroupDto> _groups = new();
+    private List<SubMerchantGroupDto> _subGroups = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cities = await LookupManagement.GetCitiesAsync() ?? new();
+        _banks = await LookupManagement.GetBanksAsync() ?? new();
+        _vaAccounts = await LookupManagement.GetVaAccountsAsync() ?? new();
+        _criteria = await LookupManagement.GetMerchantCriteriaAsync() ?? new();
+
+        if (IsEdit && Terminal != null)
+        {
+            _model.TermId = Terminal.TermId;
+            _model.MerchantId = Terminal.MerchantId ?? string.Empty;
+            _model.SubMerchantId = Terminal.SubMerchantId ?? string.Empty;
+            _model.StoreId = Terminal.StoreId ?? string.Empty;
+            _model.LoketName = Terminal.LoketName ?? string.Empty;
+            _model.Location = Terminal.Location ?? string.Empty;
+            _model.City = Terminal.City ?? string.Empty;
+            _model.Phone = Terminal.Phone ?? string.Empty;
+            _model.Active = Terminal.Active;
+            _model.GroupName = Terminal.GroupName ?? string.Empty;
+            _model.SubgroupName = Terminal.SubgroupName ?? string.Empty;
+            _model.Criteria = Terminal.Criteria ?? string.Empty;
+            _model.Nmid = Terminal.Nmid ?? string.Empty;
+            _model.Mpan = Terminal.Mpan ?? string.Empty;
+            _model.ChatId = Terminal.ChatId ?? string.Empty;
+            _model.Brand = Terminal.Brand ?? string.Empty;
+            _model.Type = Terminal.Type ?? string.Empty;
+            _model.SerialNumber = Terminal.SerialNumber ?? string.Empty;
+            _model.EnableInit = Terminal.EnableInit;
+            _model.InitId = Terminal.InitId ?? string.Empty;
+            if (DateTime.TryParseExact(Terminal.InstDate, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var d))
+                _instDate = d;
+            _model.Security = Terminal.Security;
+            _model.IpAddress = Terminal.IpAddress ?? string.Empty;
+            _model.MacAddress = Terminal.MacAddress ?? string.Empty;
+            _model.BankName = Terminal.BankName ?? string.Empty;
+            _model.BankBranch = Terminal.BankBranch ?? string.Empty;
+            _model.BankCode = Terminal.BankCode ?? string.Empty;
+            _model.BankAccNumber = Terminal.BankAccNumber ?? string.Empty;
+            _model.BankAccName = Terminal.BankAccName ?? string.Empty;
+            _model.VirtualAccount = Terminal.VirtualAccount ?? string.Empty;
+            _model.VaName = Terminal.VaName ?? string.Empty;
+            _model.KeyLength = Terminal.KeyLength ?? "2";
+            _model.PinblockFormat = Terminal.PinblockFormat ?? "01";
+            _model.MasterKey = Terminal.MasterKey ?? string.Empty;
+            _model.MasterKcv = Terminal.MasterKcv ?? string.Empty;
+            _model.KeyUnderLmk = Terminal.KeyUnderLmk ?? string.Empty;
+            _model.KeyUnderZmk = Terminal.KeyUnderZmk ?? string.Empty;
+            _model.KeyCheckValue = Terminal.KeyCheckValue ?? string.Empty;
+        }
+        else
+        {
+            _model.KeyLength = "2";
+            _model.PinblockFormat = "01";
+        }
+
+        // Group/SubGroup dropdown sources scoped to the selected merchant's participant, same
+        // as legacy's MerchantGroupGetListByMid/SubMerchantGroupGetListByMid.
+        if (!string.IsNullOrEmpty(_model.MerchantId))
+            await LoadGroupsForMerchantAsync(_model.MerchantId);
+    }
+
+    private async Task GenerateMasterKeyAsync()
+    {
+        var bundle = await KeyManagement.GenerateMasterKeyAsync(_model.KeyLength);
+        if (bundle == null) return;
+        _model.MasterKey = bundle.MasterKey;
+        _model.MasterKcv = bundle.MasterKcv;
+    }
+
+    private async Task GenerateSessionKeyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.MasterKey)) return;
+
+        var bundle = await KeyManagement.GenerateSessionKeyAsync(_model.MasterKey);
+        if (bundle == null) return;
+        _model.KeyUnderLmk = bundle.KeyUnderLmk;
+        _model.KeyUnderZmk = bundle.KeyUnderZmk;
+        _model.KeyCheckValue = bundle.KeyCheckValue;
+    }
+
+    private async Task OnMerchantChanged(string value)
+    {
+        _model.MerchantId = value;
+        await LoadGroupsForMerchantAsync(value);
+    }
+
+    private async Task LoadGroupsForMerchantAsync(string merchantId)
+    {
+        var participantId = Merchants.FirstOrDefault(m => m.MerchantId == merchantId)?.ParticipantId;
+        if (string.IsNullOrEmpty(participantId)) { _groups = new(); _subGroups = new(); return; }
+
+        _groups = await MerchantGroupManagement.GetGroupsAsync(participantId: participantId) ?? new();
+        _subGroups = await SubMerchantGroupManagement.GetGroupsAsync(participantId: participantId) ?? new();
+    }
+
+    private string MerchantLabel(string? id) => Merchants.FirstOrDefault(m => m.MerchantId == id) is { } m ? $"{m.MerchantId} - {m.Name}" : (id ?? string.Empty);
+    private string SubMerchantLabel(string? id) => SubMerchants.FirstOrDefault(s => s.SubMerchantId == id) is { } s ? $"{s.SubMerchantId} - {s.Name}" : (id ?? string.Empty);
+    private string StoreLabel(string? id) => Stores.FirstOrDefault(s => s.StoreId == id) is { } s ? $"{s.StoreId} - {s.Name}" : (id ?? string.Empty);
+    private string VaLabel(string? accNr) => _vaAccounts.FirstOrDefault(v => v.Key == accNr)?.Value ?? (accNr ?? string.Empty);
+
+    private Task<IEnumerable<string>> SearchMerchants(string value, CancellationToken ct)
+    {
+        var results = string.IsNullOrWhiteSpace(value)
+            ? Merchants.Select(m => m.MerchantId)
+            : Merchants.Where(m => m.MerchantId.Contains(value, StringComparison.OrdinalIgnoreCase) || (m.Name ?? "").Contains(value, StringComparison.OrdinalIgnoreCase)).Select(m => m.MerchantId);
+        return Task.FromResult(results.Take(20));
+    }
+
+    private Task<IEnumerable<string>> SearchSubMerchants(string value, CancellationToken ct)
+    {
+        var scoped = string.IsNullOrEmpty(_model.MerchantId) ? SubMerchants : SubMerchants.Where(s => s.MerchantId == _model.MerchantId);
+        var results = string.IsNullOrWhiteSpace(value)
+            ? scoped.Select(s => s.SubMerchantId)
+            : scoped.Where(s => s.SubMerchantId.Contains(value, StringComparison.OrdinalIgnoreCase) || (s.Name ?? "").Contains(value, StringComparison.OrdinalIgnoreCase)).Select(s => s.SubMerchantId);
+        return Task.FromResult(results.Take(20));
+    }
+
+    private Task<IEnumerable<string>> SearchStores(string value, CancellationToken ct)
+    {
+        var scoped = string.IsNullOrEmpty(_model.MerchantId) ? Stores : Stores.Where(s => s.MerchantId == _model.MerchantId);
+        var results = string.IsNullOrWhiteSpace(value)
+            ? scoped.Select(s => s.StoreId)
+            : scoped.Where(s => s.StoreId.Contains(value, StringComparison.OrdinalIgnoreCase) || (s.Name ?? "").Contains(value, StringComparison.OrdinalIgnoreCase)).Select(s => s.StoreId);
+        return Task.FromResult(results.Take(20));
+    }
+
+    private Task<IEnumerable<string>> SearchCities(string value, CancellationToken ct)
+    {
+        var results = string.IsNullOrWhiteSpace(value)
+            ? _cities.Select(c => c.Value)
+            : _cities.Where(c => c.Value.Contains(value, StringComparison.OrdinalIgnoreCase)).Select(c => c.Value);
+        return Task.FromResult(results.Take(20));
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+        var instDateStr = _instDate?.ToString("yyyyMMdd");
+        // va_name is a display cache derived from the selected Virtual Account, matching
+        // legacy's `model.va_name = dbService.VaAccountGetName(model.virtual_account)`.
+        _model.VaName = _vaAccounts.FirstOrDefault(v => v.Key == _model.VirtualAccount)?.Value;
+
+        if (IsEdit)
+        {
+            var request = new UpdateTerminalRequest
+            {
+                MerchantId = _model.MerchantId, SubMerchantId = NullIfEmpty(_model.SubMerchantId), StoreId = NullIfEmpty(_model.StoreId),
+                LoketName = _model.LoketName, Location = _model.Location, City = _model.City, Phone = _model.Phone, Active = _model.Active,
+                GroupName = _model.GroupName, SubgroupName = _model.SubgroupName, Criteria = _model.Criteria, Nmid = _model.Nmid,
+                Mpan = _model.Mpan, ChatId = _model.ChatId, Brand = _model.Brand, Type = _model.Type, SerialNumber = _model.SerialNumber,
+                EnableInit = _model.EnableInit, InitId = _model.InitId, InstDate = instDateStr, Security = _model.Security,
+                IpAddress = _model.IpAddress, MacAddress = _model.MacAddress, BankName = _model.BankName, BankBranch = _model.BankBranch,
+                BankCode = _model.BankCode, BankAccNumber = _model.BankAccNumber, BankAccName = _model.BankAccName,
+                VirtualAccount = _model.VirtualAccount, VaName = _model.VaName, KeyLength = _model.KeyLength,
+                PinblockFormat = _model.PinblockFormat, MasterKey = _model.MasterKey, MasterKcv = _model.MasterKcv,
+                KeyUnderLmk = _model.KeyUnderLmk, KeyUnderZmk = _model.KeyUnderZmk, KeyCheckValue = _model.KeyCheckValue
+            };
+            var (success, error) = await TerminalManagement.UpdateTerminalAsync(_model.TermId, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateTerminalRequest
+            {
+                TermId = _model.TermId, MerchantId = _model.MerchantId, SubMerchantId = NullIfEmpty(_model.SubMerchantId),
+                StoreId = NullIfEmpty(_model.StoreId), LoketName = _model.LoketName, Location = _model.Location, City = _model.City,
+                Phone = _model.Phone, Active = _model.Active, GroupName = _model.GroupName, SubgroupName = _model.SubgroupName,
+                Criteria = _model.Criteria, Nmid = _model.Nmid, Mpan = _model.Mpan, ChatId = _model.ChatId, Brand = _model.Brand,
+                Type = _model.Type, SerialNumber = _model.SerialNumber, EnableInit = _model.EnableInit, InitId = _model.InitId,
+                InstDate = instDateStr, Security = _model.Security, IpAddress = _model.IpAddress, MacAddress = _model.MacAddress,
+                BankName = _model.BankName, BankBranch = _model.BankBranch, BankCode = _model.BankCode, BankAccNumber = _model.BankAccNumber,
+                BankAccName = _model.BankAccName, VirtualAccount = _model.VirtualAccount, VaName = _model.VaName,
+                KeyLength = _model.KeyLength, PinblockFormat = _model.PinblockFormat, MasterKey = _model.MasterKey,
+                MasterKcv = _model.MasterKcv, KeyUnderLmk = _model.KeyUnderLmk, KeyUnderZmk = _model.KeyUnderZmk,
+                KeyCheckValue = _model.KeyCheckValue
+            };
+            var (success, _, error) = await TerminalManagement.CreateTerminalAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan terminal.";
+        }
+    }
+
+    private static string? NullIfEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string TermId { get; set; } = string.Empty;
+        public string MerchantId { get; set; } = string.Empty;
+        public string SubMerchantId { get; set; } = string.Empty;
+        public string StoreId { get; set; } = string.Empty;
+        public string LoketName { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public bool Active { get; set; } = true;
+        public string GroupName { get; set; } = string.Empty;
+        public string SubgroupName { get; set; } = string.Empty;
+        public string Criteria { get; set; } = string.Empty;
+        public string Nmid { get; set; } = string.Empty;
+        public string Mpan { get; set; } = string.Empty;
+        public string ChatId { get; set; } = string.Empty;
+        public string Brand { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string SerialNumber { get; set; } = string.Empty;
+        public bool EnableInit { get; set; }
+        public string InitId { get; set; } = string.Empty;
+        public bool Security { get; set; }
+        public string IpAddress { get; set; } = string.Empty;
+        public string MacAddress { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public string BankBranch { get; set; } = string.Empty;
+        public string BankCode { get; set; } = string.Empty;
+        public string BankAccNumber { get; set; } = string.Empty;
+        public string BankAccName { get; set; } = string.Empty;
+        public string VirtualAccount { get; set; } = string.Empty;
+        public string VaName { get; set; } = string.Empty;
+        public string KeyLength { get; set; } = "2";
+        public string PinblockFormat { get; set; } = "01";
+        public string MasterKey { get; set; } = string.Empty;
+        public string MasterKcv { get; set; } = string.Empty;
+        public string KeyUnderLmk { get; set; } = string.Empty;
+        public string KeyUnderZmk { get; set; } = string.Empty;
+        public string KeyCheckValue { get; set; } = string.Empty;
+    }
+}

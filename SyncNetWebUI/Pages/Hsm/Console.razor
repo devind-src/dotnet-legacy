@@ -1,0 +1,301 @@
+@page "/hsm-console"
+@attribute [Authorize]
+@inject HsmConsoleService HsmConsole
+
+<PageTitle>HSM Console</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">HSM Console</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">HSM > Console.</MudText>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudTabs Elevation="0" Rounded="true" PanelClass="pa-6">
+        <MudTabPanel Text="Component" Icon="@Icons.Material.Filled.Key">
+            <MudPaper Class="pa-4">
+                <MudGrid Spacing="5">
+                    <MudItem xs="12" sm="4">
+                        <MudSelect T="int" Label="Key Length" @bind-Value="_componentLength" Variant="Variant.Outlined">
+                            <MudSelectItem Value="16">16</MudSelectItem>
+                            <MudSelectItem Value="32">32</MudSelectItem>
+                            <MudSelectItem Value="48">48</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudSelect T="string" Label="Parity" @bind-Value="_componentParity" Variant="Variant.Outlined">
+                            <MudSelectItem Value="@("none")">None</MudSelectItem>
+                            <MudSelectItem Value="@("odd")">Odd</MudSelectItem>
+                            <MudSelectItem Value="@("even")">Even</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField T="int" Label="How Many?" @bind-Value="_componentCount" Min="1" Max="5" Variant="Variant.Outlined" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudTextField T="string" Value="_componentOutput" Label="Result" Variant="Variant.Outlined" Lines="10" ReadOnly="true" Class="mt-4" />
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="GenerateComponentAsync" Disabled="_busy">Generate Component</MudButton>
+
+                @if (!string.IsNullOrEmpty(_componentError))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_componentError</MudAlert>
+                }
+            </MudPaper>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Encrypt Component" Icon="@Icons.Material.Filled.Lock">
+            <MudPaper Class="pa-4">
+                <MudStack Spacing="4">
+                    <MudTextField T="string" Label="Clear Component" @bind-Value="_encryptClear" Variant="Variant.Outlined" InputType="InputType.Password" />
+                    <MudTextField T="string" Value="_encryptResult" Label="Encrypted Component" Variant="Variant.Outlined" ReadOnly="true" />
+                    <MudTextField T="string" Value="_encryptKcv" Label="Key Check Value" Variant="Variant.Outlined" ReadOnly="true" />
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="EncryptComponentAsync" Disabled="_busy" Style="width:fit-content">Encrypt</MudButton>
+
+                    @if (!string.IsNullOrEmpty(_encryptError))
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true">@_encryptError</MudAlert>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Form a Key" Icon="@Icons.Material.Filled.VpnKey">
+            <MudPaper Class="pa-4">
+                <MudGrid Spacing="5" AlignItems="AlignItems.Center">
+                    <MudItem xs="12" sm="2">
+                        <MudSelect T="string" Label="Input Mode" @bind-Value="_zmkInputMode" Variant="Variant.Outlined">
+                            <MudSelectItem Value="@("clear")">Clear</MudSelectItem>
+                            <MudSelectItem Value="@("encrypted")">Encrypted</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="5">
+                        <MudTextField T="string" Label="Input Component" @bind-Value="_zmkComponent" Variant="Variant.Outlined"
+                                      InputType="@(_zmkInputMode == "clear" ? InputType.Password : InputType.Text)" />
+                    </MudItem>
+                    <MudItem xs="6" sm="2">
+                        <MudButton Class="mt-4" Variant="Variant.Filled" Color="Color.Warning" FullWidth="true" OnClick="CheckZmkComponentAsync" Disabled="_busy">Check</MudButton>
+                    </MudItem>
+                    <MudItem xs="12" sm="2">
+                        <MudTextField T="string" Value="_zmkComponentKcv" Label="Key Check Value" Variant="Variant.Outlined" ReadOnly="true" />
+                    </MudItem>
+                    <MudItem xs="6" sm="1">
+                        <MudButton Class="mt-4" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="AddZmkComponentAsync" Disabled="_busy">Add</MudButton>
+                    </MudItem>
+                </MudGrid>
+
+                <MudTextField T="string" Value="_zmkOutput" Label="Result" Variant="Variant.Outlined" Lines="6" ReadOnly="true" Class="mt-4" />
+
+                <MudStack Row="true" Spacing="2" Class="mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GenerateZmkAsync" Disabled="@(_busy || _zmkComponents.Count == 0)">Generate ZMK</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="ClearZmkData" Disabled="_busy">Clear Data</MudButton>
+                </MudStack>
+
+                @if (!string.IsNullOrEmpty(_zmkError))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_zmkError</MudAlert>
+                }
+            </MudPaper>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Key Check Value" Icon="@Icons.Material.Filled.FactCheck">
+            <MudPaper Class="pa-4">
+                <MudStack Spacing="4">
+                    <MudTextField T="string" Label="Input Component" @bind-Value="_kcvInput" Variant="Variant.Outlined" />
+                    <MudTextField T="string" Value="_kcvResult" Label="Key Check Value" Variant="Variant.Outlined" ReadOnly="true" />
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GetKeyCheckValueAsync" Disabled="_busy" Style="width:fit-content">Get Key Check Value</MudButton>
+
+                    @if (!string.IsNullOrEmpty(_kcvError))
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true">@_kcvError</MudAlert>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudTabPanel>
+    </MudTabs>
+</MudPaper>
+
+@code {
+    private bool _busy;
+
+    // Component tab
+    private int _componentLength = 48;
+    private string _componentParity = "none";
+    private int _componentCount = 3;
+    private string _componentOutput = string.Empty;
+    private string? _componentError;
+
+    // Encrypt Component tab
+    private string _encryptClear = string.Empty;
+    private string _encryptResult = string.Empty;
+    private string _encryptKcv = string.Empty;
+    private string? _encryptError;
+
+    // Form a Key tab
+    private string _zmkInputMode = "clear";
+    private string _zmkComponent = string.Empty;
+    private string _zmkComponentKcv = string.Empty;
+    private readonly List<string> _zmkComponents = new();
+    private string _zmkOutput = string.Empty;
+    private string? _zmkError;
+
+    // Key Check Value tab
+    private string _kcvInput = string.Empty;
+    private string _kcvResult = string.Empty;
+    private string? _kcvError;
+
+    private async Task GenerateComponentAsync()
+    {
+        _busy = true;
+        _componentError = null;
+
+        var (results, error) = await HsmConsole.GenerateComponentAsync(new GenerateComponentRequest
+        {
+            Length = _componentLength,
+            Parity = _componentParity,
+            Count = _componentCount
+        });
+
+        _busy = false;
+
+        if (results == null)
+        {
+            _componentError = error ?? "Gagal generate component.";
+            return;
+        }
+
+        var text = string.Empty;
+        foreach (var r in results)
+            text += $"Component: {r.Component}\nKey Check Value: {r.Kcv}\n\n";
+
+        _componentOutput = text;
+    }
+
+    private async Task EncryptComponentAsync()
+    {
+        _encryptError = null;
+
+        if (string.IsNullOrEmpty(_encryptClear)) return;
+        if (_encryptClear.Length != 16 && _encryptClear.Length != 32 && _encryptClear.Length != 48)
+        {
+            _encryptError = "Panjang component tidak valid (harus 16, 32, atau 48 karakter hex).";
+            return;
+        }
+
+        _busy = true;
+        var (result, error) = await HsmConsole.EncryptComponentAsync(_encryptClear);
+        _busy = false;
+
+        if (result == null)
+        {
+            _encryptError = error ?? "Gagal mengenkripsi component.";
+            return;
+        }
+
+        _encryptResult = result.EncryptedComponent;
+        _encryptKcv = result.Kcv;
+    }
+
+    private async Task GetKeyCheckValueAsync()
+    {
+        _kcvError = null;
+
+        if (string.IsNullOrEmpty(_kcvInput)) return;
+        if (_kcvInput.Length != 16 && _kcvInput.Length != 32 && _kcvInput.Length != 48)
+        {
+            _kcvError = "Panjang component tidak valid (harus 16, 32, atau 48 karakter hex).";
+            return;
+        }
+
+        _busy = true;
+        var (kcv, error) = await HsmConsole.GetKeyCheckValueAsync(_kcvInput);
+        _busy = false;
+
+        if (kcv == null)
+        {
+            _kcvError = error ?? "Gagal menghitung Key Check Value.";
+            return;
+        }
+
+        _kcvResult = kcv;
+    }
+
+    private async Task CheckZmkComponentAsync()
+    {
+        _zmkError = null;
+
+        if (string.IsNullOrEmpty(_zmkComponent)) return;
+        if (_zmkComponent.Length != 16 && _zmkComponent.Length != 32 && _zmkComponent.Length != 48)
+        {
+            _zmkError = "Panjang component tidak valid (harus 16, 32, atau 48 karakter hex).";
+            return;
+        }
+
+        _busy = true;
+        var (kcv, error) = await HsmConsole.GetComponentKcvAsync(_zmkComponent, _zmkInputMode);
+        _busy = false;
+
+        if (kcv == null)
+        {
+            _zmkError = error ?? "Gagal menghitung Key Check Value.";
+            return;
+        }
+
+        _zmkComponentKcv = kcv;
+    }
+
+    private async Task AddZmkComponentAsync()
+    {
+        _zmkError = null;
+
+        if (string.IsNullOrEmpty(_zmkComponent)) return;
+        if (_zmkComponent.Length != 16 && _zmkComponent.Length != 32 && _zmkComponent.Length != 48)
+        {
+            _zmkError = "Panjang component tidak valid (harus 16, 32, atau 48 karakter hex).";
+            return;
+        }
+
+        _busy = true;
+        var (kcv, error) = await HsmConsole.GetComponentKcvAsync(_zmkComponent, _zmkInputMode);
+        _busy = false;
+
+        if (kcv == null)
+        {
+            _zmkError = error ?? "Gagal menghitung Key Check Value.";
+            return;
+        }
+
+        _zmkComponents.Add(_zmkComponent);
+        _zmkOutput += $"Component {_zmkComponents.Count} KCV: {kcv}\n";
+
+        _zmkComponent = string.Empty;
+        _zmkComponentKcv = string.Empty;
+    }
+
+    private async Task GenerateZmkAsync()
+    {
+        _zmkError = null;
+        if (_zmkComponents.Count == 0) return;
+
+        _busy = true;
+        var (result, error) = await HsmConsole.GenerateZmkAsync(_zmkComponents, _zmkInputMode);
+        _busy = false;
+
+        if (result == null)
+        {
+            _zmkError = error ?? "Gagal membentuk ZMK.";
+            return;
+        }
+
+        _zmkOutput += $"\nKey Encrypted: {result.EncryptedKey}\nKey Check Value: {result.KeyCheckValue}\n";
+    }
+
+    private void ClearZmkData()
+    {
+        _zmkComponents.Clear();
+        _zmkComponent = string.Empty;
+        _zmkComponentKcv = string.Empty;
+        _zmkOutput = string.Empty;
+        _zmkError = null;
+    }
+}

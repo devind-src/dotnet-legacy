@@ -1,0 +1,276 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.LocalOffer" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Promotion" : "Tambah Promotion")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@Item?.ProductId — @Item?.PromoCode</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Product" Value="@FormatProduct(_model.ProductId)" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudAutocomplete T="string" Label="Product" @bind-Value="_model.ProductId"
+                                         SearchFunc="SearchProducts" ToStringFunc="FormatProduct" Required="true" RequiredError="Product wajib diisi"
+                                         CoerceValue="true" Disabled="_busy" MaxLength="30" />
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <MudTextField T="string" Label="Promo Code" @bind-Value="_model.PromoCode" Class="flex-grow-1"
+                                      Disabled="IsEdit || _busy" Required="true" RequiredError="Promo code wajib diisi" MaxLength="15" />
+                        @if (!IsEdit)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Autorenew" Disabled="_busy"
+                                           OnClick="GeneratePromoCode" title="Generate" />
+                        }
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Promo Description" @bind-Value="_model.PromoDesc"
+                                  Disabled="IsEdit || _busy" Lines="3" MaxLength="255" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Date Start" @bind-Date="_dateStart" DateFormat="dd MMM yyyy" Disabled="IsEdit || _busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTimePicker Label="Time Start" @bind-Time="_timeStart" Disabled="IsEdit || _busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Date End" @bind-Date="_dateEnd" DateFormat="dd MMM yyyy" Disabled="IsEdit || _busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTimePicker Label="Time End" @bind-Time="_timeEnd" Disabled="IsEdit || _busy" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Fee Type" @bind-Value="_model.FeeType" Disabled="_busy">
+                        <MudSelectItem T="string" Value="@("0")">Fixed</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("1")">Percent</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="bool" Label="Status" @bind-Value="_model.IsActive" Disabled="_busy">
+                        <MudSelectItem T="bool" Value="true">Active</MudSelectItem>
+                        <MudSelectItem T="bool" Value="false">Not Active</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                @if (_model.FeeType == "0")
+                {
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="int?" Label="Total Fee" @bind-Value="_model.FixedFee" Disabled="_busy" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="int?" Label="Fee Merchant" @bind-Value="_model.FixedFeeAcq" Disabled="_busy" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="int?" Label="Fee Sub Merchant" @bind-Value="_model.FixedFeeIss" Disabled="_busy" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="int?" Label="Fee Switch" @bind-Value="_model.FixedFeeSwt" Disabled="_busy" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Style="opacity:.65">Fee Merchant + Fee Sub Merchant + Fee Switch harus sama dengan Total Fee.</MudText>
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="decimal?" Label="Total Fee (%)" @bind-Value="_model.PercentFee" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="decimal?" Label="Fee Merchant (%)" @bind-Value="_model.PercentFeeAcq" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="decimal?" Label="Fee Sub Merchant (%)" @bind-Value="_model.PercentFeeIss" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="decimal?" Label="Fee Switch (%)" @bind-Value="_model.PercentFeeSwt" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Style="opacity:.65">Fee Merchant + Fee Sub Merchant + Fee Switch (%) harus 100%.</MudText>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductPromotionManagementService PromoManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public ProductPromotionDto? Item { get; set; }
+    [Parameter] public List<LookupItemDto> Products { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private DateTime? _dateStart;
+    private DateTime? _dateEnd;
+    private TimeSpan? _timeStart;
+    private TimeSpan? _timeEnd;
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Item != null)
+        {
+            _model.ProductId = Item.ProductId ?? string.Empty;
+            _model.PromoCode = Item.PromoCode ?? string.Empty;
+            _model.PromoDesc = Item.PromoDesc;
+            _model.FeeType = Item.FeeType;
+            _model.FixedFee = Item.FixedFee;
+            _model.FixedFeeAcq = Item.FixedFeeAcq;
+            _model.FixedFeeIss = Item.FixedFeeIss;
+            _model.FixedFeeSwt = Item.FixedFeeSwt;
+            _model.PercentFee = Item.PercentFee;
+            _model.PercentFeeAcq = Item.PercentFeeAcq;
+            _model.PercentFeeIss = Item.PercentFeeIss;
+            _model.PercentFeeSwt = Item.PercentFeeSwt;
+            _model.IsActive = Item.IsActive;
+
+            _dateStart = Item.DateStart.Date;
+            _dateEnd = Item.DateEnd.Date;
+            _timeStart = Item.DateStart.TimeOfDay;
+            _timeEnd = Item.DateEnd.TimeOfDay;
+        }
+        else
+        {
+            _dateStart = DateTime.Today;
+            _dateEnd = DateTime.Today;
+            _timeStart = TimeSpan.Zero;
+            _timeEnd = new TimeSpan(23, 59, 59);
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchProducts(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? Products.Select(p => p.Key)
+            : Products.Where(p => p.Key.Contains(value, StringComparison.OrdinalIgnoreCase)
+                                   || p.Value.Contains(value, StringComparison.OrdinalIgnoreCase))
+                      .Select(p => p.Key);
+        return Task.FromResult(matches);
+    }
+
+    private string? FormatProduct(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return code;
+        var match = Products.FirstOrDefault(p => p.Key == code);
+        return match == null ? code : $"{match.Key} — {match.Value}";
+    }
+
+    private void GeneratePromoCode()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var random = Random.Shared;
+        _model.PromoCode = new string(Enumerable.Range(0, 8).Select(_ => chars[random.Next(chars.Length)]).ToArray());
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Item != null)
+        {
+            var request = new UpdateProductPromotionRequest
+            {
+                FeeType = _model.FeeType,
+                FixedFee = _model.FixedFee,
+                FixedFeeAcq = _model.FixedFeeAcq,
+                FixedFeeIss = _model.FixedFeeIss,
+                FixedFeeSwt = _model.FixedFeeSwt,
+                PercentFee = _model.PercentFee,
+                PercentFeeAcq = _model.PercentFeeAcq,
+                PercentFeeIss = _model.PercentFeeIss,
+                PercentFeeSwt = _model.PercentFeeSwt,
+                IsActive = _model.IsActive
+            };
+            var (success, error) = await PromoManagement.UpdatePromoAsync(Item.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateProductPromotionRequest
+            {
+                ProductId = _model.ProductId,
+                PromoCode = _model.PromoCode,
+                PromoDesc = _model.PromoDesc,
+                DateStart = (_dateStart ?? DateTime.Today).Date.Add(_timeStart ?? TimeSpan.Zero),
+                DateEnd = (_dateEnd ?? DateTime.Today).Date.Add(_timeEnd ?? new TimeSpan(23, 59, 59)),
+                FeeType = _model.FeeType,
+                FixedFee = _model.FixedFee,
+                FixedFeeAcq = _model.FixedFeeAcq,
+                FixedFeeIss = _model.FixedFeeIss,
+                FixedFeeSwt = _model.FixedFeeSwt,
+                PercentFee = _model.PercentFee,
+                PercentFeeAcq = _model.PercentFeeAcq,
+                PercentFeeIss = _model.PercentFeeIss,
+                PercentFeeSwt = _model.PercentFeeSwt,
+                IsActive = _model.IsActive
+            };
+            var (success, _, error) = await PromoManagement.CreatePromoAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan product promo.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string ProductId { get; set; } = string.Empty;
+        public string PromoCode { get; set; } = string.Empty;
+        public string? PromoDesc { get; set; }
+        public string FeeType { get; set; } = "0";
+        public int? FixedFee { get; set; }
+        public int? FixedFeeAcq { get; set; }
+        public int? FixedFeeIss { get; set; }
+        public int? FixedFeeSwt { get; set; }
+        public decimal? PercentFee { get; set; }
+        public decimal? PercentFeeAcq { get; set; }
+        public decimal? PercentFeeIss { get; set; }
+        public decimal? PercentFeeSwt { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+}

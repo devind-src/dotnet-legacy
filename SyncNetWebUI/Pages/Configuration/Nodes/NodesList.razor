@@ -1,0 +1,335 @@
+@page "/config-interface"
+@attribute [Authorize]
+@inject NodeManagementService NodeManagement
+@inject AppManagementService AppManagement
+@inject SupportTeamManagementService SupportTeamManagement
+@inject BusinessDateManagementService BusinessDateManagement
+@inject ConnectionManagementService ConnectionManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Nodes</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Nodes</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Konfigurasi > Interface > Nodes.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari node" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Node</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage"
+              T="NodeDto" OnRowClick="@((TableRowClickEventArgs<NodeDto> e) => SelectNodeAsync(e.Item))">
+        <HeaderContent>
+            <MudTh>Node Name</MudTh>
+            <MudTh>Application</MudTh>
+            <MudTh>Business Calendar</MudTh>
+            <MudTh>Port In</MudTh>
+            <MudTh>Port Out</MudTh>
+            <MudTh>Last Connected</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Node Name">@context.NodeName</MudTd>
+            <MudTd DataLabel="Application">@context.AppName</MudTd>
+            <MudTd DataLabel="Business Calendar">@context.BusinessCalendar</MudTd>
+            <MudTd DataLabel="Port In">@context.PortIn</MudTd>
+            <MudTd DataLabel="Port Out">@context.PortOut</MudTd>
+            <MudTd DataLabel="Last Connected">@(context.LastConnected?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada node ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+
+    @if (_selectedNode != null)
+    {
+        <MudPaper Class="pa-4 mt-4" Elevation="1">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h6" Color="Color.Primary">Connections — Node: @_selectedNode.NodeName</MudText>
+                @if (Session.UserManagementPermissions.CanAdd)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenCreateConnectionDialog">Tambah Connection</MudButton>
+                }
+            </MudStack>
+
+            @if (_connectionsLoading)
+            {
+                <MudProgressLinear Indeterminate="true" Class="mb-2" />
+            }
+            else
+            {
+                <MudTable Items="_connections" Hover="true" Dense="true" T="ConnectionDto">
+                    <HeaderContent>
+                        <MudTh>Conn Name</MudTh>
+                        <MudTh>Protocol</MudTh>
+                        <MudTh>IP Address</MudTh>
+                        <MudTh>Port</MudTh>
+                        <MudTh>WS URL</MudTh>
+                        <MudTh>Aksi</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Conn Name">@context.ConnName</MudTd>
+                        <MudTd DataLabel="Protocol">@ProtocolLabel(context.Protocol)</MudTd>
+                        <MudTd DataLabel="IP Address">@context.IpAddress</MudTd>
+                        <MudTd DataLabel="Port">@context.Port</MudTd>
+                        <MudTd DataLabel="WS URL">@context.WsUrl</MudTd>
+                        <MudTd DataLabel="Aksi">
+                            @if (Session.UserManagementPermissions.CanEdit)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                               OnClick="@(() => OpenEditConnectionDialog(context))" title="Edit" />
+                            }
+                            @if (Session.UserManagementPermissions.CanDelete)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                               OnClick="@(() => ConfirmDeleteConnectionAsync(context))" title="Hapus" />
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent>
+                        <MudText Style="opacity:.65">Belum ada connection untuk node ini.</MudText>
+                    </NoRecordsContent>
+                </MudTable>
+            }
+        </MudPaper>
+    }
+}
+
+@code {
+    private List<NodeDto> _items = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Large, FullWidth = true };
+
+    private List<AppDto> _apps = new();
+    private List<SupportTeamDto> _teams = new();
+    private List<BusinessDateDto> _calendars = new();
+
+    private NodeDto? _selectedNode;
+    private List<ConnectionDto> _connections = new();
+    private bool _connectionsLoading;
+
+    private static readonly Dictionary<string, string> ProtocolLabels = new()
+    {
+        ["0"] = "TCP/IP 2 bytes exclude header",
+        ["1"] = "TCP/IP 2 bytes include header",
+        ["2"] = "TCP/IP 4 bytes exclude header",
+        ["3"] = "TCP/IP 4 bytes include header",
+        ["4"] = "TCP/IP Custom",
+        ["5"] = "TCP/IP None",
+        ["6"] = "Message Queue",
+        ["7"] = "Web Service",
+        ["8"] = "Custom",
+    };
+
+    private static string ProtocolLabel(string? protocol) => protocol != null && ProtocolLabels.TryGetValue(protocol, out var label) ? label : (protocol ?? "");
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await NodeManagement.GetNodesAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar node.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _apps = await AppManagement.GetAppsAsync() ?? new();
+        _teams = await SupportTeamManagement.GetTeamsAsync() ?? new();
+        _calendars = await BusinessDateManagement.GetBusinessDatesAsync() ?? new();
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<NodeFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Apps, _apps },
+            { x => x.Teams, _teams },
+            { x => x.Calendars, _calendars }
+        };
+        var dialog = await DialogService.ShowAsync<NodeFormDialog>("Tambah Node", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Node berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(NodeDto item)
+    {
+        var parameters = new DialogParameters<NodeFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Node, item },
+            { x => x.Apps, _apps },
+            { x => x.Teams, _teams },
+            { x => x.Calendars, _calendars }
+        };
+        var dialog = await DialogService.ShowAsync<NodeFormDialog>("Edit Node", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan node berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(NodeDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Node",
+            $"Yakin ingin menghapus node '{item.NodeName}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await NodeManagement.DeleteNodeAsync(item.NodeId);
+        if (success)
+        {
+            Snackbar.Add("Node berhasil dihapus.", Severity.Success);
+            if (_selectedNode?.NodeId == item.NodeId) _selectedNode = null;
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus node.", Severity.Error);
+        }
+    }
+
+    private async Task SelectNodeAsync(NodeDto node)
+    {
+        _selectedNode = node;
+        await LoadConnectionsAsync();
+    }
+
+    private async Task LoadConnectionsAsync()
+    {
+        if (_selectedNode == null) return;
+
+        _connectionsLoading = true;
+        _connections = await ConnectionManagement.GetByNodeIdAsync(_selectedNode.NodeId) ?? new();
+        _connectionsLoading = false;
+    }
+
+    private async Task OpenCreateConnectionDialog()
+    {
+        if (_selectedNode == null) return;
+
+        var parameters = new DialogParameters<ConnectionFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.NodeId, _selectedNode.NodeId },
+            { x => x.NodeName, _selectedNode.NodeName ?? string.Empty }
+        };
+        var dialog = await DialogService.ShowAsync<ConnectionFormDialog>("Tambah Connection", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Connection berhasil ditambahkan.", Severity.Success);
+            await LoadConnectionsAsync();
+        }
+    }
+
+    private async Task OpenEditConnectionDialog(ConnectionDto item)
+    {
+        if (_selectedNode == null) return;
+
+        var parameters = new DialogParameters<ConnectionFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Connection, item },
+            { x => x.NodeId, _selectedNode.NodeId },
+            { x => x.NodeName, _selectedNode.NodeName ?? string.Empty }
+        };
+        var dialog = await DialogService.ShowAsync<ConnectionFormDialog>("Edit Connection", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan connection berhasil disimpan.", Severity.Success);
+            await LoadConnectionsAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteConnectionAsync(ConnectionDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Connection",
+            $"Yakin ingin menghapus connection '{item.ConnName}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await ConnectionManagement.DeleteConnectionAsync(item.ConnName);
+        if (success)
+        {
+            Snackbar.Add("Connection berhasil dihapus.", Severity.Success);
+            await LoadConnectionsAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus connection.", Severity.Error);
+        }
+    }
+}

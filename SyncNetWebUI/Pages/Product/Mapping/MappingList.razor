@@ -1,0 +1,186 @@
+@page "/product-mapping"
+@attribute [Authorize]
+@inject ProductMappingManagementService MappingManagement
+@inject LookupService Lookups
+@inject ProductManagementService ProductManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Product Mapping</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Product Mapping</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Product > Mapping.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari product / notes" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Mapping</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Application</MudTh>
+            <MudTh>Product</MudTh>
+            <MudTh>Denom</MudTh>
+            <MudTh>Supplier Biller Code</MudTh>
+            <MudTh>Deposit</MudTh>
+            <MudTh>Notes</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Application">@context.AppName</MudTd>
+            <MudTd DataLabel="Product">@context.SourceBillerCode</MudTd>
+            <MudTd DataLabel="Denom">@context.Denom</MudTd>
+            <MudTd DataLabel="Supplier Biller Code">@context.DestBillerCode</MudTd>
+            <MudTd DataLabel="Deposit">
+                <MudChip T="string" Size="Size.Small" Color="@(context.IsDeposit ? Color.Success : Color.Default)">
+                    @(context.IsDeposit ? "Ya" : "Tidak")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Notes">@context.Notes</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada mapping ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<ProductMappingDto> _items = new();
+    private List<LookupItemDto> _apps = new();
+    private List<LookupItemDto> _products = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var apps = await Lookups.GetAppsWithBillerNodeAsync();
+        _apps = apps ?? new();
+
+        var products = await ProductManagement.GetProductsAsync();
+        _products = products?.Select(p => new LookupItemDto(p.ProductCode, p.ProductName ?? p.ProductCode)).ToList() ?? new();
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await MappingManagement.GetMappingsAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar mapping.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<MappingFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Apps, _apps },
+            { x => x.Products, _products }
+        };
+        var dialog = await DialogService.ShowAsync<MappingFormDialog>("Tambah Mapping", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Mapping berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(ProductMappingDto item)
+    {
+        var parameters = new DialogParameters<MappingFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Mapping, item },
+            { x => x.Apps, _apps },
+            { x => x.Products, _products }
+        };
+        var dialog = await DialogService.ShowAsync<MappingFormDialog>("Edit Mapping", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan mapping berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(ProductMappingDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Mapping",
+            $"Yakin ingin menghapus mapping '{item.SourceBillerCode}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await MappingManagement.DeleteMappingAsync(item.Id);
+        if (success)
+        {
+            Snackbar.Add("Mapping berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus mapping.", Severity.Error);
+        }
+    }
+}

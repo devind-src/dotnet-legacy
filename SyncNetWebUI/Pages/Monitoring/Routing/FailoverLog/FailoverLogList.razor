@@ -1,0 +1,111 @@
+﻿@page "/mon-route-failover-log"
+@attribute [Authorize]
+@inject RouteFailoverLogManagementService LogManagement
+
+<PageTitle>Failover Log</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Failover Log</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Monitoring > Routing > Failover Log — riwayat setiap kali supplier/biller diblokir (DOWN/SUSPECT) beserta alasannya, untuk topup (MARGIN) dan bill payment (PRODUCT) (read-only).</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" AlignItems="AlignItems.End">
+        @* lebar dibatasi di pembungkus, bukan di picker: style di MudDatePicker ikut memotong kalendernya *@
+        <div style="width:180px;"><MudDatePicker Label="Dari tanggal" @bind-Date="_from" DateFormat="dd MMM yyyy" /></div>
+        <div style="width:180px;"><MudDatePicker Label="Sampai tanggal" @bind-Date="_to" DateFormat="dd MMM yyyy" /></div>
+        <MudSelect T="string" Label="Routing Type" @bind-Value="_routingType" Clearable="true" Style="max-width:200px;">
+            <MudSelectItem T="string" Value="@("MARGIN")">MARGIN (topup)</MudSelectItem>
+            <MudSelectItem T="string" Value="@("PRODUCT")">PRODUCT (bill payment)</MudSelectItem>
+        </MudSelect>
+        <MudTextField T="string" @bind-Value="_instId" Label="Product ID" Immediate="true" Style="max-width:160px;" />
+        <MudTextField T="string" @bind-Value="_supplierId" Label="Supplier ID" Immediate="true" Style="max-width:160px;" />
+        <MudSelect T="string" Label="Reason" @bind-Value="_reason" Clearable="true" Style="max-width:200px;">
+            @foreach (var r in HealthCheckReasons.All.Append(HealthCheckReasons.ScheduleClosed))
+            {
+                <MudSelectItem T="string" Value="@r">@HealthCheckReasons.Label(r)</MudSelectItem>
+            }
+        </MudSelect>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="LoadAsync">Cari</MudButton>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Waktu</MudTh>
+            <MudTh>Routing Type</MudTh>
+            <MudTh>Product</MudTh>
+            <MudTh>Denom</MudTh>
+            <MudTh>Trace Number</MudTh>
+            <MudTh>From Supplier</MudTh>
+            <MudTh>To Supplier</MudTh>
+            <MudTh>RC Code</MudTh>
+            <MudTh>Latency</MudTh>
+            <MudTh>Reason</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Waktu">@context.CreatedDt.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+            <MudTd DataLabel="Routing Type">@context.RoutingType</MudTd>
+            <MudTd DataLabel="Product">@context.InstId</MudTd>
+            <MudTd DataLabel="Denom">@context.Denom?.ToString("N0")</MudTd>
+            <MudTd DataLabel="Trace Number">@context.TraceNumber</MudTd>
+            <MudTd DataLabel="From Supplier">@context.FromSupplierId</MudTd>
+            <MudTd DataLabel="To Supplier">@(context.ToSupplierId ?? "-")</MudTd>
+            <MudTd DataLabel="RC Code">@context.RcCode</MudTd>
+            <MudTd DataLabel="Latency">@(context.LatencyMs.HasValue ? $"{context.LatencyMs / 1000m:0.0} dtk" : "")</MudTd>
+            <MudTd DataLabel="Reason">
+                <MudChip T="string" Size="Size.Small" Color="@(context.Reason == HealthCheckReasons.LinkDown || context.Reason == HealthCheckReasons.ScheduleClosed ? Color.Error : Color.Warning)">
+                    @HealthCheckReasons.Label(context.Reason)
+                </MudChip>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada riwayat failover ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<RouteFailoverLogDto> _items = new();
+    private DateTime? _from;
+    private DateTime? _to;
+    private string? _instId;
+    private string? _supplierId;
+    private string? _reason;
+    private string? _routingType;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 25;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await LogManagement.GetLogsAsync(_from, _to?.AddDays(1).AddTicks(-1), _instId, _supplierId, _reason, _routingType);
+        if (result == null)
+        {
+            _error = "Gagal memuat riwayat failover.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+}

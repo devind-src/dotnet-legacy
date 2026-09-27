@@ -1,0 +1,102 @@
+﻿@page "/mon-route-margin"
+@attribute [Authorize]
+@inject RouteMarginManagementService RouteMarginManagement
+@inject ProductManagementService ProductManagement
+
+<PageTitle>Monitoring Route by Margin</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Monitoring Route by Margin</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-4">Monitoring > Routing > Product Prepaid.</MudText>
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" Icon="@Icons.Material.Filled.Info">
+    Routing Mode, harga, priority, dan LB weight supplier topup diatur di
+    <MudLink Href="/product/pricing-fees/prepaid-pricing">Product &gt; Pricing &amp; Fees &gt; Prepaid Pricing</MudLink>.
+    Halaman ini hanya menampilkan produk yang sudah punya route margin.
+</MudAlert>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari product ID / notes" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Product ID</MudTh>
+            <MudTh>Product</MudTh>
+            <MudTh>Routing Mode</MudTh>
+            <MudTh>Supplier Aktif</MudTh>
+            <MudTh>Notes</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Product ID">@context.InstId</MudTd>
+            <MudTd DataLabel="Product">@ProductName(context.InstId)</MudTd>
+            <MudTd DataLabel="Routing Mode">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                         Color="@(RoutingModes.IsDynamic(context.RoutingMode) ? Color.Primary : Color.Default)">@RoutingModes.Label(context.RoutingMode)</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Supplier Aktif">@context.ActiveSupplierCount</MudTd>
+            <MudTd DataLabel="Notes">@context.Notes</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada route ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<RouteMarginDto> _items = new();
+    private List<ProductDto> _products = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _products = await ProductManagement.GetProductsAsync() ?? new();
+        await LoadAsync();
+    }
+
+    private string ProductName(string instId) => _products.FirstOrDefault(p => p.ProductCode == instId)?.ProductName ?? instId;
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await RouteMarginManagement.GetRoutesAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar route.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+}

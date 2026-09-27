@@ -1,0 +1,8 @@
+<MudPaper Class="@($"flow-node {(Faded ? "flow-node-faded" : "")}")" Elevation="2">
+    @Label
+</MudPaper>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public bool Faded { get; set; }
+}

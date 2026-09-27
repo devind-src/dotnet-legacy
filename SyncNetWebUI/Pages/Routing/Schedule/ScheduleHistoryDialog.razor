@@ -1,0 +1,87 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Spacing="0">
+            <MudText Typo="Typo.h6">@Item?.RuleName</MudText>
+            <MudText Typo="Typo.caption" Style="opacity:.65">ID @Item?.Id · @RouteScheduleCodes.StateLabel(Item?.State)</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (Item != null)
+        {
+            <MudSimpleTable Dense="true" Class="mb-4">
+                <tbody>
+                    <tr><td style="width:160px">Jenis</td><td>@RouteScheduleCodes.RuleTypeLabel(Item.RuleType)@(Item.Priority.HasValue ? $" (priority {Item.Priority})" : "")</td></tr>
+                    <tr><td>Kategori</td><td>@RouteScheduleCodes.RoutingTypeLabel(Item.RoutingType)</td></tr>
+                    <tr><td>Biller</td><td>@(Item.NodeName ?? "(semua biller produk)")</td></tr>
+                    <tr><td>Produk</td><td>@(Item.InstId == null ? "(semua produk biller)" : $"{Item.InstId} {Item.ProductName}")</td></tr>
+                    <tr><td>Waktu</td><td>@RouteScheduleCodes.RecurrenceLabel(Item.Recurrence) · @Item.WindowText</td></tr>
+                    <tr><td>Catatan</td><td>@(Item.Notes ?? "-")</td></tr>
+                    <tr><td>Dibuat</td><td>@Item.CreatedBy · @Item.CreatedDt?.ToString("dd-MM-yyyy HH:mm")</td></tr>
+                    <tr><td>Diubah</td><td>@Item.UpdatedBy · @Item.UpdatedDt?.ToString("dd-MM-yyyy HH:mm")</td></tr>
+                    @if (!Item.IsActive)
+                    {
+                        <tr><td>Dibatalkan</td><td>@Item.CancelledBy · @Item.CancelledDt?.ToString("dd-MM-yyyy HH:mm") · @Item.CancelReason</td></tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+
+        <MudText Typo="Typo.subtitle2" Class="mb-1">Riwayat perubahan (nilai sebelum diubah)</MudText>
+        @if (_history == null)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_history.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Style="opacity:.65">Belum pernah diubah.</MudText>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Hover="true">
+                <thead>
+                    <tr><th>Waktu</th><th>Oleh</th><th>Aksi</th><th>Nilai sebelumnya</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var h in _history)
+                    {
+                        <tr>
+                            <td style="white-space:nowrap">@h.ChangedDt.ToString("dd-MM-yyyy HH:mm")</td>
+                            <td>@h.ChangedBy</td>
+                            <td>@ActionLabel(h.Action)</td>
+                            <td>
+                                @h.RuleName · @RouteScheduleCodes.RuleTypeLabel(h.RuleType)@(h.Priority.HasValue ? $" {h.Priority}" : "")
+                                · @(h.NodeName ?? "semua biller") · @(h.InstId ?? "semua produk") · @h.WindowText
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Tutup</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private RouteScheduleManagementService Schedules { get; set; } = null!;
+    [Parameter] public RouteScheduleDto? Item { get; set; }
+
+    private List<RouteScheduleHistDto>? _history;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _history = Item == null ? new() : await Schedules.GetHistoryAsync(Item.Id) ?? new();
+    }
+
+    private static string ActionLabel(string action) => action switch
+    {
+        "UPDATE" => "Diubah",
+        "CANCEL" => "Dibatalkan",
+        "DELETE" => "Dihapus",
+        _ => action
+    };
+
+    private void Close() => MudDialog.Close();
+}

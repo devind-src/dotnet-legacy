@@ -1,0 +1,144 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Apps" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Application" : "Tambah Application")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.AppName</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="App Name" @bind-Value="_model.AppName"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="App Name wajib diisi" MaxLength="20" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="App Type" @bind-Value="_model.AppType" Disabled="_busy" Required="true">
+                        @foreach (var t in AppTypes)
+                        {
+                            <MudSelectItem T="string" Value="@t.Key">@t.Value</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Host" @bind-Value="_model.Host"
+                                  Disabled="_busy" Required="true" RequiredError="Host wajib diisi" MaxLength="30" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Command Port" @bind-Value="_model.CommandPort"
+                                  Disabled="_busy" Required="true" RequiredError="Command Port wajib diisi" MaxLength="5" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Primary" Disabled="_busy">Aktif</MudSwitch>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private AppManagementService AppManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public AppDto? App { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    private static readonly Dictionary<string, string> AppTypes = new()
+    {
+        ["0"] = "Transaction Processing",
+        ["1"] = "Interface",
+        ["2"] = "Terminal",
+        ["3"] = "PC Base",
+        ["4"] = "Mobile",
+        ["5"] = "ATM",
+        ["6"] = "Web",
+        ["7"] = "Crypto",
+        ["8"] = "Other",
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEdit && App != null)
+        {
+            _model.AppName = App.AppName;
+            _model.AppType = App.AppType ?? "1";
+            _model.Host = App.Host ?? "localhost";
+            _model.CommandPort = App.CommandPort ?? string.Empty;
+            _model.Active = App.Active;
+        }
+        else
+        {
+            var port = await AppManagement.GetNewCommandPortAsync();
+            _model.CommandPort = port?.ToString() ?? string.Empty;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var request = new UpdateAppRequest { AppType = _model.AppType, Host = _model.Host, CommandPort = _model.CommandPort, Active = _model.Active };
+            var (success, error) = await AppManagement.UpdateAppAsync(_model.AppName, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateAppRequest { AppName = _model.AppName, AppType = _model.AppType, Host = _model.Host, CommandPort = _model.CommandPort };
+            var (success, _, error) = await AppManagement.CreateAppAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan application.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string AppName { get; set; } = string.Empty;
+        public string AppType { get; set; } = "1";
+        public string Host { get; set; } = "localhost";
+        public string CommandPort { get; set; } = string.Empty;
+        public bool Active { get; set; } = true;
+    }
+}

@@ -1,0 +1,165 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Calculate" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Account" : "Tambah Account")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Account Number" @bind-Value="_model.AccNr"
+                                  Disabled="_busy || IsEdit" Required="true" RequiredError="Account number wajib diisi" MaxLength="30"
+                                  Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Autorenew"
+                                  OnAdornmentClick="GenerateAccNr" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="VA Name" @bind-Value="_model.VaName"
+                                  Disabled="_busy || IsEdit" Required="true" RequiredError="VA name wajib diisi" MaxLength="30" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Group Name" @bind-Value="_model.GroupName" Required="true" RequiredError="Group wajib dipilih" Disabled="_busy || IsEdit">
+                        @foreach (var g in Groups)
+                        {
+                            <MudSelectItem T="string" Value="@g.GroupName">@g.GroupName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="bool" Label="Status" @bind-Value="_model.Active" Disabled="_busy">
+                        <MudSelectItem T="bool" Value="false">Not Active</MudSelectItem>
+                        <MudSelectItem T="bool" Value="true">Active</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" Label="Low Balance" @bind-Value="_model.LowBalance" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" Label="Min Balance" @bind-Value="_model.MinBalance" Disabled="_busy" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal" Label="Balance" Value="Account?.Balance ?? 0" Disabled="true" ReadOnly="true" />
+                    </MudItem>
+                }
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Notes" @bind-Value="_model.VaNotes" Disabled="_busy" MaxLength="50" Lines="2" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private VaAccountManagementService AccountManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<VaGroupDto> Groups { get; set; } = new();
+    [Parameter] public VaAccountDto? Account { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Account != null)
+        {
+            _model.AccNr = Account.AccNr;
+            _model.VaName = Account.VaName ?? string.Empty;
+            _model.GroupName = Account.GroupName ?? string.Empty;
+            _model.VaNotes = Account.VaNotes;
+            _model.Active = Account.Active;
+            _model.LowBalance = Account.LowBalance;
+            _model.MinBalance = Account.MinBalance;
+        }
+        else
+        {
+            if (Groups.Count > 0) _model.GroupName = Groups[0].GroupName;
+            GenerateAccNr();
+        }
+    }
+
+    private void GenerateAccNr()
+    {
+        // Mirrors legacy's "Generate" button next to Account Number — a plain random 10-digit
+        // number, no server round-trip and no pre-emptive uniqueness check (same as legacy);
+        // a collision only surfaces as a 409 on Save, which is astronomically unlikely.
+        _model.AccNr = Random.Shared.NextInt64(1_000_000_000, 9_999_999_999).ToString();
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await AccountManagement.UpdateAccountAsync(_model.AccNr, new UpdateVaAccountRequest
+            {
+                VaNotes = _model.VaNotes,
+                Active = _model.Active,
+                LowBalance = _model.LowBalance,
+                MinBalance = _model.MinBalance
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateVaAccountRequest
+            {
+                AccNr = _model.AccNr,
+                VaName = _model.VaName,
+                GroupName = _model.GroupName,
+                VaNotes = _model.VaNotes,
+                Active = _model.Active,
+                LowBalance = _model.LowBalance,
+                MinBalance = _model.MinBalance
+            };
+            var (success, _, error) = await AccountManagement.CreateAccountAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan account.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string AccNr { get; set; } = string.Empty;
+        public string VaName { get; set; } = string.Empty;
+        public string GroupName { get; set; } = string.Empty;
+        public string? VaNotes { get; set; }
+        public bool Active { get; set; }
+        public decimal LowBalance { get; set; }
+        public decimal MinBalance { get; set; }
+    }
+}

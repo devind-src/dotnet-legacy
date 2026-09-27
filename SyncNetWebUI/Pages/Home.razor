@@ -1,0 +1,768 @@
+@page "/"
+@attribute [Authorize]
+@implements IDisposable
+@* ApexCharts also declares Color/Size/Align — kept out of _Imports.razor (which every page
+   shares) to avoid CS0104 everywhere else MudBlazor's Color/Size/Align are used unqualified.
+   MudBlazor.* is qualified explicitly below wherever this file needs it instead. *@
+@using ApexCharts
+@using SyncNetApi.Dtos.RouteMargins
+@inject ThemeState Theme
+
+<PageTitle>Dashboard</PageTitle>
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" Icon="@Icons.Material.Filled.Info">
+    Data pada dashboard ini masih simulasi.
+</MudAlert>
+
+<div class="@($"dashboard-grid {(Theme.IsDarkMode ? "dark-theme" : "")}")">
+    <MudTabs Elevation="2" Rounded="true"
+             ApplyEffectsToContainer="true"
+             ActivePanelIndexChanged="OnTabChanged"
+             TabPanelsClass="pa-0">
+
+        <!-- Dashboard 1 -->
+        <MudTabPanel Text="Dashboard 1">
+            @if (_dash1 != null)
+            {
+                <!-- Baris 1 -->
+                <MudGrid Spacing="3" Justify="Justify.Center" Class="mt-1">
+                    <!-- System Health -->
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="3" Class="pa-4 equal-height"
+                                  Style="@($"border-left: 6px solid {GetHealthColor(_dash1.SystemHealth, _dash1.Tps)};")">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary" Style="letter-spacing: 1px;">SYSTEM HEALTH</MudText>
+                                <div class="d-flex align-center justify-space-between mt-2">
+                                    <div>
+                                        <div class="d-flex align-baseline">
+                                            <MudText Typo="Typo.h4" Style="font-weight: 800;" Class="neon-orange">@_dash1.SystemHealth.ToString("N1")</MudText>
+                                            <MudText Typo="Typo.h6" Class="ml-1" Style="font-weight: 300;">%</MudText>
+                                        </div>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Time-based success rate</MudText>
+                                    </div>
+                                </div>
+                                <MudDivider Class="my-2" />
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.caption">DATA SOURCE</MudText>
+                                    <MudText Typo="Typo.caption" Style="font-weight: bold;">LAST 15 MIN</MudText>
+                                </div>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- Traffic Load -->
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="3" Class="pa-4 equal-height d-flex flex-column justify-center" Style="height: 100%; min-height: 140px; border-left: 6px solid var(--mud-palette-info);">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary" Style="letter-spacing: 1px;">TRAFFIC LOAD</MudText>
+                                <div class="d-flex align-center justify-space-between mt-2">
+                                    <div>
+                                        <div class="d-flex align-baseline">
+                                            <MudText Typo="Typo.h4" Style="font-weight: 800;" Class="neon-cyan">@_dash1.Tps.ToString("N2")</MudText>
+                                            <MudText Typo="Typo.h6" Class="ml-1" Style="font-weight: 300;">TPS</MudText>
+                                        </div>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Trans. per second</MudText>
+                                    </div>
+                                    <div class="d-flex align-end pb-2" style="height: 40px; gap: 2px;">
+                                        <div style="width: 4px; height: 40%; background: var(--mud-palette-info-lighten); border-radius: 2px;"></div>
+                                        <div style="width: 4px; height: 70%; background: var(--mud-palette-info-lighten); border-radius: 2px;"></div>
+                                        <div style="width: 4px; height: 50%; background: var(--mud-palette-info-lighten); border-radius: 2px;"></div>
+                                        <div style="width: 4px; height: 90%; background: var(--mud-palette-info); border-radius: 2px;"></div>
+                                    </div>
+                                </div>
+                                <MudDivider Class="my-2" />
+                                <div class="d-flex justify-space-between align-center">
+                                    <div class="d-flex align-center">
+                                        <div class="mr-2" style="width: 8px; height: 8px; border-radius: 50%; background: var(--mud-palette-success); animation: pulse 1.5s infinite;"></div>
+                                        <MudText Typo="Typo.caption">LIVE STATUS</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.caption" Style="font-weight: bold;">@GetTrafficStatus(_dash1.Tps)</MudText>
+                                </div>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- Average Response Time -->
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="3" Class="pa-4 equal-height d-flex flex-column justify-center" Style="height: 100%; min-height: 140px; border-left: 6px solid var(--mud-palette-warning);">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary" Style="letter-spacing: 1px;">AVG RESPONSE TIME</MudText>
+                                <div class="d-flex align-center justify-space-between mt-2">
+                                    <div>
+                                        <div class="d-flex align-baseline">
+                                            <MudText Typo="Typo.h4" Style="font-weight: 800;" Class="neon-green">@_dash1.AvgRespTime</MudText>
+                                            <MudText Typo="Typo.h6" Class="ml-1" Style="font-weight: 300;">ms</MudText>
+                                        </div>
+                                        <div class="d-flex align-center mt-1">
+                                            <MudIcon Icon="@Icons.Material.Filled.Speed" Color="MudBlazor.Color.Warning" Size="MudBlazor.Size.Small" Class="mr-1" />
+                                            <MudText Typo="Typo.caption" Style="font-weight: 600;">@GetLatencyStatus(_dash1.AvgRespTime)</MudText>
+                                        </div>
+                                    </div>
+                                </div>
+                                <MudDivider Class="my-2" />
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.caption">DATA SOURCE</MudText>
+                                    <MudText Typo="Typo.caption" Style="font-weight: bold;">LAST 10 TX</MudText>
+                                </div>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- Success Rate -->
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="3" Class="pa-4 equal-height d-flex flex-column justify-center" Style="height: 100%; min-height: 140px; border-left: 6px solid var(--mud-palette-secondary);">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary" Style="letter-spacing: 1px;">SUCCESS RATE</MudText>
+                                <div class="d-flex align-center justify-space-between mt-2">
+                                    <div>
+                                        <div class="d-flex align-baseline">
+                                            <MudText Typo="Typo.h4" Style="font-weight: 800;" Class="neon-yellow">@_dash1.SuccessRate.ToString("N1")</MudText>
+                                            <MudText Typo="Typo.h6" Class="ml-1" Style="font-weight: 300;">%</MudText>
+                                        </div>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Volume-based success rate</MudText>
+                                    </div>
+                                </div>
+                                <MudDivider Class="my-2" />
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.caption">DATA SOURCE</MudText>
+                                    <MudText Typo="Typo.caption" Style="font-weight: bold;">LAST 100 TX</MudText>
+                                </div>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Baris 2 -->
+                <MudGrid Spacing="3" Class="mt-1">
+                    <!-- Last Transaction -->
+                    <MudItem xs="12" md="7">
+                        <MudPaper Elevation="3" Class="pa-4" Style="height: 100%;">
+                            <div class="pa-4 pb-0">
+                                <div class="d-flex align-center justify-space-between">
+                                    <MudText Typo="Typo.subtitle2"
+                                             Class="mud-text-secondary mb-3"
+                                             Style="letter-spacing: 1px;">LAST TRANSACTIONS</MudText>
+
+                                    <div class="d-flex align-center">
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1 mr-2">
+                                            Last Refresh @DateTime.Now.ToString("HH:mm:ss")
+                                        </MudText>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                                       Size="MudBlazor.Size.Small"
+                                                       OnClick="RefreshData"
+                                                       Disabled="_isRefreshing"
+                                                       Class="pa-0 neon-yellow"
+                                                       Style="margin-top: -4px;" />
+                                    </div>
+                                </div>
+
+                                <table id="blazor-table" style="font-size:0.8rem;font-family:monospace;">
+                                    <thead>
+                                        <tr>
+                                            <th width="20"></th>
+                                            <th>TID</th>
+                                            <th style="text-align:center">Type</th>
+                                            <th style="text-align:right">Amount</th>
+                                            <th style="text-align:right">Time</th>
+                                            <th style="text-align:right">Duration</th>
+                                            <th style="text-align:center">RC</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var record in _dash1.ListTopTen)
+                                        {
+                                            <tr>
+                                                @if (record.RespCodeRsp == "00")
+                                                {
+                                                    <td><span class="fa fa-circle" style="color:#32CD32;"></span></td>
+                                                }
+                                                else if (record.RespCodeRsp == "68" || record.RespCodeRsp == "1068")
+                                                {
+                                                    <td><span class="fa fa-circle" style="color:orange;"></span></td>
+                                                }
+                                                else
+                                                {
+                                                    <td><span class="fa fa-circle" style="color:red;"></span></td>
+                                                }
+                                                <td>@record.TerminalId</td>
+                                                <td style="text-align:center">@record.TranType</td>
+                                                <td style="text-align:right">@record.AmountTran.FormatAmount()</td>
+                                                <td style="text-align:right">@record.TimeRequest.FormatTime()</td>
+                                                <td style="text-align:right">@record.DurationMs</td>
+                                                <td style="text-align:center">@record.RespCodeRsp</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- Services -->
+                    <MudItem xs="12" md="5">
+                        <MudPaper Elevation="3" Class="pa-4" Style="height: 100%;">
+                            <div class="pa-4 pb-0">
+                                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary mb-3" Style="letter-spacing: 1px;">SERVICES STATUS</MudText>
+
+                                <table id="blazor-table" style="font-size:0.8rem;font-family:monospace;">
+                                    <thead>
+                                        <tr>
+                                            <th width="20"></th>
+                                            <th>Services</th>
+                                            <th style="text-align:center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var record in _dash1.ListServices)
+                                        {
+                                            <tr>
+                                                @if (record.Status.GetStatusNode(record.LastEcho) == "OK")
+                                                {
+                                                    <td><span class="fa fa-circle" style="color:#32CD32;"></span></td>
+                                                }
+                                                else if (record.Status.GetStatusNode(record.LastEcho) == "Warning")
+                                                {
+                                                    <td><span class="fa fa-circle" style="color:orange;"></span></td>
+                                                }
+                                                else
+                                                {
+                                                    <td><span class="fa fa-circle" style="color:red;"></span></td>
+                                                }
+                                                <td>@record.NodeName</td>
+                                                <td style="text-align:center">@record.Status.GetStatusNode(record.LastEcho)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            }
+        </MudTabPanel>
+
+        <!-- Dashboard 2 -->
+        <MudTabPanel Text="Dashboard 2">
+            @if (_dash2 != null)
+            {
+                <!-- Baris 1 -->
+                <MudGrid Spacing="3" Justify="Justify.Center" Class="mt-1">
+                    <!-- Total Transactions Today -->
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="3" Class="pa-4 equal-height">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.subtitle2" Class="grey-text text-lighten-1">Total Transactions Today</MudText>
+
+                                <MudGrid Spacing="0">
+                                    <MudItem xs="8">
+                                        <div class="d-flex align-end">
+                                            <MudText Typo="Typo.h5" Style="font-weight: bold;">
+                                                @_dash2.TotalTransToday.FormatAmount()
+                                            </MudText>
+                                        </div>
+                                    </MudItem>
+
+                                    <MudItem xs="4" Class="d-flex justify-end">
+                                        <MudIcon Icon="@Icons.Material.Filled.ReceiptLong"
+                                                 Style="font-size: 2.5rem; opacity: 0.7;"
+                                                 Color="MudBlazor.Color.Warning" />
+                                    </MudItem>
+                                </MudGrid>
+
+                                <div class="d-flex align-center pt-2" style="border-top: 1px solid var(--mud-palette-divider);">
+                                    @{
+                                        var isUp = _dash2.TotalTransToday >= _dash2.TotalTransYesterday;
+                                        var icon = isUp ? Icons.Material.Filled.ArrowUpward : Icons.Material.Filled.ArrowDownward;
+                                        var color = isUp ? MudBlazor.Color.Success : MudBlazor.Color.Error;
+                                    }
+                                    <MudIcon Icon="@icon" Color="@color" Size="MudBlazor.Size.Small" />
+                                    <MudText Typo="Typo.caption" Class="ml-1" Color="@color" Style="font-weight: bold;">
+                                        @CalculatePercentageChange(_dash2.TotalTransToday, _dash2.TotalTransYesterday)%
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Class="ml-2 grey-text">
+                                        Yesterday (@_dash2.TotalTransYesterday.FormatAmount())
+                                    </MudText>
+                                </div>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- Total Transactions This Month -->
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="3" Class="pa-4 equal-height">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.subtitle2" Class="grey-text text-lighten-1">Total Transactions This Month</MudText>
+
+                                <MudGrid Spacing="0">
+                                    <MudItem xs="8">
+                                        <div class="d-flex align-end">
+                                            <MudText Typo="Typo.h5" Style="font-weight: bold;">
+                                                @_dash2.TotalTransThisMonth.FormatAmount()
+                                            </MudText>
+                                        </div>
+                                    </MudItem>
+
+                                    <MudItem xs="4" Class="d-flex justify-end">
+                                        <MudIcon Icon="@Icons.Material.Filled.DateRange"
+                                                 Style="font-size: 2.5rem; opacity: 0.7;"
+                                                 Color="MudBlazor.Color.Info" />
+                                    </MudItem>
+                                </MudGrid>
+
+                                <div class="d-flex align-center pt-2" style="border-top: 1px solid var(--mud-palette-divider);">
+                                    @{
+                                        var isUp = _dash2.TotalTransThisMonth >= _dash2.TotalTransLastMonth;
+                                        var icon = isUp ? Icons.Material.Filled.ArrowUpward : Icons.Material.Filled.ArrowDownward;
+                                        var color = isUp ? MudBlazor.Color.Success : MudBlazor.Color.Error;
+                                    }
+                                    <MudIcon Icon="@icon" Color="@color" Size="MudBlazor.Size.Small" />
+                                    <MudText Typo="Typo.caption" Class="ml-1" Color="@color" Style="font-weight: bold;">
+                                        @CalculatePercentageChange(_dash2.TotalTransThisMonth, _dash2.TotalTransLastMonth)%
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Class="ml-2 grey-text">
+                                        Last Month (@_dash2.TotalTransLastMonth.FormatAmount())
+                                    </MudText>
+                                </div>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- Total Revenue -->
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="3" Class="pa-4 equal-height">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.subtitle2" Class="grey-text text-lighten-1">Total Revenue This Month</MudText>
+
+                                <MudGrid Spacing="0">
+                                    <MudItem xs="8">
+                                        <div class="d-flex align-end">
+                                            <MudText Typo="Typo.h5" Style="font-weight: bold;">
+                                                Rp @_dash2.TotalRevenueThisMonth.FormatAmountK()
+                                            </MudText>
+                                        </div>
+                                    </MudItem>
+
+                                    <MudItem xs="4" Class="d-flex justify-end">
+                                        <MudIcon Icon="@Icons.Material.Filled.MonetizationOn"
+                                                 Style="font-size: 2.5rem; opacity: 0.7;"
+                                                 Color="MudBlazor.Color.Success" />
+                                    </MudItem>
+                                </MudGrid>
+
+                                <div class="d-flex align-center pt-2" style="border-top: 1px solid var(--mud-palette-divider);">
+                                    @{
+                                        var isUp = _dash2.TotalRevenueThisMonth >= _dash2.TotalRevenueLastMonth;
+                                        var icon = isUp ? Icons.Material.Filled.ArrowUpward : Icons.Material.Filled.ArrowDownward;
+                                        var color = isUp ? MudBlazor.Color.Success : MudBlazor.Color.Error;
+                                    }
+                                    <MudIcon Icon="@icon" Color="@color" Size="MudBlazor.Size.Small" />
+                                    <MudText Typo="Typo.caption" Class="ml-1" Color="@color" Style="font-weight: bold;">
+                                        @CalculatePercentageChange(_dash2.TotalRevenueThisMonth, _dash2.TotalRevenueLastMonth)%
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Class="ml-2 grey-text">
+                                        Last Month (Rp @_dash2.TotalRevenueLastMonth.FormatAmountK())
+                                    </MudText>
+                                </div>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- Active Terminals -->
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="3" Class="pa-4 equal-height">
+                            <MudStack Spacing="1">
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.subtitle2" Class="grey-text text-lighten-1">Total Terminals</MudText>
+                                    <MudChip T="string" Color="MudBlazor.Color.Success" Size="MudBlazor.Size.Small" Variant="Variant.Text">Active</MudChip>
+                                </div>
+
+                                <div class="d-flex align-end">
+                                    <MudText Typo="Typo.h5" Style="font-weight: bold;">
+                                        @_dash2.TotalAgent.FormatAmount()
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Class="ml-2 mb-1" Style="color: #757575;">Units</MudText>
+                                </div>
+
+                                <div class="d-flex align-center pt-2" style="border-top: 1px solid var(--mud-palette-divider);">
+                                    <div>
+                                        <MudText Typo="Typo.caption" Style="display: block;">Merchants: @_dash2.TotalMerchant.FormatAmount()</MudText>
+                                    </div>
+                                    <div class="text-right">
+                                        <MudText Typo="Typo.caption" Class="ms-2" Style="display: block;">Sub-Merchants : @_dash2.TotalSubMerchant.FormatAmount()</MudText>
+                                    </div>
+                                </div>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Baris 2 -->
+                <MudGrid Spacing="3" Justify="Justify.Center" Class="mt-1">
+                    <!-- Chart Line 24 Hour -->
+                    <MudItem xs="12" sm="6" md="6">
+                        <MudPaper Elevation="3" Class="pa-4 equal-height">
+                            <MudText Typo="Typo.subtitle2" Align="MudBlazor.Align.Center" Class="grey-text text-lighten-1 mb-5">
+                                Realtime Transactions Trends
+                            </MudText>
+
+                            <ApexChart @ref="_refChart24Hour" TItem="StatOpsByHour" Options="_chartOptionLine">
+                                <ApexPointSeries TItem="StatOpsByHour"
+                                                 Items="_dash2.DataChart24Hour"
+                                                 Name="Success"
+                                                 SeriesType="SeriesType.Area"
+                                                 XValue="@(e => e.Hour)"
+                                                 YValue="@(e => e.SuccessTran)" />
+
+                                <ApexPointSeries TItem="StatOpsByHour"
+                                                 Items="_dash2.DataChart24Hour"
+                                                 Name="Failed"
+                                                 SeriesType="SeriesType.Area"
+                                                 XValue="@(e => e.Hour)"
+                                                 YValue="@(e => e.FailedTran)" />
+                            </ApexChart>
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- Chart Donut This Month By Type -->
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="3" Class="pa-4 equal-height">
+                            <MudText Typo="Typo.subtitle2" Align="MudBlazor.Align.Center" Class="grey-text text-lighten-1 mb-5">This Month</MudText>
+
+                            <ApexChart @ref="_refChartByType" TItem="StatOpsByType" Options="_chartOptionDonut">
+                                <ApexPointSeries TItem="StatOpsByType"
+                                                 Items="_dash2.DataChartByType"
+                                                 Name="Transactions"
+                                                 XValue="@(e => e.TransactionType)"
+                                                 YValue="@(e => e.Amount)"
+                                                 SeriesType="SeriesType.Donut" />
+                            </ApexChart>
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- Top Five -->
+                    <MudItem xs="12" sm="12" md="3">
+                        <MudPaper Elevation="3" Class="pa-4 equal-height">
+                            <MudStack Spacing="2">
+                                <MudText Typo="Typo.subtitle2" Align="MudBlazor.Align.Center" Class="grey-text text-lighten-1 mb-5">Merchant Leaderboard</MudText>
+
+                                @if (_dash2.DataTopFive != null)
+                                {
+                                    var maxTrans = _dash2.DataTopFive.FirstOrDefault()?.TotalTrans ?? 1;
+
+                                    @foreach (var (item, index) in _dash2.DataTopFive.Select((value, i) => (value, i)))
+                                    {
+                                        <div class="d-flex align-center mb-3">
+                                            <div style="width: 30px;" class="d-flex justify-center mr-2">
+                                                @if (index == 0)
+                                                {
+                                                    <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="MudBlazor.Color.Warning" Size="MudBlazor.Size.Small" />
+                                                }
+                                                else if (index == 1)
+                                                {
+                                                    <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Style="color: #C0C0C0;" Size="MudBlazor.Size.Small" />
+                                                }
+                                                else if (index == 2)
+                                                {
+                                                    <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Style="color: #CD7F32;" Size="MudBlazor.Size.Small" />
+                                                }
+                                                else
+                                                {
+                                                    <MudText Typo="Typo.body2" Class="grey-text">@(index + 1)</MudText>
+                                                }
+                                            </div>
+
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-space-between align-center">
+                                                    <MudText Typo="Typo.body2" Style="font-weight: 600; font-size: 0.7rem;">
+                                                        @item.Name
+                                                    </MudText>
+                                                    <MudText Typo="Typo.caption" Style="font-weight: bold;">
+                                                        @item.TotalTrans.FormatAmount()
+                                                    </MudText>
+                                                </div>
+                                                <MudProgressLinear Color="MudBlazor.Color.Success"
+                                                                   Value="@((double)item.TotalTrans / maxTrans * 100)"
+                                                                   Class="mt-1"
+                                                                   Style="height: 6px; border-radius: 3px;" />
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            }
+        </MudTabPanel>
+    </MudTabs>
+</div>
+
+@code {
+    // Dashboard
+    private DashOneModel _dash1 = new();
+    private DashTwoModel _dash2 = new();
+
+    // Chart
+    private ApexChart<StatOpsByHour>? _refChart24Hour;
+    private ApexChart<StatOpsByType>? _refChartByType;
+
+    private ApexChartOptions<StatOpsByHour> _chartOptionLine = new()
+    {
+        Colors = ["#A2CB8B", "#E81123"],
+        Chart = new Chart
+        {
+            Type = ApexCharts.ChartType.Area,
+            Toolbar = new Toolbar { Show = true },
+            Zoom = new Zoom { Enabled = false }
+        },
+        Stroke = new Stroke { Curve = Curve.Smooth, Width = 3 },
+        DataLabels = new DataLabels
+        {
+            Enabled = false,
+            Formatter = "function(val) { return val.toLocaleString(); }"
+        },
+        Tooltip = new Tooltip
+        {
+            Enabled = true,
+            Y = new TooltipY { Formatter = "function(val) { return val.toLocaleString(); }" }
+        },
+        Legend = new Legend { Position = LegendPosition.Top },
+        Xaxis = new XAxis { Title = new AxisTitle { Text = "Hour" } },
+        Yaxis = [new YAxis { Title = new AxisTitle { Text = "Number Transaction" } }]
+    };
+
+    private ApexChartOptions<StatOpsByType> _chartOptionDonut = new()
+    {
+        Colors = ["#A2CB8B", "#E81123", "#4A90E2", "#F5A623"],
+        Chart = new Chart { Type = ApexCharts.ChartType.Donut, Height = "100%" },
+        Stroke = new Stroke { Width = 2 },
+        DataLabels = new DataLabels
+        {
+            Enabled = false,
+            Formatter = "function(val, opts) { return val.toFixed(1) + '%'; }"
+        },
+        PlotOptions = new PlotOptions
+        {
+            Pie = new PlotOptionsPie
+            {
+                CustomScale = 0.85,
+                Donut = new PlotOptionsDonut
+                {
+                    Size = "75%",
+                    Labels = new DonutLabels
+                    {
+                        Show = true,
+                        Name = new DonutLabelName { Show = true, FontSize = "20px", FontWeight = "400", OffsetY = -10 },
+                        Value = new DonutLabelValue
+                        {
+                            Show = true,
+                            FontSize = "30px",
+                            FontWeight = "700",
+                            OffsetY = 10,
+                            Formatter = "function(val) { return parseInt(val).toLocaleString(); }"
+                        },
+                        Total = new DonutLabelTotal
+                        {
+                            Show = true,
+                            Label = "Total",
+                            FontSize = "22px",
+                            FontWeight = "500",
+                            Formatter = "function(w) { return w.globals.seriesTotals.reduce((a, b) => a + b, 0).toLocaleString(); }"
+                        }
+                    }
+                }
+            }
+        },
+        Tooltip = new Tooltip
+        {
+            Enabled = true,
+            Y = new TooltipY { Formatter = "function(val) { return val.toLocaleString(); }" }
+        },
+        Legend = new Legend
+        {
+            Show = true,
+            Position = LegendPosition.Bottom,
+            HorizontalAlign = ApexCharts.Align.Left,
+            Formatter = "function(seriesName, opts) { return seriesName + ': <b>' + opts.w.globals.series[opts.seriesIndex].toLocaleString() + '</b>'; }"
+        }
+    };
+
+    private bool _isRefreshing;
+
+    public void Dispose()
+    {
+        Theme.Changed -= StateHasChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.Changed += StateHasChanged;
+        await GetDashboardDataOne();
+    }
+
+    private async Task OnTabChanged(int index)
+    {
+        switch (index)
+        {
+            case 0:
+                await GetDashboardDataOne();
+                break;
+            case 1:
+                await GetDashboardDataTwo();
+                break;
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        if (_isRefreshing) return;
+
+        _isRefreshing = true;
+        try
+        {
+            await Task.Delay(500);
+            await GetDashboardDataOne();
+        }
+        finally
+        {
+            _isRefreshing = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    #region Dashboard 1
+    private Task GetDashboardDataOne()
+    {
+        GenerateDummyDashOne();
+        return Task.CompletedTask;
+    }
+
+    private static string GetHealthColor(double health, double tps)
+    {
+        if (tps <= 0) return "var(--mud-palette-success)";
+        if (health >= 95) return "var(--mud-palette-info)";
+        if (health >= 60) return "var(--mud-palette-warning)";
+        return "var(--mud-palette-error)";
+    }
+
+    private static string GetTrafficStatus(double val) => val > 100 ? "HIGH LOAD" : val > 0 ? "OPTIMAL" : "IDLE";
+    private static string GetLatencyStatus(int ms) => ms == 0 ? "IDLE" : ms < 1000 ? "FAST" : ms < 3000 ? "NORMAL" : "SLOW";
+
+    private void GenerateDummyDashOne()
+    {
+        var random = new Random();
+        _dash1 = new DashOneModel
+        {
+            SystemHealth = Math.Round(95.0 + (random.NextDouble() * 5.0), 2),
+            SuccessRate = Math.Round(98.0 + (random.NextDouble() * 2.0), 2),
+            Tps = Math.Round(10.0 + (random.NextDouble() * 40.0), 1),
+            AvgRespTime = random.Next(150, 450)
+        };
+
+        List<string> tranTypes = ["TRANSFER", "WITHDRAWAL", "PAYMENT", "INQUIRY"];
+        List<string> respCodes = ["00", "00", "00", "00", "05", "68"];
+
+        for (var i = 1; i <= 10; i++)
+        {
+            var requestTime = DateTime.Now.AddSeconds(-random.Next(5, 300));
+            var delayMs = random.Next(100, 800);
+            var responseTime = requestTime.AddMilliseconds(delayMs);
+
+            _dash1.ListTopTen.Add(new TopTenTransaction
+            {
+                TerminalId = $"TID{random.Next(10000, 99999)}",
+                TranType = tranTypes[random.Next(tranTypes.Count)],
+                AmountTran = random.Next(1, 50) * 100000,
+                RespCodeRsp = respCodes[random.Next(respCodes.Count)],
+                TimeRequest = requestTime,
+                TimeResponse = responseTime
+            });
+        }
+
+        _dash1.ListTopTen = _dash1.ListTopTen.OrderByDescending(t => t.TimeRequest).ToList();
+
+        List<string> serviceNames =
+        [
+            "Artajasa", "Rintis", "QRIS API Gateway", "Bank DKI", "Notification",
+            "Biller Switch", "EDC Merchant", "Bank BJB", "Settlement", "Token Server"
+        ];
+
+        foreach (var name in serviceNames)
+        {
+            var nodeStatus = random.Next(0, 10) > 0 ? "1" : "0";
+
+            _dash1.ListServices.Add(new ServiceStatus
+            {
+                NodeName = name,
+                LastEcho = DateTime.Now.AddSeconds(-random.Next(1, 10)),
+                Status = nodeStatus
+            });
+        }
+    }
+    #endregion
+
+    #region Dashboard 2
+    private Task GetDashboardDataTwo()
+    {
+        GenerateDummyDashTwo();
+        return Task.CompletedTask;
+    }
+
+    private static string CalculatePercentageChange(decimal current, decimal previous)
+    {
+        if (previous == 0) return "0";
+        var change = (current - previous) / previous * 100;
+        return change.ToString("0.0");
+    }
+
+    private void GenerateDummyDashTwo()
+    {
+        var random = new Random();
+        _dash2 = new DashTwoModel
+        {
+            TotalAgent = random.Next(100, 500),
+            TotalMerchant = random.Next(50, 200),
+            TotalSubMerchant = random.Next(200, 1000),
+
+            TotalTransToday = random.Next(5000, 25000),
+            TotalTransYesterday = random.Next(5000, 25000),
+
+            TotalTransThisMonth = random.Next(150000, 500000),
+            TotalTransLastMonth = random.Next(150000, 500000),
+
+            TotalRevenueThisMonth = random.Next(50000000, 250000000),
+            TotalRevenueLastMonth = random.Next(50000000, 250000000)
+        };
+
+        for (var hour = 0; hour < 24; hour++)
+        {
+            _dash2.DataChart24Hour.Add(new StatOpsByHour
+            {
+                Hour = hour,
+                SuccessTran = random.Next(100, 2000),
+                FailedTran = random.Next(0, 150)
+            });
+        }
+
+        _dash2.DataChartByType =
+        [
+            new StatOpsByType { TransactionType = "Transfer", Amount = random.Next(5000, 50000) },
+            new StatOpsByType { TransactionType = "Withdrawal", Amount = random.Next(2000, 30000) },
+            new StatOpsByType { TransactionType = "Balance", Amount = random.Next(1000, 15000) },
+            new StatOpsByType { TransactionType = "Payment", Amount = random.Next(4000, 40000) }
+        ];
+
+        List<string> dummyNames = ["Merchant Berkah", "Agen Token Listrik", "Sub-Merchant Utama", "Grosir Sembako Jaya", "Agen Pulsa Murah"];
+        foreach (var name in dummyNames)
+        {
+            _dash2.DataTopFive.Add(new StatOpsTopFive
+            {
+                Name = name,
+                TotalTrans = random.Next(500, 5000)
+            });
+        }
+
+        _dash2.DataTopFive = _dash2.DataTopFive.OrderByDescending(x => x.TotalTrans).ToList();
+    }
+    #endregion
+}

@@ -1,0 +1,57 @@
+﻿@inject SessionState Session
+
+@* Confirmed against a real login response: the hierarchy is Level1 (top group, e.g.
+   "Configuration") -> Level2 (subgroup, e.g. "Base") -> Level3 (leaf, e.g. "Account Type").
+   Level4 is unused everywhere in the current data. When a (Level1, Level2) pair has only
+   one row with an empty Level3, Level2 itself is the leaf (e.g. "HSM" -> "Service" links
+   directly, no further nesting) rather than a folder with one child. *@
+
+<MudNavMenu>
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+
+    @foreach (var level1 in GroupedMenus)
+    {
+        <MudNavGroup Title="@level1.Level1" Icon="@IconFor(level1.Level2Groups[0].Items[0].Icon)" Expanded="false">
+            @foreach (var level2 in level1.Level2Groups)
+            {
+                @if (level2.Items.Count == 1 && string.IsNullOrEmpty(level2.Items[0].Level3))
+                {
+                    <MudNavLink Href="@NormalizeUrl(level2.Items[0].Url)" Icon="@Level2Icon" Class="nav-level2">
+                        @level2.Level2
+                    </MudNavLink>
+                }
+                else
+                {
+                    <MudNavGroup Title="@level2.Level2" Icon="@Level2Icon" Class="nav-level2" Expanded="false">
+                        @foreach (var item in level2.Items)
+                        {
+                            <MudNavLink Href="@NormalizeUrl(item.Url)">@item.Level3</MudNavLink>
+                        }
+                    </MudNavGroup>
+                }
+            }
+        </MudNavGroup>
+    }
+</MudNavMenu>
+
+@code {
+    private record Level2Group(string Level2, List<MenuItemDto> Items);
+    private record Level1Group(string Level1, List<Level2Group> Level2Groups);
+
+    private List<Level1Group> GroupedMenus =>
+        Session.Menus
+            .GroupBy(m => m.Level1)
+            .Select(g1 => new Level1Group(
+                g1.Key,
+                g1.GroupBy(m => m.Level2)
+                  .Select(g2 => new Level2Group(g2.Key, g2.ToList()))
+                  .ToList()))
+            .ToList();
+
+    // penanda kecil ">" di kiri menu level_2 (ukuran dikecilkan lewat .nav-level2 di app.css)
+    private const string Level2Icon = Icons.Material.Filled.ChevronRight;
+
+    private static string NormalizeUrl(string url) => string.IsNullOrWhiteSpace(url) ? "#" : url;
+
+    private static string IconFor(string ociClass) => MenuIconMapper.IconFor(ociClass);
+}

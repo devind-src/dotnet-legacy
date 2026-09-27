@@ -1,0 +1,188 @@
+@page "/product-qris-criteria"
+@attribute [Authorize]
+@inject MerchantCriteriaManagementService CriteriaManagement
+@inject MerchantGroupManagementService MerchantGroupManagement
+@inject SubMerchantGroupManagementService SubMerchantGroupManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>QRIS Fees</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">QRIS Fees</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Product > Fees > QRIS Fees.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari criteria / group" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah QRIS Fees</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Criteria</MudTh>
+            <MudTh>MDR</MudTh>
+            <MudTh>Fee Bank</MudTh>
+            <MudTh>Fee Partner</MudTh>
+            <MudTh>Fee Merchant</MudTh>
+            <MudTh>Fee Sub Merchant</MudTh>
+            <MudTh>Fee Switch</MudTh>
+            <MudTh>Group</MudTh>
+            <MudTh>Sub Group</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Criteria">@context.Criteria</MudTd>
+            <MudTd DataLabel="MDR">@context.Mdr.ToString("N2")</MudTd>
+            <MudTd DataLabel="Fee Bank">@context.FeeFromIssuer.ToString("N2")</MudTd>
+            <MudTd DataLabel="Fee Partner">@context.FeeFromPartner.ToString("N2")</MudTd>
+            <MudTd DataLabel="Fee Merchant">@context.FeeToMerchant.ToString("N2")</MudTd>
+            <MudTd DataLabel="Fee Sub Merchant">@context.FeeToSubmerchant.ToString("N2")</MudTd>
+            <MudTd DataLabel="Fee Switch">@context.FeeToSwitch.ToString("N2")</MudTd>
+            <MudTd DataLabel="Group">@context.GroupName</MudTd>
+            <MudTd DataLabel="Sub Group">@context.SubgroupName</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada QRIS fees ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<MerchantCriteriaDto> _items = new();
+    private List<string> _groups = new();
+    private List<string> _subgroups = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var groups = await MerchantGroupManagement.GetGroupsAsync();
+        _groups = groups?.Select(g => g.GroupName).ToList() ?? new();
+
+        var subgroups = await SubMerchantGroupManagement.GetGroupsAsync();
+        _subgroups = subgroups?.Select(g => g.GroupName).ToList() ?? new();
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await CriteriaManagement.GetCriteriaAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar QRIS fees.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<QrisCriteriaFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Groups, _groups },
+            { x => x.Subgroups, _subgroups }
+        };
+        var dialog = await DialogService.ShowAsync<QrisCriteriaFormDialog>("Tambah QRIS Fees", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("QRIS fees berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(MerchantCriteriaDto item)
+    {
+        var parameters = new DialogParameters<QrisCriteriaFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Item, item },
+            { x => x.Groups, _groups },
+            { x => x.Subgroups, _subgroups }
+        };
+        var dialog = await DialogService.ShowAsync<QrisCriteriaFormDialog>("Edit QRIS Fees", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan QRIS fees berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(MerchantCriteriaDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus QRIS Fees",
+            $"Yakin ingin menghapus QRIS fees '{item.Criteria}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await CriteriaManagement.DeleteCriteriaAsync(item.Id);
+        if (success)
+        {
+            Snackbar.Add("QRIS fees berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus QRIS fees.", Severity.Error);
+        }
+    }
+}

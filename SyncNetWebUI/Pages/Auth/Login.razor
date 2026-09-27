@@ -1,0 +1,187 @@
+@page "/login"
+@layout AuthLayout
+@attribute [AllowAnonymous]
+@inject AuthService AuthService
+@inject PendingChallengeState PendingChallenge
+@inject NavigationManager Navigation
+
+<AuthShell>
+    <MudText Typo="Typo.h5" Style="font-weight:600;">Selamat datang kembali</MudText>
+    <MudText Typo="Typo.body2" Style="opacity:.65" Class="mb-6">Masuk untuk melanjutkan ke dashboard.</MudText>
+
+    <MudForm @ref="_form" Model="_model">
+        <MudTextField T="string" Label="Username" @bind-Value="_model.UserName"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.PersonOutline"
+                      Required="true" RequiredError="Username wajib diisi"
+                      Disabled="_busy" Class="mb-4" />
+
+        <div class="password-field">
+            <MudTextField T="string" Label="Password" @bind-Value="_model.Password"
+                          InputType="@_passwordInput"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                          Required="true" RequiredError="Password wajib diisi"
+                          Disabled="_busy" Class="mb-1"
+                          OnKeyDown="OnPasswordKeyDown" />
+            <MudIconButton Icon="@_passwordAdornmentIcon" Size="Size.Small" Disabled="_busy"
+                           OnClick="ToggleShowPassword" aria-label="Tampilkan password"
+                           Class="password-field-toggle" />
+        </div>
+
+        @if (_captchaEnabled)
+        {
+             <div class="capcha-field">
+                 <MudGrid>
+                    <!-- input captcha -->
+                    <MudItem xs="6">
+                        <MudTextField T="string" Label="Kode captcha" @bind-Value="_model.CaptchaAnswer"
+                                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Shield"
+                                      Required="true" RequiredError="Kode captcha wajib diisi" MaxLength="8"
+                                      Disabled="_busy" Class="mb-1" OnKeyDown="OnPasswordKeyDown" />
+                    </MudItem>
+
+                    <!-- gambar captcha -->
+                    <MudItem xs="6">
+                        <div class="captcha-image">
+                            @if (_captchaLoading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            }
+                            else if (_captcha != null)
+                            {
+                                <img src="@_captcha.ImageDataUri" alt="Captcha" style="max-width:100%;" />
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Style="opacity:.65">Captcha belum termuat</MudText>
+                            }
+                        </div>
+                        <div class="capcha-refresh">
+                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                                           Disabled="_busy || _captchaLoading"
+                                           OnClick="LoadCaptchaAsync"
+                                           aria-label="Ganti captcha" title="Ganti captcha" />
+                        </div>
+                    </MudItem>
+                </MudGrid>
+             </div>            
+        }
+
+        <div class="d-flex justify-end mb-4">
+            <MudLink Href="/forgot-password" Typo="Typo.body2">Lupa password?</MudLink>
+        </div>
+
+        @if (Reason == "idle")
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+                Anda telah logout otomatis karena tidak ada aktivitas.
+            </MudAlert>
+        }
+        else if (Reason == "session-expired")
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+                Sesi Anda telah berakhir. Silakan login kembali.
+            </MudAlert>
+        }
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_error</MudAlert>
+        }
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large"
+                   OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Login
+        </MudButton>
+    </MudForm>
+</AuthShell>
+
+@code {
+    private MudForm _form = null!;
+    private readonly LoginModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    private CaptchaResponse? _captcha;
+    private bool _captchaEnabled = true;
+    private bool _captchaLoading;
+
+    private bool _showPassword;
+    private InputType _passwordInput = InputType.Password;
+    private string _passwordAdornmentIcon = Icons.Material.Filled.VisibilityOff;
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Reason { get; set; }
+
+    protected override async Task OnInitializedAsync() => await LoadCaptchaAsync();
+
+    // A captcha is single use on the server, so a new one is needed after every attempt.
+    private async Task LoadCaptchaAsync()
+    {
+        _captchaLoading = true;
+        _model.CaptchaAnswer = string.Empty;
+
+        var captcha = await AuthService.GetCaptchaAsync();
+        if (captcha != null) _captchaEnabled = captcha.Enabled;
+        _captcha = captcha is { Enabled: true } ? captcha : null;
+
+        _captchaLoading = false;
+    }
+
+    private void ToggleShowPassword()
+    {
+        _showPassword = !_showPassword;
+        _passwordInput = _showPassword ? InputType.Text : InputType.Password;
+        _passwordAdornmentIcon = _showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+    }
+
+    private async Task OnPasswordKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SubmitAsync();
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        var result = await AuthService.LoginAsync(_model.UserName, _model.Password,
+            _captcha?.CaptchaId, _model.CaptchaAnswer);
+
+        _busy = false;
+
+        if (result.IsSuccess)
+        {
+            Navigation.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : Uri.UnescapeDataString(ReturnUrl), forceLoad: false);
+            return;
+        }
+
+        if (result.RequiresNewPassword)
+        {
+            PendingChallenge.UserName = result.ChallengeUserName;
+            PendingChallenge.CurrentPassword = _model.Password;
+            Navigation.NavigateTo("/force-change-password", forceLoad: false);
+            return;
+        }
+
+        _error = result.ErrorMessage ?? "Login gagal.";
+
+        if (_captchaEnabled) await LoadCaptchaAsync();
+    }
+
+    private class LoginModel
+    {
+        public string UserName { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string CaptchaAnswer { get; set; } = string.Empty;
+    }
+}

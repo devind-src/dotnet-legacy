@@ -1,0 +1,108 @@
+@page "/mon-application"
+@attribute [Authorize]
+@using SyncNetApi.Dtos.RouteMargins
+@using SyncNetWasm.Common
+@inject MonitoringManagementService Monitoring
+@inject SessionState Session
+@inject IDialogService DialogService
+
+<PageTitle>Application</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Application</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Monitoring > Realtime > Application.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari application" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync" title="Refresh" />
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage" T="ApplicationMonitorDto">
+        <HeaderContent>
+            <MudTh></MudTh>
+            <MudTh>App Name</MudTh>
+            <MudTh>App Type</MudTh>
+            <MudTh>Host</MudTh>
+            <MudTh>Command Port</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel=""><MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@(MonitoringStatus.IsAppRunning(context.Status) ? Color.Success : Color.Error)" /></MudTd>
+            <MudTd DataLabel="App Name">@context.AppName</MudTd>
+            <MudTd DataLabel="App Type">@MonitoringStatus.AppTypeLabel(context.AppType)</MudTd>
+            <MudTd DataLabel="Host">@context.Host</MudTd>
+            <MudTd DataLabel="Command Port">@context.CommandPort</MudTd>
+            <MudTd DataLabel="Status">@MonitoringStatus.AppStatusLabel(context.Status)</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"
+                                   OnClick="@(() => OpenCommandDialog(context.AppName))" title="Send Command" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada application ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<ApplicationMonitorDto> _items = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await Monitoring.GetApplicationsAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar application.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private static readonly DialogOptions CommandDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    private async Task OpenCommandDialog(string appName)
+    {
+        var parameters = new DialogParameters<ApplicationCommandDialog> { { x => x.AppName, appName } };
+        var dialog = await DialogService.ShowAsync<ApplicationCommandDialog>("Send Command", parameters, CommandDialogOptions);
+        await dialog.Result;
+    }
+}

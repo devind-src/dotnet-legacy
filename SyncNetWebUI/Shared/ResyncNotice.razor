@@ -1,0 +1,15 @@
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" Icon="@Icons.Material.Filled.Sync">
+    @if (string.IsNullOrEmpty(Message))
+    {
+        <span>Perubahan di halaman ini baru dipakai routing setelah perintah <b>RESYNC</b> dikirim ke aplikasi channel</span>
+    }
+    else
+    {
+        <span>@Message</span>
+    }
+    (<MudLink Href="/mon-application">Monitoring &gt; Application</MudLink>).
+</MudAlert>
+
+@code {
+    [Parameter] public string? Message { get; set; }
+}

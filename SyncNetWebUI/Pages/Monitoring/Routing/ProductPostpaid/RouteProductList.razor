@@ -1,0 +1,155 @@
+﻿@page "/mon-route-product"
+@attribute [Authorize]
+@inject RouteProductManagementService RouteProductManagement
+@inject ProductPostpaidBillerManagementService BillerManagement
+
+<PageTitle>Monitoring Route by Product</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Monitoring Route by Product</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-4">Monitoring > Routing > Product Postpaid. Pilih baris untuk melihat biller.</MudText>
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" Icon="@Icons.Material.Filled.Info">
+    Biller, priority, sharing fee, LB weight, dan Routing Mode diatur di
+    <MudLink Href="/product/pricing-fees/postpaid-fees">Product &gt; Pricing &amp; Fees &gt; Postpaid Fees</MudLink>.
+</MudAlert>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari product ID / notes" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage"
+              T="RouteProductDto" OnRowClick="@(e => SelectAsync(e.Item!))"
+              RowClassFunc="@((item, _) => item.InstId == _selected?.InstId ? "mud-selected-item" : "")">
+        <HeaderContent>
+            <MudTh>Product ID</MudTh>
+            <MudTh>Routing Mode (default)</MudTh>
+            <MudTh>Jumlah Biller</MudTh>
+            <MudTh>Rule by Source</MudTh>
+            <MudTh>Notes</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Product ID">@context.InstId</MudTd>
+            <MudTd DataLabel="Routing Mode">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                         Color="@(RoutingModes.IsDynamic(context.RoutingMode) ? Color.Primary : Color.Default)">@RoutingModes.Label(context.RoutingMode)</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Jumlah Biller">@(1 + (context.AlternateNodeIds?.Count ?? 0))</MudTd>
+            <MudTd DataLabel="Rule by Source">@(context.HasSourceRule ? "Ada" : "-")</MudTd>
+            <MudTd DataLabel="Notes">@context.Notes</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada route ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+
+    @if (_selected != null)
+    {
+        <MudPaper Class="pa-4 mt-4" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-2">Biller — Produk: @_selected.InstId</MudText>
+            @if (_billerLoading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else
+            {
+                <MudTable Items="_billers" Dense="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Prio</MudTh>
+                        <MudTh>Biller</MudTh>
+                        <MudTh>Sharing Fee</MudTh>
+                        <MudTh>LB Weight</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Aktif</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Prio">@context.Priority@(context.IsPrimary ? " (primary)" : "")</MudTd>
+                        <MudTd DataLabel="Biller">@context.NodeName</MudTd>
+                        <MudTd DataLabel="Sharing Fee">@(context.FeeSharing?.ToString("N0") ?? "-")</MudTd>
+                        <MudTd DataLabel="LB Weight">@(context.LbWeight.HasValue ? $"{context.LbWeight}%" : "-")</MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.HealthStatus)">@context.HealthStatus</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Aktif">@(context.Active ? "Ya" : "Tidak")</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    }
+}
+
+@code {
+    private List<RouteProductDto> _items = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private RouteProductDto? _selected;
+    private List<ProductPostpaidBillerDto> _billers = new();
+    private bool _billerLoading;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await RouteProductManagement.GetRoutesAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar route.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        if (_selected != null)
+        {
+            _selected = _items.FirstOrDefault(i => i.InstId == _selected.InstId);
+            if (_selected == null) _billers = new();
+        }
+
+        _loading = false;
+    }
+
+    private async Task SelectAsync(RouteProductDto item)
+    {
+        _selected = item;
+        _billerLoading = true;
+        _billers = (await BillerManagement.GetAsync(item.InstId))?.Billers.ToList() ?? new();
+        _billerLoading = false;
+    }
+
+    private static Color StatusColor(string status) => status.ToUpperInvariant() switch
+    {
+        "ACTIVE" => Color.Success,
+        "SUSPECT" => Color.Warning,
+        "DOWN" => Color.Error,
+        _ => Color.Default
+    };
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+}

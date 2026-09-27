@@ -1,0 +1,6 @@
+@inherits LayoutComponentBase
+
+@* Deliberately no app bar / nav drawer — login, forgot/reset-password and the forced
+   password-change challenge must never show the authenticated app shell (there's no
+   session yet, sometimes not even a valid one, when these render). *@
+@Body

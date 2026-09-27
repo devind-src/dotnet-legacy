@@ -1,0 +1,118 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.VpnKey" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit HSM Service" : "Tambah HSM Service")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.HsmDesc</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Service Name" @bind-Value="_model.HsmDesc"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Service name wajib diisi" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudNumericField T="int" Label="Port" @bind-Value="_model.HsmPort" Min="1" Max="65000" Disabled="_busy"
+                                     Required="true" RequiredError="Port wajib diisi" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudNumericField T="int" Label="Request Timeout" @bind-Value="_model.RequestTimeout" Min="1" Max="120" Disabled="_busy"
+                                     Required="true" RequiredError="Request timeout wajib diisi" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudNumericField T="short?" Label="Message Header" @bind-Value="_model.MessageHeader" Min="0" Disabled="_busy" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private HsmServiceManagementService HsmServiceManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public HsmServiceDto? Service { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Service != null)
+        {
+            _model.HsmDesc = Service.HsmDesc;
+            _model.HsmPort = Service.HsmPort ?? 0;
+            _model.RequestTimeout = Service.RequestTimeout ?? 0;
+            _model.MessageHeader = Service.MessageHeader;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await HsmServiceManagement.UpdateHsmServiceAsync(_model.HsmDesc, new UpdateHsmServiceRequest
+            {
+                HsmPort = _model.HsmPort, RequestTimeout = _model.RequestTimeout, MessageHeader = _model.MessageHeader
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateHsmServiceRequest
+            {
+                HsmDesc = _model.HsmDesc, HsmPort = _model.HsmPort, RequestTimeout = _model.RequestTimeout, MessageHeader = _model.MessageHeader
+            };
+            var (success, _, error) = await HsmServiceManagement.CreateHsmServiceAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan HSM service.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string HsmDesc { get; set; } = string.Empty;
+        public int HsmPort { get; set; }
+        public int RequestTimeout { get; set; }
+        public short? MessageHeader { get; set; }
+    }
+}

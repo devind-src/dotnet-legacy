@@ -1,0 +1,51 @@
+.password-field {
+    position: relative;
+}
+
+.password-field ::deep .mud-input-slot {
+    padding-right: 40px;
+}
+
+.password-field ::deep .password-field-toggle {
+    position: absolute;
+    top: 32px;
+    right: 1px;
+    transform: translateY(-50%);
+}
+
+.capcha-field {
+    position: relative;
+    top: 16px;
+}
+
+.capcha-refresh {
+    position: absolute;
+    top: 32px;
+    left: 150px;
+    transform: translateY(-50%);
+}
+
+.captcha-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.captcha-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 170px;
+    height: 56px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 4px;
+    background: #f4f6fb;
+    overflow: hidden;
+}
+
+.captcha-image img {
+    display: block;
+    height: 56px;
+    user-select: none;
+}

@@ -1,0 +1,135 @@
+@page "/queries-transaction"
+@attribute [Authorize]
+@inject QueryManagementService Queries
+@inject IDialogService DialogService
+
+<PageTitle>Transaction</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Transaction</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Queries > Transaction.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="6" md="3">
+            <MudDatePicker Label="Date Start" @bind-Date="_dateStart" DateFormat="dd-MM-yyyy" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudDatePicker Label="Date End" @bind-Date="_dateEnd" DateFormat="dd-MM-yyyy" />
+        </MudItem>
+        <MudItem xs="6" sm="3" md="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-1"
+                       StartIcon="@Icons.Material.Filled.Search" OnClick="SearchAsync">Cari</MudButton>
+        </MudItem>
+        <MudItem xs="6" sm="3" md="2">
+            <MudButton Variant="Variant.Text" FullWidth="true" Class="mt-1" OnClick="@(() => _expanded = !_expanded)">
+                @(_expanded ? "Sembunyikan" : "Filter Lanjutan")
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+
+    <MudCollapse Expanded="_expanded">
+        <MudGrid Spacing="3" Class="mt-1">
+            <MudItem xs="12" sm="6" md="3"><MudTextField T="string" Label="Source Node" @bind-Value="_sourceNode" /></MudItem>
+            <MudItem xs="12" sm="6" md="3"><MudTextField T="string" Label="Dest Node" @bind-Value="_destNode" /></MudItem>
+            <MudItem xs="12" sm="6" md="3"><MudTextField T="string" Label="Merchant ID" @bind-Value="_merchantId" MaxLength="15" /></MudItem>
+            <MudItem xs="12" sm="6" md="3"><MudTextField T="string" Label="Terminal ID" @bind-Value="_terminalId" MaxLength="16" /></MudItem>
+            <MudItem xs="12" sm="6" md="3"><MudTextField T="string" Label="Account No" @bind-Value="_accountNo" MaxLength="28" /></MudItem>
+            <MudItem xs="12" sm="6" md="3"><MudTextField T="string" Label="Resp Code" @bind-Value="_respCode" MaxLength="4" /></MudItem>
+            <MudItem xs="12" sm="6" md="3"><MudTextField T="string" Label="Trace Number" @bind-Value="_traceNumber" MaxLength="12" /></MudItem>
+            <MudItem xs="12" sm="6" md="3"><MudTextField T="string" Label="Ref Number" @bind-Value="_refNumber" MaxLength="12" /></MudItem>
+        </MudGrid>
+    </MudCollapse>
+</MudPaper>
+
+<MudTable ServerData="ServerReloadAsync" @ref="_table" Dense="true" Hover="true" Elevation="1" T="TransactionListItemDto">
+    <HeaderContent>
+        <MudTh>Tran Nr</MudTh>
+        <MudTh>Date Time</MudTh>
+        <MudTh>Source</MudTh>
+        <MudTh>Dest</MudTh>
+        <MudTh>PAN</MudTh>
+        <MudTh>Type</MudTh>
+        <MudTh Style="text-align:right">Amount</MudTh>
+        <MudTh>To Inst ID</MudTh>
+        <MudTh>To Account</MudTh>
+        <MudTh>Merchant ID</MudTh>
+        <MudTh>Terminal ID</MudTh>
+        <MudTh>RC</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Tran Nr">@context.TranNr</MudTd>
+        <MudTd DataLabel="Date Time">@(context.TimeReq?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudTd>
+        <MudTd DataLabel="Source">@context.SourceNode</MudTd>
+        <MudTd DataLabel="Dest">@context.DestNode</MudTd>
+        <MudTd DataLabel="PAN">@context.MaskedPan</MudTd>
+        <MudTd DataLabel="Type">@context.TranType @context.TranTypeExt</MudTd>
+        <MudTd DataLabel="Amount" Style="text-align:right">@context.Amount?.FormatAmount()</MudTd>
+        <MudTd DataLabel="To Inst ID">@context.ReceivingInstId</MudTd>
+        <MudTd DataLabel="To Account">@context.ToAccNumber</MudTd>
+        <MudTd DataLabel="Merchant ID">@context.MerchantId</MudTd>
+        <MudTd DataLabel="Terminal ID">@context.TerminalId</MudTd>
+        <MudTd DataLabel="RC">@context.RespCode</MudTd>
+        <MudTd DataLabel="Aksi">
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" title="Detail"
+                           OnClick="@(() => OpenDetailAsync(context.TranNr))" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Style="opacity:.65">Tidak ada transaksi ditemukan.</MudText>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private MudTable<TransactionListItemDto> _table = null!;
+    private bool _expanded;
+
+    private DateTime? _dateStart = DateTime.Today;
+    private DateTime? _dateEnd = DateTime.Today;
+    private string? _sourceNode;
+    private string? _destNode;
+    private string? _merchantId;
+    private string? _terminalId;
+    private string? _accountNo;
+    private string? _respCode;
+    private string? _traceNumber;
+    private string? _refNumber;
+
+    private async Task<TableData<TransactionListItemDto>> ServerReloadAsync(TableState state, CancellationToken ct)
+    {
+        var request = new TransactionSearchRequest
+        {
+            DateStart = _dateStart,
+            DateEnd = _dateEnd?.Date.AddDays(1).AddTicks(-1),
+            SourceNode = _sourceNode,
+            DestNode = _destNode,
+            MerchantId = _merchantId,
+            TerminalId = _terminalId,
+            AccountNo = _accountNo,
+            RespCode = _respCode,
+            TraceNumber = _traceNumber,
+            RefNumber = _refNumber,
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize
+        };
+
+        var result = await Queries.SearchTransactionsAsync(request, ct);
+
+        return result == null
+            ? new TableData<TransactionListItemDto> { TotalItems = 0, Items = new List<TransactionListItemDto>() }
+            : new TableData<TransactionListItemDto> { TotalItems = (int)result.TotalRecords, Items = result.Items };
+    }
+
+    private Task SearchAsync() => _table.ReloadServerData();
+
+    private async Task OpenDetailAsync(long tranNr)
+    {
+        var parameters = new DialogParameters<TransactionDetailDialog> { { x => x.TranNr, tranNr } };
+        var dialog = await DialogService.ShowAsync<TransactionDetailDialog>("Query Transaction", parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        await dialog.Result;
+    }
+}

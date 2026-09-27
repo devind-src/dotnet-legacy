@@ -1,0 +1,381 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Hub" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Node" : "Tambah Node")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.NodeName</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2">
+            <MudTabs Elevation="0" Rounded="false" SliderColor="Color.Primary" TabPanelsClass="pa-6" Class="mt-2">
+                <MudTabPanel Text="General" ToolTip="General" Icon="@Icons.Material.Filled.Info">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Node Name" @bind-Value="_model.NodeName"
+                                          Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Node Name wajib diisi" MaxLength="20" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Application" @bind-Value="_model.AppName"
+                                       Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Application wajib dipilih">
+                                @foreach (var a in Apps)
+                                {
+                                    <MudSelectItem T="string" Value="@a.AppName">@a.AppName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Business Calendar" @bind-Value="_model.BusinessCalendar"
+                                       Disabled="_busy" Required="true" RequiredError="Business Calendar wajib dipilih">
+                                @foreach (var c in Calendars)
+                                {
+                                    <MudSelectItem T="string" Value="@c.BusinessCalendar">@c.BusinessCalendar</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Inst ID" @bind-Value="_model.InstId"
+                                          Disabled="_busy" Required="true" RequiredError="Inst ID wajib diisi" MaxLength="11" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Parameter" @bind-Value="_model.Parameter" MaxLength="50" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="int?" Label="Team (opsional)" @bind-Value="_model.TeamId" Disabled="_busy" Clearable="true">
+                                @foreach (var t in Teams)
+                                {
+                                    <MudSelectItem T="int?" Value="@t.TeamId">@t.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Category" @bind-Value="_model.Category" Disabled="_busy">
+                                <MudSelectItem T="string" Value="@("0")">Both</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("1")">Merchant</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("2")">Biller/Issuer</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        @if (IsEdit)
+                        {
+                            <MudItem xs="6">
+                                <MudGrid>
+                                    <MudItem xs="6">
+                                        <MudTextField Label="Port In" Value="@Node?.PortIn" Disabled="true" />
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudTextField Label="Port Out" Value="@Node?.PortOut" Disabled="true" />
+                                    </MudItem>
+                                </MudGrid>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Option" ToolTip="Option" Icon="@Icons.Material.Filled.Tune">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Timeout Mode" @bind-Value="_model.AutoReversal" Disabled="_busy">
+                                <MudSelectItem T="string" Value="@("0")">None</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("1")">Timeout Reversal</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("2")">Timeout Advice</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="short" Label="Request Timeout (detik)" @bind-Value="_model.RequestTimeout"
+                                             Min="3" Max="3600" Disabled="_busy" Required="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="short" Label="Advice Timeout (detik)" @bind-Value="_model.AdviceTimeout"
+                                             Min="3" Max="3600" Disabled="_busy" Required="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="short" Label="Keychange Timer (menit)" @bind-Value="_model.KeychangeTimer"
+                                             Min="0" Max="60" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="short" Label="Echo Timer (menit)" @bind-Value="_model.EchoTimer"
+                                             Min="0" Max="60" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="int" Label="SAF Limit" @bind-Value="_model.SafLimit"
+                                             Min="0" Max="100" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" />
+
+                        <MudGrid Spacing="1">
+                            <!-- spacing kecil hanya untuk grup ini -->
+                            <MudItem xs="12" sm="6">
+                                <MudSwitch T="bool" Value="_model.AutoSignon" ValueChanged="@(v => _model.AutoSignon = v)" Color="Color.Primary" Disabled="_busy">Auto Signon</MudSwitch>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudSwitch T="bool" Value="_model.AutoReplyReversal" ValueChanged="@(v => _model.AutoReplyReversal = v)" Color="Color.Primary" Disabled="_busy">Auto Reply Reversal</MudSwitch>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudSwitch T="bool" Value="_model.PinTranslate" ValueChanged="@(v => _model.PinTranslate = v)" Color="Color.Primary" Disabled="_busy">PIN Translate</MudSwitch>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudSwitch T="bool" Value="_model.SensitiveData" ValueChanged="@(v => _model.SensitiveData = v)" Color="Color.Primary" Disabled="_busy">Sensitive Data</MudSwitch>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudSwitch T="bool" Value="_model.SaveRepeatReversal" ValueChanged="@(v => _model.SaveRepeatReversal = v)" Color="Color.Primary" Disabled="_busy">Save Repeat Reversal</MudSwitch>
+                            </MudItem>
+                        </MudGrid>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Key Management" ToolTip="Key Management" Icon="@Icons.Material.Filled.VpnKey">
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+                        Tombol Generate di bawah menjalankan kalkulasi kriptografis nyata (DES/3DES di bawah LMK, sama seperti HSM &gt; Console) —
+                        bukan lagi nilai acak placeholder. Belum ada integrasi ke HSM fisik/jaringan (protocol TCP/IP) — kalkulasi selalu berjalan lokal.
+                    </MudAlert>
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Key Length" @bind-Value="_model.KeyLength" Disabled="_busy">
+                                <MudSelectItem T="string" Value="@("1")">Single</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("2")">Double</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("3")">Triple</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="PIN Block Format" @bind-Value="_model.PinblockFormat" Disabled="_busy">
+                                <MudSelectItem T="string" Value="@("01")">Format 01 ANSI X9.8/VISA-1</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("02")">Format 02 Docutel ATMs</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("03")">Format 03 IBM Diebold</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("04")">Format 04 PLUS Network</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Master Key" @bind-Value="_model.MasterKey" MaxLength="49" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Master Key Check Value" @bind-Value="_model.MasterKcv" MaxLength="16" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" Class="d-flex align-center">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Autorenew"
+                                       OnClick="GenerateMasterKeyAsync" Disabled="_busy">Generate Master Key</MudButton>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" />
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Session Key Under LMK" @bind-Value="_model.KeyUnderLmk" MaxLength="49" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Session Key Under ZMK" @bind-Value="_model.KeyUnderZmk" MaxLength="49" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Session Key Check Value" @bind-Value="_model.KeyCheckValue" MaxLength="48" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" Class="d-flex align-center">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Autorenew"
+                                       OnClick="GenerateSessionKeyAsync" Disabled="_busy">Generate Session Key</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private NodeManagementService NodeManagement { get; set; } = null!;
+    [Inject] private KeyManagementService KeyManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public NodeDto? Node { get; set; }
+    [Parameter] public List<AppDto> Apps { get; set; } = new();
+    [Parameter] public List<SupportTeamDto> Teams { get; set; } = new();
+    [Parameter] public List<BusinessDateDto> Calendars { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEdit && Node != null)
+        {
+            _model.NodeName = Node.NodeName ?? string.Empty;
+            _model.AppName = Node.AppName ?? string.Empty;
+            _model.BusinessCalendar = Node.BusinessCalendar ?? string.Empty;
+            _model.InstId = Node.InstId ?? string.Empty;
+            _model.Parameter = Node.Parameter;
+            _model.TeamId = Node.TeamId;
+            _model.Category = Node.Category ?? "0";
+            _model.AutoSignon = Node.AutoSignon;
+            _model.AutoReversal = Node.AutoReversal ?? "1";
+            _model.AutoReplyReversal = Node.AutoReplyReversal;
+            _model.RequestTimeout = Node.RequestTimeout ?? 30;
+            _model.AdviceTimeout = Node.AdviceTimeout ?? 15;
+            _model.KeychangeTimer = Node.KeychangeTimer ?? 0;
+            _model.EchoTimer = Node.EchoTimer ?? 0;
+            _model.SafLimit = Node.SafLimit ?? 3;
+            _model.PinTranslate = Node.PinTranslate;
+            _model.SensitiveData = Node.SensitiveData;
+            _model.SaveRepeatReversal = Node.SaveRepeatReversal;
+            _model.KeyLength = Node.KeyLength ?? "2";
+            _model.PinblockFormat = Node.PinblockFormat ?? "01";
+            _model.MasterKey = Node.MasterKey ?? string.Empty;
+            _model.MasterKcv = Node.MasterKcv ?? string.Empty;
+            _model.KeyUnderLmk = Node.KeyUnderLmk ?? string.Empty;
+            _model.KeyUnderZmk = Node.KeyUnderZmk ?? string.Empty;
+            _model.KeyCheckValue = Node.KeyCheckValue ?? string.Empty;
+        }
+        else
+        {
+            _model.KeyLength = "2";
+            _model.PinblockFormat = "01";
+        }
+        await Task.CompletedTask;
+    }
+
+    private async Task GenerateMasterKeyAsync()
+    {
+        var bundle = await KeyManagement.GenerateMasterKeyAsync(_model.KeyLength);
+        if (bundle == null) return;
+        _model.MasterKey = bundle.MasterKey;
+        _model.MasterKcv = bundle.MasterKcv;
+    }
+
+    private async Task GenerateSessionKeyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.MasterKey)) return;
+
+        var bundle = await KeyManagement.GenerateSessionKeyAsync(_model.MasterKey);
+        if (bundle == null) return;
+        _model.KeyUnderLmk = bundle.KeyUnderLmk;
+        _model.KeyUnderZmk = bundle.KeyUnderZmk;
+        _model.KeyCheckValue = bundle.KeyCheckValue;
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Node != null)
+        {
+            var request = new UpdateNodeRequest
+            {
+                BusinessCalendar = _model.BusinessCalendar,
+                Parameter = _model.Parameter,
+                TeamId = _model.TeamId,
+                Category = _model.Category,
+                AutoSignon = _model.AutoSignon,
+                AutoReversal = _model.AutoReversal,
+                AutoReplyReversal = _model.AutoReplyReversal,
+                RequestTimeout = _model.RequestTimeout,
+                AdviceTimeout = _model.AdviceTimeout,
+                KeychangeTimer = _model.KeychangeTimer,
+                EchoTimer = _model.EchoTimer,
+                SafLimit = _model.SafLimit,
+                PinTranslate = _model.PinTranslate,
+                SensitiveData = _model.SensitiveData,
+                SaveRepeatReversal = _model.SaveRepeatReversal,
+                KeyLength = _model.KeyLength,
+                PinblockFormat = _model.PinblockFormat,
+                MasterKey = _model.MasterKey,
+                MasterKcv = _model.MasterKcv,
+                KeyUnderLmk = _model.KeyUnderLmk,
+                KeyUnderZmk = _model.KeyUnderZmk,
+                KeyCheckValue = _model.KeyCheckValue
+            };
+            var (success, error) = await NodeManagement.UpdateNodeAsync(Node.NodeId, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateNodeRequest
+            {
+                NodeName = _model.NodeName,
+                AppName = _model.AppName,
+                BusinessCalendar = _model.BusinessCalendar,
+                InstId = _model.InstId,
+                Parameter = _model.Parameter,
+                TeamId = _model.TeamId,
+                Category = _model.Category,
+                AutoSignon = _model.AutoSignon,
+                AutoReversal = _model.AutoReversal,
+                AutoReplyReversal = _model.AutoReplyReversal,
+                RequestTimeout = _model.RequestTimeout,
+                AdviceTimeout = _model.AdviceTimeout,
+                KeychangeTimer = _model.KeychangeTimer,
+                EchoTimer = _model.EchoTimer,
+                SafLimit = _model.SafLimit,
+                PinTranslate = _model.PinTranslate,
+                SensitiveData = _model.SensitiveData,
+                SaveRepeatReversal = _model.SaveRepeatReversal,
+                KeyLength = _model.KeyLength,
+                PinblockFormat = _model.PinblockFormat,
+                MasterKey = _model.MasterKey,
+                MasterKcv = _model.MasterKcv,
+                KeyUnderLmk = _model.KeyUnderLmk,
+                KeyUnderZmk = _model.KeyUnderZmk,
+                KeyCheckValue = _model.KeyCheckValue
+            };
+            var (success, _, error) = await NodeManagement.CreateNodeAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan node.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string NodeName { get; set; } = string.Empty;
+        public string AppName { get; set; } = string.Empty;
+        public string BusinessCalendar { get; set; } = string.Empty;
+        public string InstId { get; set; } = string.Empty;
+        public string? Parameter { get; set; }
+        public int? TeamId { get; set; }
+        public string Category { get; set; } = "0";
+        public bool AutoSignon { get; set; }
+        public string AutoReversal { get; set; } = "1";
+        public bool AutoReplyReversal { get; set; }
+        public short RequestTimeout { get; set; } = 30;
+        public short AdviceTimeout { get; set; } = 15;
+        public short KeychangeTimer { get; set; }
+        public short EchoTimer { get; set; }
+        public int SafLimit { get; set; } = 3;
+        public bool PinTranslate { get; set; } = true;
+        public bool SensitiveData { get; set; }
+        public bool SaveRepeatReversal { get; set; }
+        public string KeyLength { get; set; } = "2";
+        public string PinblockFormat { get; set; } = "01";
+        public string MasterKey { get; set; } = string.Empty;
+        public string MasterKcv { get; set; } = string.Empty;
+        public string KeyUnderLmk { get; set; } = string.Empty;
+        public string KeyUnderZmk { get; set; } = string.Empty;
+        public string KeyCheckValue { get; set; } = string.Empty;
+    }
+}

@@ -1,0 +1,106 @@
+@* Hasil Cek Jadwal / dampak aturan: per produk, biller buka/tutup dan biller yang dipilih untuk siklus baru. *@
+
+@if (Result == null)
+{
+    return;
+}
+
+@foreach (var w in Result.Warnings)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">@w</MudAlert>
+}
+
+@if (Result.Products.Count == 0)
+{
+    <MudText Typo="Typo.body2" Style="opacity:.65">Tidak ada produk routing yang terpengaruh.</MudText>
+}
+else
+{
+    <MudSimpleTable Dense="true" Hover="true" Bordered="false" Striped="false" Class="mb-2">
+        <thead>
+            <tr>
+                <th>Produk</th>
+                <th>Mode</th>
+                <th>Hasil</th>
+                <th>Biller (urutan efektif)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Result.Products)
+            {
+                <tr>
+                    <td>
+                        <div>@p.ProductId @(p.ProductName)</div>
+                        <MudText Typo="Typo.caption" Style="opacity:.65">
+                            @RouteScheduleCodes.RoutingTypeLabel(p.RoutingType)@(p.Denom.HasValue ? $" · denom {p.Denom:N0}" : "")
+                        </MudText>
+                    </td>
+                    <td>@ModeLabel(p.RoutingMode)</td>
+                    <td>
+                        <MudChip T="string" Size="Size.Small" Color="@ResultColor(p.Result)">@ResultText(p)</MudChip>
+                        @if (!string.IsNullOrEmpty(p.Note))
+                        {
+                            <MudText Typo="Typo.caption" Style="opacity:.75">@p.Note</MudText>
+                        }
+                    </td>
+                    <td>
+                        @foreach (var b in p.Billers.OrderBy(b => b.Rank ?? int.MaxValue))
+                        {
+                            <div style="white-space:nowrap">
+                                @if (b.Open)
+                                {
+                                    <span>@b.Rank. @b.NodeName</span>
+                                    @if (b.SchedulePriority.HasValue)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Info" Inline="true"> (prioritas jadwal @b.SchedulePriority: @b.PriorityBy)</MudText>
+                                    }
+                                }
+                                else
+                                {
+                                    <span style="text-decoration:line-through;opacity:.6">@b.NodeName</span>
+                                    <MudText Typo="Typo.caption" Color="Color.Error" Inline="true"> tutup: @b.ClosedBy</MudText>
+                                }
+                                @if (!string.IsNullOrEmpty(b.HealthStatus) && b.HealthStatus != "ACTIVE")
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Warning" Inline="true"> · health sekarang @b.HealthStatus</MudText>
+                                }
+                            </div>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+    <MudText Typo="Typo.caption" Style="opacity:.65">
+        Dihitung seolah semua biller sehat; status health saat ini hanya informasi. Biller yang diblokir health check
+        dilewati ke urutan berikutnya saat transaksi.
+    </MudText>
+}
+
+@code {
+    [Parameter] public ScheduleCheckResultDto? Result { get; set; }
+
+    private static string ModeLabel(string mode) => mode switch
+    {
+        "STATIC" => "Static",
+        "PRIORITY" => "Priority",
+        "BEST_PRICE" => "Best Price",
+        "LOAD_BALANCE" => "Load Balance",
+        _ => mode
+    };
+
+    private static Color ResultColor(string result) => result switch
+    {
+        ScheduleCheckResults.Route => Color.Success,
+        ScheduleCheckResults.Reject => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string ResultText(ScheduleCheckProductDto p) => p.Result switch
+    {
+        ScheduleCheckResults.Route => $"→ {p.SelectedNode}",
+        ScheduleCheckResults.Reject => "Ditolak X15",
+        ScheduleCheckResults.Core => $"Routing statis → {p.SelectedNode}",
+        _ => p.Result
+    };
+}

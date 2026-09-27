@@ -1,0 +1,94 @@
+@using System.Text.Json
+@using SyncNetApi.Dtos.RouteMargins
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.History" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">Query Audit #@Id</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_model == null)
+        {
+            <MudAlert Severity="Severity.Warning">Data tidak ditemukan.</MudAlert>
+        }
+        else
+        {
+            <MudGrid Spacing="4" Class="mb-4">
+                <MudItem xs="6" sm="3"><FieldRow Label="ID" Value="@_model.Id.ToString()" /></MudItem>
+                <MudItem xs="6" sm="3"><FieldRow Label="Type" Value="@TypeLabel(_model.Type)" /></MudItem>
+                <MudItem xs="6" sm="3"><FieldRow Label="Table Name" Value="@_model.TableName" /></MudItem>
+                <MudItem xs="6" sm="3"><FieldRow Label="Updated By" Value="@_model.UserName" /></MudItem>
+                <MudItem xs="6" sm="3"><FieldRow Label="Updated Date" Value="@(_model.UpdateDate?.ToString("yyyy-MM-dd"))" /></MudItem>
+                <MudItem xs="6" sm="3"><FieldRow Label="Updated Time" Value="@(_model.UpdateDate?.ToString("HH:mm:ss.fff"))" /></MudItem>
+            </MudGrid>
+
+            <MudDivider Class="mb-4" />
+
+            @* Stacked vertically (Old above New) rather than legacy's side-by-side col-6/col-6
+               — narrow screens can't show two readable JSON columns at once. Pretty-printed for
+               readability; falls back to the raw string if it isn't valid JSON (e.g. the "null"
+               literal sw_audit uses for "no data", see AuditService). *@
+            <MudText Typo="Typo.subtitle2" Class="mb-1">Old Data</MudText>
+            <MudPaper Class="pa-3 mb-4" Elevation="0" Outlined="true" Style="max-height:300px;overflow:auto">
+                <pre style="margin:0;white-space:pre-wrap;word-break:break-all;font-family:Consolas,monospace;font-size:.8rem">@PrettyPrint(_model.OldValue)</pre>
+            </MudPaper>
+
+            <MudText Typo="Typo.subtitle2" Class="mb-1">New Data</MudText>
+            <MudPaper Class="pa-3" Elevation="0" Outlined="true" Style="max-height:300px;overflow:auto">
+                <pre style="margin:0;white-space:pre-wrap;word-break:break-all;font-family:Consolas,monospace;font-size:.8rem">@PrettyPrint(_model.NewValue)</pre>
+            </MudPaper>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Tutup</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private QueryManagementService Queries { get; set; } = null!;
+    [Parameter] public long Id { get; set; }
+
+    private AuditDetailDto? _model;
+    private bool _loading = true;
+
+    private static readonly JsonSerializerOptions PrettyOptions = new() { WriteIndented = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _model = await Queries.GetAuditAsync(Id);
+        _loading = false;
+    }
+
+    private void Close() => MudDialog.Cancel();
+
+    private static string TypeLabel(string? type) => type switch
+    {
+        "I" => "Insert",
+        "U" => "Update",
+        "D" => "Delete",
+        _ => type ?? "-"
+    };
+
+    private static string PrettyPrint(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json) || json == "null") return "-";
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return JsonSerializer.Serialize(doc.RootElement, PrettyOptions);
+        }
+        catch (JsonException)
+        {
+            return json;
+        }
+    }
+}

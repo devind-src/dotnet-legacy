@@ -1,0 +1,166 @@
+@inject IConfiguration Config
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Image" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Image Set" : "Tambah Image Set")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Name" @bind-Value="_model.Name"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Name wajib diisi" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="URL Base" @bind-Value="_model.UrlBase" MaxLength="255" Disabled="_busy" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!IsEdit)
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-4" Dense="true">
+                    Simpan dulu, lalu buka Edit untuk mengunggah banner.
+                </MudAlert>
+            }
+            else
+            {
+                <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">Banner (1-5)</MudText>
+                <MudGrid>
+                    @for (var i = 1; i <= 5; i++)
+                    {
+                        var slot = i;
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudPaper Class="pa-2" Outlined="true">
+                                @if (!string.IsNullOrEmpty(BannerUrl(slot)))
+                                {
+                                    <img src="@BannerUrl(slot)" alt="Banner @slot" style="width:100%;height:100px;object-fit:cover;border-radius:4px;" />
+                                }
+                                else
+                                {
+                                    <div style="width:100%;height:100px;display:flex;align-items:center;justify-content:center;background:var(--mud-palette-background-grey);border-radius:4px;">
+                                        <MudText Style="opacity:.5">Banner @slot</MudText>
+                                    </div>
+                                }
+                                <InputFile OnChange="@(e => UploadBannerAsync(slot, e))" accept=".jpg,.jpeg,.png,.bmp" class="mt-2" disabled="@_busy" />
+                            </MudPaper>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Tutup</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private TerminalImageManagementService ImageManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public TerminalImageDto? Image { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private bool _changed;
+    private string? _error;
+    private string?[] _bannerUrls = new string?[6];
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Image != null)
+        {
+            _model.Name = Image.Name;
+            _model.UrlBase = Image.UrlBase ?? string.Empty;
+            _bannerUrls[1] = Image.Banner1Url;
+            _bannerUrls[2] = Image.Banner2Url;
+            _bannerUrls[3] = Image.Banner3Url;
+            _bannerUrls[4] = Image.Banner4Url;
+            _bannerUrls[5] = Image.Banner5Url;
+        }
+    }
+
+    private string? BannerUrl(int slot)
+    {
+        var relative = _bannerUrls[slot];
+        if (string.IsNullOrEmpty(relative)) return null;
+        var baseUrl = Config["Api:BaseUrl"]?.TrimEnd('/') ?? string.Empty;
+        return $"{baseUrl}{relative}";
+    }
+
+    private async Task UploadBannerAsync(int slot, InputFileChangeEventArgs e)
+    {
+        _busy = true;
+        _error = null;
+
+        var (success, updated, error) = await ImageManagement.UploadBannerAsync(_model.Name, slot, e.File);
+        _busy = false;
+
+        if (success && updated != null)
+        {
+            _bannerUrls[1] = updated.Banner1Url;
+            _bannerUrls[2] = updated.Banner2Url;
+            _bannerUrls[3] = updated.Banner3Url;
+            _bannerUrls[4] = updated.Banner4Url;
+            _bannerUrls[5] = updated.Banner5Url;
+            _changed = true;
+        }
+        else
+        {
+            _error = error ?? "Gagal mengunggah banner.";
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await ImageManagement.UpdateImageAsync(_model.Name, new UpdateTerminalImageRequest { UrlBase = _model.UrlBase });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateTerminalImageRequest { Name = _model.Name, UrlBase = _model.UrlBase };
+            var (success, _, error) = await ImageManagement.CreateImageAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan image set.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Close(DialogResult.Ok(_changed));
+
+    private class FormModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string UrlBase { get; set; } = string.Empty;
+    }
+}

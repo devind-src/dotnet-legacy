@@ -1,0 +1,200 @@
+@inject UserManagementService UserManagement
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(IsEdit ? "Edit User" : "Tambah User")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Username" @bind-Value="_model.UserName"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Username wajib diisi"
+                                  MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Nama Lengkap" @bind-Value="_model.FullName"
+                                  Required="true" RequiredError="Nama lengkap wajib diisi" Disabled="_busy" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Email" @bind-Value="_model.Email" InputType="InputType.Email"
+                                  Required="true" RequiredError="Email wajib diisi"
+                                  Validation="@(new Func<string, string?>(ValidateEmail))" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Role" @bind-Value="_model.RoleName"
+                               Required="true" RequiredError="Role wajib dipilih" Disabled="_busy">
+                        @foreach (var role in Roles)
+                        {
+                            <MudSelectItem T="string" Value="@role.RoleName">@role.RoleName (@role.RoleDesc)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                @if (!IsEdit)
+                {
+                    <MudItem xs="12" sm="6">
+                        <PasswordInputField Label="Password" @bind-Value="_model.Password"
+                                             Required="true" RequiredError="Password wajib diisi"
+                                             Validation="@ValidatePassword" Disabled="_busy"
+                                             OnGenerated="@(pwd => _model.ConfirmPassword = pwd)" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <PasswordInputField Label="Konfirmasi Password" @bind-Value="_model.ConfirmPassword"
+                                             Required="true" RequiredError="Konfirmasi password wajib diisi"
+                                             Validation="@ValidateConfirmPassword" Disabled="_busy"
+                                             ShowGenerateButton="false" />
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12">
+                        <MudSelect T="string" Label="Status" @bind-Value="_model.Status" Required="true" Disabled="_busy">
+                            <MudSelectItem T="string" Value="@("1")">Aktif</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("0")">Nonaktif</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                }
+
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="bool?" Label="Hak Tambah (Add)" @bind-Value="_model.AllowAdd" Disabled="_busy">
+                        <MudSelectItem T="bool?" Value="@((bool?)null)">Inherit dari Role</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="@((bool?)true)">Ya</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="@((bool?)false)">Tidak</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="bool?" Label="Hak Ubah (Edit)" @bind-Value="_model.AllowEdit" Disabled="_busy">
+                        <MudSelectItem T="bool?" Value="@((bool?)null)">Inherit dari Role</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="@((bool?)true)">Ya</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="@((bool?)false)">Tidak</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="bool?" Label="Hak Hapus (Delete)" @bind-Value="_model.AllowDelete" Disabled="_busy">
+                        <MudSelectItem T="bool?" Value="@((bool?)null)">Inherit dari Role</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="@((bool?)true)">Ya</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="@((bool?)false)">Tidak</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<RoleDto> Roles { get; set; } = new();
+    [Parameter] public UserDto? User { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && User != null)
+        {
+            _model.UserName = User.UserName;
+            _model.FullName = User.FullName;
+            _model.Email = User.Email;
+            _model.RoleName = User.RoleName;
+            _model.Status = string.IsNullOrEmpty(User.Status) ? "1" : User.Status;
+            _model.AllowAdd = User.AllowAdd;
+            _model.AllowEdit = User.AllowEdit;
+            _model.AllowDelete = User.AllowDelete;
+        }
+    }
+
+    private static string? ValidateEmail(string email) =>
+        string.IsNullOrWhiteSpace(email) || (email.Contains('@') && email.Contains('.'))
+            ? null
+            : "Format email tidak valid";
+
+    private static string? ValidatePassword(string password) =>
+        string.IsNullOrEmpty(password) || password.Length >= 8 ? null : "Password minimal 8 karakter";
+
+    private string? ValidateConfirmPassword(string confirmPassword) =>
+        confirmPassword != _model.Password ? "Tidak sama dengan password" : null;
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var request = new UpdateUserRequest
+            {
+                FullName = _model.FullName,
+                RoleName = _model.RoleName,
+                Email = _model.Email,
+                Status = _model.Status,
+                AllowAdd = _model.AllowAdd,
+                AllowEdit = _model.AllowEdit,
+                AllowDelete = _model.AllowDelete
+            };
+            var (success, error) = await UserManagement.UpdateUserAsync(_model.UserName, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateUserRequest
+            {
+                UserName = _model.UserName,
+                FullName = _model.FullName,
+                RoleName = _model.RoleName,
+                Email = _model.Email,
+                Password = _model.Password,
+                AllowAdd = _model.AllowAdd,
+                AllowEdit = _model.AllowEdit,
+                AllowDelete = _model.AllowDelete
+            };
+            var (success, _, error) = await UserManagement.CreateUserAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan user.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string UserName { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+        public string RoleName { get; set; } = string.Empty;
+        public string Status { get; set; } = "1";
+        public bool? AllowAdd { get; set; }
+        public bool? AllowEdit { get; set; }
+        public bool? AllowDelete { get; set; }
+    }
+}

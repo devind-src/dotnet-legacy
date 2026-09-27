@@ -1,0 +1,82 @@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Atur LB Weight — @ProductId denom @(Denom?.ToString("N0") ?? "-")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3" Style="opacity:.75">
+            Mode Load Balance membagi transaksi denom ini secara acak berbobot ke supplier aktif yang sehat.
+            Total bobot supplier aktif harus tepat 100%.
+        </MudText>
+        <MudSimpleTable Dense="true" Elevation="0">
+            <thead>
+                <tr><th>Supplier</th><th>Aktif</th><th style="width:140px">LB Weight (%)</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _rows)
+                {
+                    <tr>
+                        <td>@row.Supplier</td>
+                        <td>@(row.Active ? "Ya" : "Tidak")</td>
+                        <td><MudNumericField T="int" @bind-Value="row.Weight" Min="0" Max="100" Margin="Margin.Dense" Disabled="_busy" /></td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+        <MudText Typo="Typo.subtitle2" Class="mt-3" Color="@(ActiveTotal == 100 ? Color.Success : Color.Warning)">
+            Total bobot supplier aktif: @ActiveTotal% @(ActiveTotal == 100 ? "✔" : "— harus 100%")
+        </MudText>
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3" Dense="true">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="@(_busy || ActiveTotal != 100)">Simpan</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductPrepaidPricingManagementService PriceManagement { get; set; } = null!;
+    [Parameter] public string ProductId { get; set; } = string.Empty;
+    [Parameter] public int? Denom { get; set; }
+    [Parameter] public List<ProductPrepaidPricingDto> Items { get; set; } = new();
+
+    private List<Row> _rows = new();
+    private bool _busy;
+    private string? _error;
+
+    private int ActiveTotal => _rows.Where(r => r.Active).Sum(r => r.Weight);
+
+    protected override void OnInitialized()
+    {
+        _rows = Items.Select(i => new Row { Id = i.Id, Supplier = i.SupplierId ?? "-", Active = i.Active, Weight = i.LbWeight ?? 0 }).ToList();
+    }
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _error = null;
+
+        var (success, error) = await PriceManagement.UpdateWeightsAsync(ProductId, new UpdateSupplierWeightsRequest
+        {
+            Denom = Denom,
+            Weights = _rows.Select(r => new SupplierWeight { Id = r.Id, LbWeight = r.Weight }).ToList()
+        });
+
+        _busy = false;
+        if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+        _error = error ?? "Gagal menyimpan bobot.";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class Row
+    {
+        public int Id { get; set; }
+        public string Supplier { get; set; } = string.Empty;
+        public bool Active { get; set; }
+        public int Weight { get; set; }
+    }
+}

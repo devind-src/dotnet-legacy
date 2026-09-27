@@ -1,0 +1,175 @@
+@page "/posbase-limit"
+@attribute [Authorize]
+@inject TerminalLimitManagementService LimitManagement
+@inject MerchantGroupManagementService MerchantGroupManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Terminal Limit</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Limit</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Kelola batas transaksi terminal per group.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari limit" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah Limit</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>ID</MudTh>
+            <MudTh>Nama</MudTh>
+            <MudTh>Group</MudTh>
+            <MudTh Style="text-align:right">Max Withdrawal</MudTh>
+            <MudTh Style="text-align:right">Max Transfer</MudTh>
+            <MudTh Style="text-align:right">Max Purchase</MudTh>
+            <MudTh Style="text-align:right">Max Payment</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="ID">@context.Id</MudTd>
+            <MudTd DataLabel="Nama">@context.LimitName</MudTd>
+            <MudTd DataLabel="Group">@context.GroupName</MudTd>
+            <MudTd DataLabel="Max Withdrawal" Style="text-align:right">@context.MaxWithdrawal.ToString("N0")</MudTd>
+            <MudTd DataLabel="Max Transfer" Style="text-align:right">@context.MaxTransfer.ToString("N0")</MudTd>
+            <MudTd DataLabel="Max Purchase" Style="text-align:right">@context.MaxPurchase.ToString("N0")</MudTd>
+            <MudTd DataLabel="Max Payment" Style="text-align:right">@context.MaxPayment.ToString("N0")</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada limit ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<TerminalLimitDto> _items = new();
+    private List<MerchantGroupDto> _groups = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _groups = await MerchantGroupManagement.GetGroupsAsync() ?? new();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await LimitManagement.GetLimitsAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar limit.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<TerminalLimitFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Groups, _groups }
+        };
+        var dialog = await DialogService.ShowAsync<TerminalLimitFormDialog>("Tambah Limit", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Limit berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(TerminalLimitDto limit)
+    {
+        var parameters = new DialogParameters<TerminalLimitFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Groups, _groups },
+            { x => x.Limit, limit }
+        };
+        var dialog = await DialogService.ShowAsync<TerminalLimitFormDialog>("Edit Limit", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan limit berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(TerminalLimitDto limit)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Limit",
+            $"Yakin ingin menghapus limit '{limit.LimitName}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await LimitManagement.DeleteLimitAsync(limit.Id);
+        if (success)
+        {
+            Snackbar.Add("Limit berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus limit.", Severity.Error);
+        }
+    }
+}

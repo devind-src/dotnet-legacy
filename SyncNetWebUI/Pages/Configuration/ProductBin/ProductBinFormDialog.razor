@@ -1,0 +1,111 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.CreditCard" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit BIN" : "Tambah BIN")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="BIN" @bind-Value="_model.Bin"
+                                  Disabled="_busy" Required="true" RequiredError="BIN wajib diisi" MaxLength="16" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="CBC" @bind-Value="_model.Cbc" Disabled="_busy" MaxLength="6" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Bank Name" @bind-Value="_model.BankName" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductBinManagementService ProductBinManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public ProductBinDto? Bin { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Bin != null)
+        {
+            _model.Id = Bin.Id;
+            _model.Bin = Bin.Bin ?? string.Empty;
+            _model.Cbc = Bin.Cbc;
+            _model.BankName = Bin.BankName;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await ProductBinManagement.UpdateProductBinAsync(_model.Id, new UpdateProductBinRequest
+            {
+                Bin = _model.Bin,
+                Cbc = _model.Cbc,
+                BankName = _model.BankName
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateProductBinRequest
+            {
+                Bin = _model.Bin,
+                Cbc = _model.Cbc,
+                BankName = _model.BankName
+            };
+            var (success, _, error) = await ProductBinManagement.CreateProductBinAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan BIN.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public long Id { get; set; }
+        public string Bin { get; set; } = string.Empty;
+        public string? Cbc { get; set; }
+        public string? BankName { get; set; }
+    }
+}

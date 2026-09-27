@@ -1,0 +1,93 @@
+@page "/mon-connection"
+@attribute [Authorize]
+@using SyncNetApi.Dtos.RouteMargins
+@using SyncNetWasm.Common
+@inject MonitoringManagementService Monitoring
+
+<PageTitle>Connection</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Connection</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Monitoring > Realtime > Connection.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari connection" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync" title="Refresh" />
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage" T="ConnectionMonitorDto">
+        <HeaderContent>
+            <MudTh></MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>Type</MudTh>
+            <MudTh>Protocol</MudTh>
+            <MudTh>IP Address</MudTh>
+            <MudTh>URL</MudTh>
+            <MudTh>Method</MudTh>
+            <MudTh>Content</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel=""><MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@(MonitoringStatus.IsConnectionDown(context.Protocol, context.Remote) ? Color.Error : Color.Success)" /></MudTd>
+            <MudTd DataLabel="Name">@context.ConnName</MudTd>
+            <MudTd DataLabel="Type">@MonitoringStatus.ConnTypeLabel(context.ConnType)</MudTd>
+            <MudTd DataLabel="Protocol">@MonitoringStatus.ProtocolLabel(context.Protocol)</MudTd>
+            <MudTd DataLabel="IP Address">@(string.IsNullOrEmpty(context.Port) ? context.IpAddress : $"{context.IpAddress}, {context.Port}")</MudTd>
+            <MudTd DataLabel="URL">@context.WsUrl</MudTd>
+            <MudTd DataLabel="Method">@context.WsMethod</MudTd>
+            <MudTd DataLabel="Content">@context.WsContent</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada connection ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<ConnectionMonitorDto> _items = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await Monitoring.GetConnectionsAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar connection.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+}

@@ -1,0 +1,361 @@
+@inject CityManagementService CityManagement
+@inject KeyManagementService KeyManagement
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.AccountBalance" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Issuer" : "Tambah Issuer")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2">
+            <MudTabs Elevation="0" Rounded="false" SliderColor="Color.Primary" TabPanelsClass="pa-6" Class="mt-2">
+                <MudTabPanel Text="General" ToolTip="General" Icon="@Icons.Material.Filled.Info">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Issuer" @bind-Value="_model.Issuer"
+                                          Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Issuer wajib diisi" MaxLength="30" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Inst ID" @bind-Value="_model.InstId"
+                                          Disabled="_busy" Required="true" RequiredError="Inst ID wajib diisi" MaxLength="6" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Currency" @bind-Value="_model.Currency" Required="true" RequiredError="Currency wajib dipilih" Disabled="_busy">
+                                @foreach (var c in Currencies)
+                                {
+                                    <MudSelectItem T="string" Value="@c.CurrencyCode">@c.CurrencyCode — @c.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="bool" Label="Authorization Service" @bind-Value="_model.AuthService" Disabled="_busy">
+                                <MudSelectItem T="bool" Value="false">None</MudSelectItem>
+                                <MudSelectItem T="bool" Value="true">Full Authorization</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="int?" Label="Max PIN Tries" @bind-Value="_model.MaxPinTries" Required="true" RequiredError="Max PIN Tries wajib diisi" Disabled="_busy" Min="1" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Limit" ToolTip="Limit" Icon="@Icons.Material.Filled.Speed">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="bool" Label="Velocity Per Transaction" @bind-Value="_model.VelocityPerTran" Disabled="_busy">
+                                <MudSelectItem T="bool" Value="false">No</MudSelectItem>
+                                <MudSelectItem T="bool" Value="true">Yes</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="bool" Label="Velocity Daily" @bind-Value="_model.VelocityDaily" Disabled="_busy">
+                                <MudSelectItem T="bool" Value="false">No</MudSelectItem>
+                                <MudSelectItem T="bool" Value="true">Yes</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="bool" Label="Velocity Weekly" @bind-Value="_model.VelocityWeekly" Disabled="_busy">
+                                <MudSelectItem T="bool" Value="false">No</MudSelectItem>
+                                <MudSelectItem T="bool" Value="true">Yes</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="bool" Label="Velocity Monthly" @bind-Value="_model.VelocityMonthly" Disabled="_busy">
+                                <MudSelectItem T="bool" Value="false">No</MudSelectItem>
+                                <MudSelectItem T="bool" Value="true">Yes</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Contact" ToolTip="Contact" Icon="@Icons.Material.Filled.Person">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Name" @bind-Value="_model.ContactName" Disabled="_busy" MaxLength="50" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Phone" @bind-Value="_model.Phone" Disabled="_busy" MaxLength="30" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Fax" @bind-Value="_model.Fax" Disabled="_busy" MaxLength="30" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Mobile" @bind-Value="_model.Mobile" Disabled="_busy" MaxLength="30" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Email" @bind-Value="_model.Email" InputType="InputType.Email" Disabled="_busy" MaxLength="50" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Business Address" ToolTip="Business Address" Icon="@Icons.Material.Filled.LocationOn">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12">
+                            <MudTextField T="string" Label="Business Address" @bind-Value="_model.BusinessAddress" Lines="2" Disabled="_busy" MaxLength="50" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudAutocomplete T="string" Label="City" @bind-Value="_model.City" SearchFunc="SearchCities"
+                                             Disabled="_busy" Clearable="true" CoerceValue="true" ResetValueOnEmptyText="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Postal Code" @bind-Value="_model.PostalCode" Disabled="_busy" MaxLength="5" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Key Management" ToolTip="Key Management" Icon="@Icons.Material.Filled.VpnKey">
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+                        Tombol Generate di bawah menjalankan kalkulasi kriptografis nyata (DES/3DES di bawah LMK, sama seperti HSM &gt; Console) —
+                        bukan nilai acak placeholder. Belum ada integrasi ke HSM fisik/jaringan (protocol TCP/IP) — kalkulasi selalu berjalan lokal.
+                    </MudAlert>
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Key Length" @bind-Value="_model.KeyLength" Disabled="_busy">
+                                <MudSelectItem T="string" Value="@("1")">Single</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("2")">Double</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("3")">Triple</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="PIN Block Format" @bind-Value="_model.PinblockFormat" Disabled="_busy">
+                                <MudSelectItem T="string" Value="@("01")">Format 01 ANSI X9.8/VISA-1</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("02")">Format 02 Docutel ATMs</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("03")">Format 03 IBM Diebold</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("04")">Format 04 PLUS Network</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Master Key" @bind-Value="_model.MasterKey" MaxLength="49" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Master Key Check Value" @bind-Value="_model.MasterKcv" MaxLength="16" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" Class="d-flex align-center">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Autorenew"
+                                       OnClick="GenerateMasterKeyAsync" Disabled="_busy">Generate Master Key</MudButton>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" />
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Session Key Under LMK" @bind-Value="_model.KeyUnderLmk" MaxLength="49" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Session Key Under ZMK" @bind-Value="_model.KeyUnderZmk" MaxLength="49" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Session Key Check Value" @bind-Value="_model.KeyCheckValue" MaxLength="16" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" Class="d-flex align-center">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Autorenew"
+                                       OnClick="GenerateSessionKeyAsync" Disabled="_busy">Generate Session Key</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private CardIssuerManagementService IssuerManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<CurrencyDto> Currencies { get; set; } = new();
+    [Parameter] public CardIssuerDto? Issuer { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+    private List<CityDto> _cities = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cities = await CityManagement.GetCitiesAsync() ?? new();
+
+        if (IsEdit && Issuer != null)
+        {
+            _model.Issuer = Issuer.Issuer;
+            _model.InstId = Issuer.InstId ?? string.Empty;
+            _model.Currency = Issuer.Currency ?? string.Empty;
+            _model.AuthService = Issuer.AuthService;
+            _model.MaxPinTries = Issuer.MaxPinTries;
+            _model.VelocityPerTran = Issuer.VelocityPerTran;
+            _model.VelocityDaily = Issuer.VelocityDaily;
+            _model.VelocityWeekly = Issuer.VelocityWeekly;
+            _model.VelocityMonthly = Issuer.VelocityMonthly;
+            _model.ContactName = Issuer.ContactName;
+            _model.Phone = Issuer.Phone;
+            _model.Fax = Issuer.Fax;
+            _model.Mobile = Issuer.Mobile;
+            _model.Email = Issuer.Email;
+            _model.BusinessAddress = Issuer.BusinessAddress;
+            _model.City = Issuer.City;
+            _model.PostalCode = Issuer.PostalCode;
+            _model.KeyLength = Issuer.KeyLength ?? "2";
+            _model.PinblockFormat = Issuer.PinblockFormat ?? "01";
+            _model.MasterKey = Issuer.MasterKey;
+            _model.MasterKcv = Issuer.MasterKcv;
+            _model.KeyUnderLmk = Issuer.KeyUnderLmk;
+            _model.KeyUnderZmk = Issuer.KeyUnderZmk;
+            _model.KeyCheckValue = Issuer.KeyCheckValue;
+        }
+        else if (Currencies.Count > 0)
+        {
+            _model.Currency = Currencies[0].CurrencyCode;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchCities(string value, CancellationToken ct)
+    {
+        var results = string.IsNullOrWhiteSpace(value)
+            ? _cities.Select(c => c.City ?? string.Empty)
+            : _cities.Where(c => (c.City ?? string.Empty).Contains(value, StringComparison.OrdinalIgnoreCase)).Select(c => c.City ?? string.Empty);
+        return Task.FromResult(results.Take(20));
+    }
+
+    private async Task GenerateMasterKeyAsync()
+    {
+        var bundle = await KeyManagement.GenerateMasterKeyAsync(_model.KeyLength);
+        if (bundle == null) return;
+        _model.MasterKey = bundle.MasterKey;
+        _model.MasterKcv = bundle.MasterKcv;
+    }
+
+    private async Task GenerateSessionKeyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.MasterKey)) return;
+
+        var bundle = await KeyManagement.GenerateSessionKeyAsync(_model.MasterKey);
+        if (bundle == null) return;
+        _model.KeyUnderLmk = bundle.KeyUnderLmk;
+        _model.KeyUnderZmk = bundle.KeyUnderZmk;
+        _model.KeyCheckValue = bundle.KeyCheckValue;
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await IssuerManagement.UpdateIssuerAsync(_model.Issuer, new UpdateCardIssuerRequest
+            {
+                InstId = _model.InstId,
+                Currency = _model.Currency,
+                AuthService = _model.AuthService,
+                MaxPinTries = _model.MaxPinTries,
+                VelocityPerTran = _model.VelocityPerTran,
+                VelocityDaily = _model.VelocityDaily,
+                VelocityWeekly = _model.VelocityWeekly,
+                VelocityMonthly = _model.VelocityMonthly,
+                ContactName = _model.ContactName,
+                Phone = _model.Phone,
+                Fax = _model.Fax,
+                Mobile = _model.Mobile,
+                Email = _model.Email,
+                BusinessAddress = _model.BusinessAddress,
+                City = _model.City,
+                PostalCode = _model.PostalCode,
+                KeyLength = _model.KeyLength,
+                PinblockFormat = _model.PinblockFormat,
+                MasterKey = _model.MasterKey,
+                MasterKcv = _model.MasterKcv,
+                KeyUnderLmk = _model.KeyUnderLmk,
+                KeyUnderZmk = _model.KeyUnderZmk,
+                KeyCheckValue = _model.KeyCheckValue
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateCardIssuerRequest
+            {
+                Issuer = _model.Issuer,
+                InstId = _model.InstId,
+                Currency = _model.Currency,
+                AuthService = _model.AuthService,
+                MaxPinTries = _model.MaxPinTries,
+                VelocityPerTran = _model.VelocityPerTran,
+                VelocityDaily = _model.VelocityDaily,
+                VelocityWeekly = _model.VelocityWeekly,
+                VelocityMonthly = _model.VelocityMonthly,
+                ContactName = _model.ContactName,
+                Phone = _model.Phone,
+                Fax = _model.Fax,
+                Mobile = _model.Mobile,
+                Email = _model.Email,
+                BusinessAddress = _model.BusinessAddress,
+                City = _model.City,
+                PostalCode = _model.PostalCode,
+                KeyLength = _model.KeyLength,
+                PinblockFormat = _model.PinblockFormat,
+                MasterKey = _model.MasterKey,
+                MasterKcv = _model.MasterKcv,
+                KeyUnderLmk = _model.KeyUnderLmk,
+                KeyUnderZmk = _model.KeyUnderZmk,
+                KeyCheckValue = _model.KeyCheckValue
+            };
+            var (success, _, error) = await IssuerManagement.CreateIssuerAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan issuer.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string Issuer { get; set; } = string.Empty;
+        public string InstId { get; set; } = string.Empty;
+        public string Currency { get; set; } = string.Empty;
+        public bool AuthService { get; set; }
+        public int? MaxPinTries { get; set; } = 3;
+        public bool VelocityPerTran { get; set; }
+        public bool VelocityDaily { get; set; }
+        public bool VelocityWeekly { get; set; }
+        public bool VelocityMonthly { get; set; }
+        public string? ContactName { get; set; }
+        public string? Phone { get; set; }
+        public string? Fax { get; set; }
+        public string? Mobile { get; set; }
+        public string? Email { get; set; }
+        public string? BusinessAddress { get; set; }
+        public string? City { get; set; }
+        public string? PostalCode { get; set; }
+        public string KeyLength { get; set; } = "2";
+        public string PinblockFormat { get; set; } = "01";
+        public string? MasterKey { get; set; }
+        public string? MasterKcv { get; set; }
+        public string? KeyUnderLmk { get; set; }
+        public string? KeyUnderZmk { get; set; }
+        public string? KeyCheckValue { get; set; }
+    }
+}

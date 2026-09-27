@@ -1,0 +1,90 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.RequestQuote" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">Detail Job Fee</MudText>
+                <MudText Typo="Typo.caption" Style="opacity:.65">@JobFee?.JobDesc</MudText>
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Class="mb-4" />
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Class="mb-3">Total @_details.Count baris fee.</MudText>
+            <MudTable Items="_details" Hover="true" Dense="true" Elevation="0" @bind-RowsPerPage="_rowsPerPage" FixedHeader="true" Height="400px">
+                <HeaderContent>
+                    <MudTh>Product</MudTh>
+                    <MudTh>Group</MudTh>
+                    <MudTh>Subgroup</MudTh>
+                    <MudTh>Merchant</MudTh>
+                    <MudTh>Submerchant</MudTh>
+                    <MudTh>Fee Type</MudTh>
+                    <MudTh>Total</MudTh>
+                    <MudTh>Acq</MudTh>
+                    <MudTh>Iss</MudTh>
+                    <MudTh>Swt</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Product">@context.ProductId</MudTd>
+                    <MudTd DataLabel="Group">@context.GroupName</MudTd>
+                    <MudTd DataLabel="Subgroup">@context.SubgroupName</MudTd>
+                    <MudTd DataLabel="Merchant">@context.MerchantId</MudTd>
+                    <MudTd DataLabel="Submerchant">@context.SubmerchantId</MudTd>
+                    <MudTd DataLabel="Fee Type">@context.FeeType</MudTd>
+                    @if (context.FeeType == "Fixed")
+                    {
+                        <MudTd DataLabel="Total">@context.FixedFee</MudTd>
+                        <MudTd DataLabel="Acq">@context.FixedFeeAcq</MudTd>
+                        <MudTd DataLabel="Iss">@context.FixedFeeIss</MudTd>
+                        <MudTd DataLabel="Swt">@context.FixedFeeSwt</MudTd>
+                    }
+                    else
+                    {
+                        <MudTd DataLabel="Total">@context.PercentFee</MudTd>
+                        <MudTd DataLabel="Acq">@context.PercentFeeAcq</MudTd>
+                        <MudTd DataLabel="Iss">@context.PercentFeeIss</MudTd>
+                        <MudTd DataLabel="Swt">@context.PercentFeeSwt</MudTd>
+                    }
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText Style="opacity:.65">Tidak ada baris detail.</MudText>
+                </NoRecordsContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+                </PagerContent>
+            </MudTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Tutup</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private JobFeeManagementService JobFeeManagement { get; set; } = null!;
+    [Parameter] public JobFeeDto? JobFee { get; set; }
+
+    private List<JobFeeDetailDto> _details = new();
+    private bool _loading = true;
+    private int _rowsPerPage = 10;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (JobFee != null)
+        {
+            var result = await JobFeeManagement.GetDetailsAsync(JobFee.Id);
+            _details = result ?? new();
+        }
+        _loading = false;
+    }
+
+    private void Close() => MudDialog.Close();
+}

@@ -1,0 +1,199 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.AccountBalance" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Cash Withdrawal Account" : "Tambah Cash Withdrawal Account")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@Item?.TerminalId</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudAutocomplete T="string" Label="Merchant" @bind-Value="_model.MerchantId"
+                                     SearchFunc="SearchMerchants" ToStringFunc="FormatMerchant" Required="true" RequiredError="Merchant wajib diisi"
+                                     CoerceValue="true" Disabled="_busy" MaxLength="15" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudAutocomplete T="string" Label="Terminal" @bind-Value="_model.TerminalId"
+                                     SearchFunc="SearchTerminals" Required="true" RequiredError="Terminal wajib diisi"
+                                     CoerceValue="true" Disabled="_busy" MaxLength="16" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudAutocomplete T="string" Label="Bank Name" Value="_model.BankName" ValueChanged="OnBankNameChanged"
+                                     SearchFunc="SearchBanks" Required="true" RequiredError="Bank name wajib diisi"
+                                     CoerceValue="true" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Bank Code" @bind-Value="_model.BankCode"
+                                  Required="true" RequiredError="Bank code wajib diisi" Disabled="_busy" MaxLength="6" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Account Number" @bind-Value="_model.AccNumber"
+                                  Required="true" RequiredError="Account number wajib diisi" Disabled="_busy" MaxLength="30" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Account Name" @bind-Value="_model.AccName" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private CashoutWithdrawalManagementService WithdrawalManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public CashoutWithdrawalDto? Item { get; set; }
+    [Parameter] public List<LookupItemDto> Merchants { get; set; } = new();
+    [Parameter] public List<TerminalDto> Terminals { get; set; } = new();
+    [Parameter] public List<BankDto> Banks { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    // Legacy leaves every field (including Terminal/Merchant) editable on Update — no field is
+    // readonly on the legacy Edit form, so both Create and Edit share the same fully-editable
+    // layout here.
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Item != null)
+        {
+            _model.MerchantId = Item.MerchantId ?? string.Empty;
+            _model.TerminalId = Item.TerminalId ?? string.Empty;
+            _model.BankName = Item.BankName ?? string.Empty;
+            _model.BankCode = Item.BankCode ?? string.Empty;
+            _model.AccNumber = Item.AccNumber ?? string.Empty;
+            _model.AccName = Item.AccName;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchMerchants(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? Merchants.Select(m => m.Key)
+            : Merchants.Where(m => m.Key.Contains(value, StringComparison.OrdinalIgnoreCase)
+                                    || m.Value.Contains(value, StringComparison.OrdinalIgnoreCase))
+                       .Select(m => m.Key);
+        return Task.FromResult(matches);
+    }
+
+    private string? FormatMerchant(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return code;
+        var match = Merchants.FirstOrDefault(m => m.Key == code);
+        return match == null ? code : $"{match.Key} — {match.Value}";
+    }
+
+    // Mirrors legacy OnMerchantChange/TerminalGetList(selectedMerchant) — suggestions are
+    // scoped to the currently selected Merchant.
+    private Task<IEnumerable<string>> SearchTerminals(string? value, CancellationToken ct)
+    {
+        var scoped = string.IsNullOrEmpty(_model.MerchantId)
+            ? Terminals
+            : Terminals.Where(t => t.MerchantId == _model.MerchantId).ToList();
+
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? scoped.Select(t => t.TermId)
+            : scoped.Where(t => t.TermId.Contains(value, StringComparison.OrdinalIgnoreCase)).Select(t => t.TermId);
+        return Task.FromResult(matches);
+    }
+
+    private Task<IEnumerable<string>> SearchBanks(string? value, CancellationToken ct)
+    {
+        var names = Banks.Select(b => b.Bank ?? string.Empty).Where(n => n.Length > 0);
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? names
+            : names.Where(n => n.Contains(value, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(matches);
+    }
+
+    // Mirrors legacy OnBankNameChange — selecting a known bank auto-fills Bank Code (still
+    // editable afterwards); an unrecognized value clears it.
+    private void OnBankNameChanged(string? value)
+    {
+        _model.BankName = value ?? string.Empty;
+        var match = Banks.FirstOrDefault(b => b.Bank == value);
+        _model.BankCode = match?.Cbc ?? string.Empty;
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Item != null)
+        {
+            var request = new UpdateCashoutWithdrawalRequest
+            {
+                TerminalId = _model.TerminalId,
+                MerchantId = _model.MerchantId,
+                BankName = _model.BankName,
+                BankCode = _model.BankCode,
+                AccNumber = _model.AccNumber,
+                AccName = _model.AccName
+            };
+            var (success, error) = await WithdrawalManagement.UpdateAsync(Item.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateCashoutWithdrawalRequest
+            {
+                TerminalId = _model.TerminalId,
+                MerchantId = _model.MerchantId,
+                BankName = _model.BankName,
+                BankCode = _model.BankCode,
+                AccNumber = _model.AccNumber,
+                AccName = _model.AccName
+            };
+            var (success, _, error) = await WithdrawalManagement.CreateAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan cash withdrawal account.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string MerchantId { get; set; } = string.Empty;
+        public string TerminalId { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public string BankCode { get; set; } = string.Empty;
+        public string AccNumber { get; set; } = string.Empty;
+        public string? AccName { get; set; }
+    }
+}

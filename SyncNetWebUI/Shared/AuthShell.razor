@@ -1,0 +1,29 @@
+@inject ThemeState Theme
+
+<div class="auth-shell">
+    <div class="auth-shell-brand">
+        <div class="auth-shell-brand-content">
+            <MudIcon Icon="@Icons.Material.Filled.Hub" Style="font-size: 3.5rem;" />
+            <MudText Typo="Typo.h3" Class="mt-4" Style="font-weight:700; letter-spacing:-0.5px;">SyncNet</MudText>
+            <MudText Typo="Typo.subtitle1" Class="mt-2" Style="opacity:.85;">Switching &amp; Payment Dashboard</MudText>
+        </div>
+    </div>
+
+    <div class="auth-shell-form">
+        <MudIconButton Class="auth-shell-theme-toggle"
+                        Icon="@(Theme.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                        OnClick="@Theme.Toggle" />
+
+        <div class="auth-shell-form-inner">
+            @ChildContent
+        </div>
+
+        <MudText Typo="Typo.caption" Class="auth-shell-footer" Style="opacity:.65">
+            &copy; @DateTime.Now.Year SyncNet. All rights reserved.
+        </MudText>
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

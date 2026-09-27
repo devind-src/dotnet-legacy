@@ -1,0 +1,134 @@
+@page "/statistic/finance/yearly"
+@attribute [Authorize]
+@using System.Globalization
+@using ApexCharts
+@using SyncNetApi.Dtos.RouteMargins
+@implements IDisposable
+@inject ThemeState Theme
+
+<PageTitle>Yearly Finance Trends</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Yearly Finance Trends</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-3">Statistics &gt; Finance &gt; Yearly.</MudText>
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" Icon="@Icons.Material.Filled.Info">
+    Data pada halaman ini masih simulasi.
+</MudAlert>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int" Label="Year" @bind-Value="_selectedYear" FullWidth="true">
+                @for (var y = DateTime.Now.Year - 5; y <= DateTime.Now.Year; y++)
+                {
+                    var currentYear = y;
+                    <MudSelectItem Value="@currentYear">@currentYear</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="RefreshData"
+                       StartIcon="@Icons.Material.Filled.BarChart" Disabled="_isRefreshing">
+                Show
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <ApexChart @ref="_chart" TItem="StatFinByDate" Options="_chartOptions">
+        <ApexPointSeries TItem="StatFinByDate" Items="_dataList" Name="Total Amount"
+                         SeriesType="SeriesType.Bar" XValue="@(e => e.MonthName)" YValue="@(e => e.TotalAmount)" />
+        <ApexPointSeries TItem="StatFinByDate" Items="_dataList" Name="Total Fee"
+                         SeriesType="SeriesType.Bar" XValue="@(e => e.MonthName)" YValue="@(e => e.TotalFee)" />
+        <ApexPointSeries TItem="StatFinByDate" Items="_dataList" Name="Total Switch Fee"
+                         SeriesType="SeriesType.Bar" XValue="@(e => e.MonthName)" YValue="@(e => e.TotalFeeSwitch)" />
+    </ApexChart>
+</MudPaper>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudTable Items="_dataList" Dense="true" Hover="true">
+        <HeaderContent>
+            <MudTh>Month</MudTh>
+            <MudTh Style="text-align:right">Number</MudTh>
+            <MudTh Style="text-align:right">Amount</MudTh>
+            <MudTh Style="text-align:right">Fees</MudTh>
+            <MudTh Style="text-align:right">Switch Fee</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.MonthName</MudTd>
+            <MudTd Style="text-align:right">@context.TotalTran.FormatAmount()</MudTd>
+            <MudTd Style="text-align:right">Rp @context.TotalAmount.FormatAmount()</MudTd>
+            <MudTd Style="text-align:right">Rp @context.TotalFee.FormatAmount()</MudTd>
+            <MudTd Style="text-align:right">Rp @context.TotalFeeSwitch.FormatAmount()</MudTd>
+        </RowTemplate>
+        <FooterContent>
+            <MudTd><b>Total</b></MudTd>
+            <MudTd Style="text-align:right"><b>@_dataList.Sum(x => x.TotalTran).FormatAmount()</b></MudTd>
+            <MudTd Style="text-align:right"><b>Rp @_dataList.Sum(x => x.TotalAmount).FormatAmount()</b></MudTd>
+            <MudTd Style="text-align:right"><b>Rp @_dataList.Sum(x => x.TotalFee).FormatAmount()</b></MudTd>
+            <MudTd Style="text-align:right"><b>Rp @_dataList.Sum(x => x.TotalFeeSwitch).FormatAmount()</b></MudTd>
+        </FooterContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<StatFinByDate> _dataList = [];
+    private ApexChart<StatFinByDate>? _chart;
+    private bool _isRefreshing;
+    private int _selectedYear = DateTime.Now.Year;
+
+    private readonly ApexChartOptions<StatFinByDate> _chartOptions = new()
+    {
+        Colors = ["#4382DF", "#67C090", "#FFD400"],
+        Chart = new Chart { Type = ApexCharts.ChartType.Bar, Stacked = true, Toolbar = new Toolbar { Show = true }, Zoom = new Zoom { Enabled = false } },
+        Stroke = new Stroke { Curve = Curve.Smooth, Width = 3 },
+        DataLabels = new DataLabels { Enabled = false },
+        Tooltip = new Tooltip { Enabled = true, Y = new TooltipY { Formatter = "function(val) { return val.toLocaleString(); }" } },
+        Legend = new Legend { Position = LegendPosition.Top },
+        Xaxis = new XAxis { Title = new AxisTitle { Text = "Month" } },
+        Yaxis = [new YAxis { Title = new AxisTitle { Text = "Amount Transaction" } }]
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.Changed += StateHasChanged;
+        await RefreshData();
+    }
+
+    public void Dispose() => Theme.Changed -= StateHasChanged;
+
+    private async Task RefreshData()
+    {
+        if (_isRefreshing) return;
+        _isRefreshing = true;
+
+        try
+        {
+            var random = new Random();
+
+            _dataList = Enumerable.Range(1, 12).Select(month =>
+            {
+                var totalTran = random.Next(50000, 150000);
+                var totalAmount = (decimal)random.Next(100000, 500000) * totalTran;
+
+                return new StatFinByDate
+                {
+                    MonthNumber = month,
+                    MonthName = CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month),
+                    TotalTran = totalTran,
+                    TotalAmount = totalAmount,
+                    TotalFeeSwitch = totalTran * 1500,
+                    TotalFee = totalTran * 5000
+                };
+            }).ToList();
+        }
+        finally
+        {
+            _isRefreshing = false;
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(1);
+            if (_chart != null) await _chart.UpdateSeriesAsync(true);
+        }
+    }
+}

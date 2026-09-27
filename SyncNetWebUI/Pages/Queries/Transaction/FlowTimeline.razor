@@ -1,0 +1,109 @@
+@* Replaces legacy's horizontal Acquirer/SwitchNet/Biller flow grid (Bootstrap col-2/col-3
+   rows). Renders BOTH layouts below; scoped CSS (FlowTimeline.razor.css) shows only one at a
+   time based on viewport width — mobile gets a single vertical sequence (every arrow points
+   down, request then response back-to-back), desktop gets legacy's side-by-side shape: two
+   horizontal rows (Request, Response), each "Inbound - Switch - Outbound" in that order, arrows
+   pointing the direction the message actually travels. Same underlying visibility rules as
+   legacy (source_tran/auth_tran INTERNAL checks, VBA/VDB/VCR "Reply From Virtual Account"
+   special case) drive both layouts from one computed model. *@
+
+<div class="flow-mobile">
+    <FlowNodeBox Label="@_inbound" />
+    @if (_reqLeg1.Visible)
+    {
+        <FlowLegArrow Caption="@_reqLeg1.Caption" Detail="@_reqLeg1.Detail" Down="true" />
+    }
+    <FlowNodeBox Label="Switch" />
+    @if (_reqLeg2.Visible)
+    {
+        <FlowLegArrow Caption="@_reqLeg2.Caption" Detail="@_reqLeg2.Detail" Down="true" />
+    }
+    @if (_outbound != null)
+    {
+        <FlowNodeBox Label="@_outbound" />
+    }
+    @if (_rspLeg2.Visible)
+    {
+        <FlowLegArrow Caption="@_rspLeg2.Caption" Detail="@_rspLeg2.Detail" Down="true" />
+    }
+    @if (_isVirtualAccountReply)
+    {
+        <FlowNodeBox Label="Reply From Virtual Account" />
+    }
+    else
+    {
+        <FlowNodeBox Label="Switch" />
+    }
+    @if (_rspLeg1.Visible)
+    {
+        <FlowLegArrow Caption="@_rspLeg1.Caption" Detail="@_rspLeg1.Detail" Down="true" />
+    }
+    <FlowNodeBox Label="@_inbound" />
+</div>
+
+<div class="flow-desktop">
+    <div class="left-align">
+        <MudText Typo="Typo.caption" Class="flow-row-label" Style="opacity:.65">REQUEST</MudText>
+        <div class="flow-row">
+            <FlowNodeBox Label="@_inbound" />
+            <FlowLegArrow Caption="@_reqLeg1.Caption" Detail="@_reqLeg1.Detail" Visible="_reqLeg1.Visible" />
+            <FlowNodeBox Label="Switch" />
+            <FlowLegArrow Caption="@_reqLeg2.Caption" Detail="@_reqLeg2.Detail" Visible="_reqLeg2.Visible" />
+            <FlowNodeBox Label="@(_outbound ?? "-")" Faded="@(_outbound == null)" />
+        </div>
+
+        <MudText Typo="Typo.caption" Class="flow-row-label mt-4" Style="opacity:.65">RESPONSE</MudText>
+        <div class="flow-row">
+            <FlowNodeBox Label="@_inbound" />
+            <FlowLegArrow Caption="@_rspLeg1.Caption" Detail="@_rspLeg1.Detail" Visible="_rspLeg1.Visible" Reverse="true" />
+            <FlowNodeBox Label="@(_isVirtualAccountReply ? "Reply From Virtual Account" : "Switch")" />
+            <FlowLegArrow Caption="@_rspLeg2.Caption" Detail="@_rspLeg2.Detail" Visible="_rspLeg2.Visible" Reverse="true" />
+            <FlowNodeBox Label="@(_outbound ?? "-")" Faded="@(_outbound == null)" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public TransactionDetailDto Model { get; set; } = null!;
+
+    private string _inbound = "-";
+    private string? _outbound;
+    private bool _isVirtualAccountReply;
+    private Leg _reqLeg1 = Leg.Hidden;
+    private Leg _reqLeg2 = Leg.Hidden;
+    private Leg _rspLeg1 = Leg.Hidden;
+    private Leg _rspLeg2 = Leg.Hidden;
+
+    protected override void OnParametersSet()
+    {
+        var m = Model;
+
+        _inbound = string.IsNullOrEmpty(m.SourceNode) ? "-" : m.SourceNode!.ToUpper();
+
+        var hasOutbound = !string.IsNullOrEmpty(m.DestNode) && m.DestNode != "VirtualAccount";
+        _outbound = hasOutbound ? m.DestNode!.ToUpper() : null;
+
+        _isVirtualAccountReply = m.TranType is "VBA" or "VDB" or "VCR";
+
+        // Request leg 1: inbound -> switch (mirrors legacy: hidden when source_tran is INTERNAL)
+        _reqLeg1 = new Leg(m.SourceTran != "0", m.TranType, m.TimeReq?.ToString("HH:mm:ss.fff"));
+
+        // Request leg 2: switch -> outbound (mirrors legacy: hidden when auth_tran is INTERNAL
+        // and resp code isn't a VA-forwarded code)
+        var showReqLeg2 = !string.IsNullOrEmpty(m.DestNode)
+            && !(m.AuthTran == "0" && m.RespCodeRsp != "1068" && m.RespCodeRsp != "0068");
+        _reqLeg2 = new Leg(showReqLeg2, m.TranType, m.TimeReq?.ToString("HH:mm:ss.fff"));
+
+        // Response leg 2: outbound -> switch
+        var showRspLeg2 = !string.IsNullOrEmpty(m.DestNode) && m.AuthTran != "0";
+        _rspLeg2 = new Leg(showRspLeg2, m.TranType, $"{m.TimeRsp:HH:mm:ss.fff} [{m.RespCodeRsp}]");
+
+        // Response leg 1: switch -> inbound
+        _rspLeg1 = new Leg(m.SourceTran != "0", m.TranType, $"{m.TimeRsp:HH:mm:ss.fff} [{m.RespCodeRsp}]");
+    }
+
+    private readonly record struct Leg(bool Visible, string? Caption, string? Detail)
+    {
+        public static readonly Leg Hidden = new(false, null, null);
+    }
+}

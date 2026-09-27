@@ -1,0 +1,130 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Category" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit MCC" : "Tambah MCC")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.MccCode</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="MCC Code" @bind-Value="_model.MccCode"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="MCC code wajib diisi" MaxLength="5" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Description" @bind-Value="_model.MccDesc" Disabled="_busy" MaxLength="200" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Floor Limit" @bind-Value="_model.FloorLimit" Disabled="_busy" MaxLength="5" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Currency" @bind-Value="_model.Currency" Disabled="_busy" MaxLength="4" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Primary" Disabled="_busy">Aktif</MudSwitch>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private MccManagementService MccManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public MccDto? Mcc { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Mcc != null)
+        {
+            _model.MccCode = Mcc.MccCode;
+            _model.MccDesc = Mcc.MccDesc;
+            _model.FloorLimit = Mcc.FloorLimit;
+            _model.Currency = Mcc.Currency;
+            _model.Active = Mcc.Active;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await MccManagement.UpdateMccAsync(_model.MccCode, new UpdateMccRequest
+            {
+                MccDesc = _model.MccDesc,
+                FloorLimit = _model.FloorLimit,
+                Currency = _model.Currency,
+                Active = _model.Active
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateMccRequest
+            {
+                MccCode = _model.MccCode,
+                MccDesc = _model.MccDesc,
+                FloorLimit = _model.FloorLimit,
+                Currency = _model.Currency
+            };
+            var (success, _, error) = await MccManagement.CreateMccAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan MCC.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string MccCode { get; set; } = string.Empty;
+        public string? MccDesc { get; set; }
+        public string? FloorLimit { get; set; }
+        public string? Currency { get; set; }
+        public bool Active { get; set; } = true;
+    }
+}

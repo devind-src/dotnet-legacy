@@ -1,0 +1,244 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Layers" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Volume Tiering" : "Tambah Volume Tiering")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@Item?.ProductId — Level @Item?.TierLevel</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Product" Value="@FormatProduct(_model.ProductId)" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudAutocomplete T="string" Label="Product" @bind-Value="_model.ProductId"
+                                         SearchFunc="SearchProducts" ToStringFunc="FormatProduct" Required="true" RequiredError="Product wajib diisi"
+                                         CoerceValue="true" Disabled="_busy" MaxLength="30" />
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Tier Level" Value="@($"Level {_model.TierLevel}")" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudSelect T="int" Label="Tier Level" @bind-Value="_model.TierLevel" Disabled="_busy">
+                            @for (var i = 1; i <= 8; i++)
+                            {
+                                var level = i;
+                                <MudSelectItem T="int" Value="@level">Level @level</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="long?" Label="Min Tran" @bind-Value="_model.MinTran" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="long?" Label="Max Tran" @bind-Value="_model.MaxTran" Disabled="_busy" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Fee Type" @bind-Value="_model.FeeType" Disabled="_busy">
+                        <MudSelectItem T="string" Value="@("0")">Fixed</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("1")">Percent</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                @if (_model.FeeType == "0")
+                {
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="int?" Label="Total Fee" @bind-Value="_model.FixedFee" Disabled="_busy" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="int?" Label="Fee Merchant" @bind-Value="_model.FixedFeeAcq" Disabled="_busy" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="int?" Label="Fee Sub Merchant" @bind-Value="_model.FixedFeeIss" Disabled="_busy" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="int?" Label="Fee Switch" @bind-Value="_model.FixedFeeSwt" Disabled="_busy" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Style="opacity:.65">Fee Merchant + Fee Sub Merchant + Fee Switch harus sama dengan Total Fee.</MudText>
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="decimal?" Label="Total Fee (%)" @bind-Value="_model.PercentFee" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="decimal?" Label="Fee Merchant (%)" @bind-Value="_model.PercentFeeAcq" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="decimal?" Label="Fee Sub Merchant (%)" @bind-Value="_model.PercentFeeIss" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="decimal?" Label="Fee Switch (%)" @bind-Value="_model.PercentFeeSwt" Disabled="_busy" Format="N2" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Style="opacity:.65">Fee Merchant + Fee Sub Merchant + Fee Switch (%) harus 100%.</MudText>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductVolumeTieringManagementService TieringManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public ProductVolumeTieringDto? Item { get; set; }
+    [Parameter] public List<LookupItemDto> Products { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Item != null)
+        {
+            _model.ProductId = Item.ProductId ?? string.Empty;
+            _model.TierLevel = Item.TierLevel;
+            _model.MinTran = Item.MinTran;
+            _model.MaxTran = Item.MaxTran;
+            _model.FeeType = Item.FeeType;
+            _model.FixedFee = Item.FixedFee;
+            _model.FixedFeeAcq = Item.FixedFeeAcq;
+            _model.FixedFeeIss = Item.FixedFeeIss;
+            _model.FixedFeeSwt = Item.FixedFeeSwt;
+            _model.PercentFee = Item.PercentFee;
+            _model.PercentFeeAcq = Item.PercentFeeAcq;
+            _model.PercentFeeIss = Item.PercentFeeIss;
+            _model.PercentFeeSwt = Item.PercentFeeSwt;
+        }
+        else if (Products.Count > 0)
+        {
+            _model.ProductId = Products[0].Key;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchProducts(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? Products.Select(p => p.Key)
+            : Products.Where(p => p.Key.Contains(value, StringComparison.OrdinalIgnoreCase)
+                                   || p.Value.Contains(value, StringComparison.OrdinalIgnoreCase))
+                      .Select(p => p.Key);
+        return Task.FromResult(matches);
+    }
+
+    private string? FormatProduct(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return code;
+        var match = Products.FirstOrDefault(p => p.Key == code);
+        return match == null ? code : $"{match.Key} — {match.Value}";
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Item != null)
+        {
+            var request = new UpdateProductVolumeTieringRequest
+            {
+                MinTran = _model.MinTran,
+                MaxTran = _model.MaxTran,
+                FeeType = _model.FeeType,
+                FixedFee = _model.FixedFee,
+                FixedFeeAcq = _model.FixedFeeAcq,
+                FixedFeeIss = _model.FixedFeeIss,
+                FixedFeeSwt = _model.FixedFeeSwt,
+                PercentFee = _model.PercentFee,
+                PercentFeeAcq = _model.PercentFeeAcq,
+                PercentFeeIss = _model.PercentFeeIss,
+                PercentFeeSwt = _model.PercentFeeSwt
+            };
+            var (success, error) = await TieringManagement.UpdateTieringAsync(Item.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateProductVolumeTieringRequest
+            {
+                ProductId = _model.ProductId,
+                TierLevel = _model.TierLevel,
+                MinTran = _model.MinTran,
+                MaxTran = _model.MaxTran,
+                FeeType = _model.FeeType,
+                FixedFee = _model.FixedFee,
+                FixedFeeAcq = _model.FixedFeeAcq,
+                FixedFeeIss = _model.FixedFeeIss,
+                FixedFeeSwt = _model.FixedFeeSwt,
+                PercentFee = _model.PercentFee,
+                PercentFeeAcq = _model.PercentFeeAcq,
+                PercentFeeIss = _model.PercentFeeIss,
+                PercentFeeSwt = _model.PercentFeeSwt
+            };
+            var (success, _, error) = await TieringManagement.CreateTieringAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan tiering fee.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string ProductId { get; set; } = string.Empty;
+        public int TierLevel { get; set; } = 1;
+        public long? MinTran { get; set; }
+        public long? MaxTran { get; set; }
+        public string FeeType { get; set; } = "0";
+        public int? FixedFee { get; set; }
+        public int? FixedFeeAcq { get; set; }
+        public int? FixedFeeIss { get; set; }
+        public int? FixedFeeSwt { get; set; }
+        public decimal? PercentFee { get; set; }
+        public decimal? PercentFeeAcq { get; set; }
+        public decimal? PercentFeeIss { get; set; }
+        public decimal? PercentFeeSwt { get; set; }
+    }
+}

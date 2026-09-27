@@ -1,0 +1,124 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.AltRoute" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Route by BIN" : "Tambah Route by BIN")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">Group @Route?.GroupId</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    <MudSelect T="int" Label="Card Group" @bind-Value="_model.GroupId"
+                               Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Card Group wajib dipilih">
+                        @foreach (var g in CardGroups)
+                        {
+                            <MudSelectItem T="int" Value="@int.Parse(g.Key)">@g.Value</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect T="int" Label="Node" @bind-Value="_model.NodeId"
+                               Disabled="_busy" Required="true" RequiredError="Node wajib dipilih">
+                        @foreach (var n in BillerNodes)
+                        {
+                            <MudSelectItem T="int" Value="@n.NodeId">@n.NodeName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private RouteBinManagementService RouteBinManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public RouteBinDto? Route { get; set; }
+    [Parameter] public List<NodeDto> Nodes { get; set; } = new();
+    [Parameter] public List<LookupItemDto> CardGroups { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    // Mirrors legacy NodeGetNodeBiller filter (category "0"/"2" = Both/Biller-Issuer).
+    private IEnumerable<NodeDto> BillerNodes => Nodes.Where(n => n.Category is "0" or "2");
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Route != null)
+        {
+            _model.GroupId = Route.GroupId;
+            _model.NodeId = Route.NodeId;
+        }
+        else
+        {
+            // MudSelect<int> has no natural "unselected" state — default to the first
+            // option, same pattern as SupportMemberFormDialog's Team dropdown.
+            _model.GroupId = CardGroups.Count > 0 ? int.Parse(CardGroups[0].Key) : 0;
+            _model.NodeId = BillerNodes.FirstOrDefault()?.NodeId ?? 0;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Route != null)
+        {
+            var request = new UpdateRouteBinRequest { NodeId = _model.NodeId };
+            var (success, error) = await RouteBinManagement.UpdateRouteAsync(Route.GroupId, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateRouteBinRequest { GroupId = _model.GroupId, NodeId = _model.NodeId };
+            var (success, _, error) = await RouteBinManagement.CreateRouteAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan route.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public int GroupId { get; set; }
+        public int NodeId { get; set; }
+    }
+}

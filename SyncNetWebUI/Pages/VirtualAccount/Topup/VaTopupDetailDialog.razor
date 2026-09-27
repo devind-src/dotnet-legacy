@@ -1,0 +1,29 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Calculate" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">Detail Topup</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Class="px-2 pt-4" Spacing="4">
+            <MudTextField T="string" Label="Account Number" Value="Request?.AccNr" Disabled="true" ReadOnly="true" />
+            <MudTextField T="string" Label="Group Name" Value="Request?.GroupName" Disabled="true" ReadOnly="true" />
+            <MudTextField T="string" Label="Amount Topup" Value="@(Request?.Amount.ToString("N0"))" Disabled="true" ReadOnly="true" />
+            <MudTextField T="string" Label="Notes" Value="Request?.Description" Disabled="true" ReadOnly="true" />
+            <MudTextField T="string" Label="Status" Value="Request?.StatusName" Disabled="true" ReadOnly="true" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Tutup</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public VaTransRequestDto? Request { get; set; }
+
+    private void Close() => MudDialog.Close(DialogResult.Ok(false));
+}

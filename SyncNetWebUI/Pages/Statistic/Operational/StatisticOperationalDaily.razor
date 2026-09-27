@@ -1,0 +1,119 @@
+@page "/statistic/operational/daily"
+@attribute [Authorize]
+@* ApexCharts also declares Color/Size/Align — see Home.razor's note; qualified explicitly below. *@
+@using ApexCharts
+@using SyncNetApi.Dtos.RouteMargins
+@implements IDisposable
+@inject ThemeState Theme
+
+<PageTitle>Daily Transaction Trends</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Daily Transaction Trends</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-3">Statistics &gt; Operational &gt; Daily.</MudText>
+
+<MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" Icon="@Icons.Material.Filled.Info">
+    Data pada halaman ini masih simulasi.
+</MudAlert>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="4">
+            <MudDatePicker Label="Date" @bind-Date="_selectedDate" DateFormat="dd-MM-yyyy" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="RefreshData"
+                       StartIcon="@Icons.Material.Filled.BarChart" Disabled="_isRefreshing">
+                Show
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" sm="7">
+        <MudPaper Class="pa-4" Elevation="1">
+            <ApexChart @ref="_chart" TItem="StatOpsByHour" Options="_chartOptions">
+                <ApexPointSeries TItem="StatOpsByHour" Items="_dataList" Name="Success"
+                                 SeriesType="SeriesType.Area" XValue="@(e => e.Hour)" YValue="@(e => e.SuccessTran)" />
+                <ApexPointSeries TItem="StatOpsByHour" Items="_dataList" Name="Failed"
+                                 SeriesType="SeriesType.Area" XValue="@(e => e.Hour)" YValue="@(e => e.FailedTran)" />
+            </ApexChart>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="5">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudTable Items="_dataList" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Hour</MudTh>
+                    <MudTh Style="text-align:right">Success</MudTh>
+                    <MudTh Style="text-align:right">Failed</MudTh>
+                    <MudTh Style="text-align:right">Total</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Hour</MudTd>
+                    <MudTd Style="text-align:right">@context.SuccessTran.FormatAmount()</MudTd>
+                    <MudTd Style="text-align:right">@context.FailedTran.FormatAmount()</MudTd>
+                    <MudTd Style="text-align:right">@context.Total.FormatAmount()</MudTd>
+                </RowTemplate>
+                <FooterContent>
+                    <MudTd><b>Total</b></MudTd>
+                    <MudTd Style="text-align:right"><b>@_dataList.Sum(x => x.SuccessTran).FormatAmount()</b></MudTd>
+                    <MudTd Style="text-align:right"><b>@_dataList.Sum(x => x.FailedTran).FormatAmount()</b></MudTd>
+                    <MudTd Style="text-align:right"><b>@_dataList.Sum(x => x.Total).FormatAmount()</b></MudTd>
+                </FooterContent>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private List<StatOpsByHour> _dataList = [];
+    private ApexChart<StatOpsByHour>? _chart;
+    private bool _isRefreshing;
+    private DateTime? _selectedDate = DateTime.Now;
+
+    private readonly ApexChartOptions<StatOpsByHour> _chartOptions = new()
+    {
+        Colors = ["#A2CB8B", "#E81123"],
+        Chart = new Chart { Type = ApexCharts.ChartType.Area, Toolbar = new Toolbar { Show = true }, Zoom = new Zoom { Enabled = false } },
+        Stroke = new Stroke { Curve = Curve.Smooth, Width = 3 },
+        DataLabels = new DataLabels { Enabled = false },
+        Tooltip = new Tooltip { Enabled = true, Y = new TooltipY { Formatter = "function(val) { return val.toLocaleString(); }" } },
+        Legend = new Legend { Position = LegendPosition.Top },
+        Xaxis = new XAxis { Title = new AxisTitle { Text = "Hour" } },
+        Yaxis = [new YAxis { Title = new AxisTitle { Text = "Number Transaction" } }]
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.Changed += StateHasChanged;
+        await RefreshData();
+    }
+
+    public void Dispose() => Theme.Changed -= StateHasChanged;
+
+    private async Task RefreshData()
+    {
+        if (_isRefreshing) return;
+        _isRefreshing = true;
+
+        try
+        {
+            var random = new Random();
+            _dataList = Enumerable.Range(0, 24).Select(hour => new StatOpsByHour
+            {
+                Hour = hour,
+                SuccessTran = random.Next(50, 200),
+                FailedTran = random.Next(5, 15)
+            }).ToList();
+        }
+        finally
+        {
+            _isRefreshing = false;
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(1);
+            if (_chart != null) await _chart.UpdateSeriesAsync(true);
+        }
+    }
+}

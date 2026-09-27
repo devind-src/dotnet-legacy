@@ -1,0 +1,45 @@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Batalkan Aturan</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3">
+            Aturan <b>@Item?.RuleName</b> (@Item?.WindowText) tidak berlaku lagi setelah Terapkan Perubahan.
+            Baris tetap tersimpan dan terlihat di filter Dibatalkan.
+        </MudText>
+        <MudTextField T="string" Label="Alasan pembatalan" @bind-Value="_reason" Required="true" MaxLength="100"
+                      Counter="100" Immediate="true" Disabled="_busy" />
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3" Dense="true">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Kembali</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="SubmitAsync"
+                   Disabled="@(_busy || string.IsNullOrWhiteSpace(_reason))">Batalkan Aturan</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private RouteScheduleManagementService Schedules { get; set; } = null!;
+    [Parameter] public RouteScheduleDto? Item { get; set; }
+
+    private string _reason = string.Empty;
+    private bool _busy;
+    private string? _error;
+
+    private async Task SubmitAsync()
+    {
+        if (Item == null) return;
+        _busy = true;
+        var (success, error) = await Schedules.CancelAsync(Item.Id, _reason.Trim());
+        _busy = false;
+
+        if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+        _error = error ?? "Gagal membatalkan aturan.";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

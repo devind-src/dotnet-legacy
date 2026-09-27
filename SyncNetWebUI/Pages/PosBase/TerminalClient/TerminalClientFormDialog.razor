@@ -1,0 +1,228 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Key" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Credential" : "Tambah Credential")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.ClientId</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2">
+            <MudTabs Elevation="0" Rounded="false" SliderColor="Color.Primary" TabPanelsClass="pa-6" Class="mt-2">
+                <MudTabPanel Text="General" ToolTip="General" Icon="@Icons.Material.Filled.Info">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Client ID" @bind-Value="_model.ClientId"
+                                          Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Client ID wajib diisi" MaxLength="30" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Client Name" @bind-Value="_model.ClientName"
+                                          Required="true" RequiredError="Client name wajib diisi" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Username" @bind-Value="_model.Username" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Passkey" @bind-Value="_model.Password" MaxLength="50" Disabled="_busy"
+                                          Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Autorenew" OnAdornmentClick="@(() => _model.Password = PasswordGenerator.Generate(10))" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Secret ID" @bind-Value="_model.SecretId" MaxLength="100" Disabled="_busy"
+                                          Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Autorenew" OnAdornmentClick="@(() => _model.SecretId = HexKeyGenerator.Generate(16))" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Secret Key" @bind-Value="_model.SecretKey" MaxLength="100" Disabled="_busy"
+                                          Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Autorenew" OnAdornmentClick="@(() => _model.SecretKey = HexKeyGenerator.Generate(32))" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Master Key" @bind-Value="_model.MasterKey" MaxLength="100" Disabled="_busy"
+                                          Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Autorenew" OnAdornmentClick="@(() => _model.MasterKey = HexKeyGenerator.Generate(32))" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Session Key" @bind-Value="_model.SessionKey" MaxLength="100" Disabled="_busy"
+                                          Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Autorenew" OnAdornmentClick="@(() => _model.SessionKey = HexKeyGenerator.Generate(32))" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+                <MudTabPanel Text="Callback" ToolTip="Callback" Icon="@Icons.Material.Filled.Webhook">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudAutocomplete T="string" Label="Group Name" @bind-Value="_model.GroupName"
+                                             SearchFunc="SearchGroups" CoerceValue="true" ResetValueOnEmptyText="true"
+                                             MaxLength="15" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudAutocomplete T="string" Label="Subgroup Name" @bind-Value="_model.SubgroupName"
+                                             SearchFunc="SearchSubgroups" CoerceValue="true" ResetValueOnEmptyText="true"
+                                             MaxLength="15" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Callback URL" @bind-Value="_model.CallbackUrl" MaxLength="1000" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Callback Client ID" @bind-Value="_model.CallbackClientId" MaxLength="100" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Callback Secret Key" @bind-Value="_model.CallbackSecretKey" MaxLength="100" Disabled="_busy"
+                                          Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Autorenew" OnAdornmentClick="@(() => _model.CallbackSecretKey = HexKeyGenerator.Generate(32))" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private TerminalClientManagementService ClientManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public TerminalClientDto? Client { get; set; }
+    [Parameter] public List<MerchantGroupDto> Groups { get; set; } = new();
+    [Parameter] public List<SubMerchantGroupDto> Subgroups { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Client != null)
+        {
+            _model.ClientId = Client.ClientId;
+            _model.ClientName = Client.ClientName;
+            _model.Username = Client.Username ?? string.Empty;
+            _model.Password = Client.Password ?? string.Empty;
+            _model.SecretId = Client.SecretId ?? string.Empty;
+            _model.SecretKey = Client.SecretKey ?? string.Empty;
+            _model.MasterKey = Client.MasterKey ?? string.Empty;
+            _model.SessionKey = Client.SessionKey ?? string.Empty;
+            _model.GroupName = Client.GroupName ?? string.Empty;
+            _model.SubgroupName = Client.SubgroupName ?? string.Empty;
+            _model.CallbackUrl = Client.CallbackUrl ?? string.Empty;
+            _model.CallbackClientId = Client.CallbackClientId ?? string.Empty;
+            _model.CallbackSecretKey = Client.CallbackSecretKey ?? string.Empty;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchGroups(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? Groups.Select(g => g.GroupName)
+            : Groups.Where(g => g.GroupName.Contains(value, StringComparison.OrdinalIgnoreCase)).Select(g => g.GroupName);
+        return Task.FromResult(matches);
+    }
+
+    // Mirrors legacy FilterSubGroup — suggestions are scoped to the currently selected
+    // Group (matches legacy's dynamic SubMerchantGroupGetListByGroup(selectedGroup) reload).
+    private Task<IEnumerable<string>> SearchSubgroups(string? value, CancellationToken ct)
+    {
+        var scoped = string.IsNullOrEmpty(_model.GroupName)
+            ? Subgroups
+            : Subgroups.Where(s => s.ParentGroupName == _model.GroupName).ToList();
+
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? scoped.Select(s => s.GroupName)
+            : scoped.Where(s => s.GroupName.Contains(value, StringComparison.OrdinalIgnoreCase)).Select(s => s.GroupName);
+        return Task.FromResult(matches);
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var request = new UpdateTerminalClientRequest
+            {
+                ClientName = _model.ClientName,
+                Username = _model.Username,
+                Password = _model.Password,
+                SecretId = _model.SecretId,
+                SecretKey = _model.SecretKey,
+                MasterKey = _model.MasterKey,
+                SessionKey = _model.SessionKey,
+                GroupName = _model.GroupName,
+                SubgroupName = _model.SubgroupName,
+                CallbackUrl = _model.CallbackUrl,
+                CallbackClientId = _model.CallbackClientId,
+                CallbackSecretKey = _model.CallbackSecretKey
+            };
+            var (success, error) = await ClientManagement.UpdateClientAsync(_model.ClientId, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateTerminalClientRequest
+            {
+                ClientId = _model.ClientId,
+                ClientName = _model.ClientName,
+                Username = _model.Username,
+                Password = _model.Password,
+                SecretId = _model.SecretId,
+                SecretKey = _model.SecretKey,
+                MasterKey = _model.MasterKey,
+                SessionKey = _model.SessionKey,
+                GroupName = _model.GroupName,
+                SubgroupName = _model.SubgroupName,
+                CallbackUrl = _model.CallbackUrl,
+                CallbackClientId = _model.CallbackClientId,
+                CallbackSecretKey = _model.CallbackSecretKey
+            };
+            var (success, _, error) = await ClientManagement.CreateClientAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan credential.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string ClientId { get; set; } = string.Empty;
+        public string ClientName { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string SecretId { get; set; } = string.Empty;
+        public string SecretKey { get; set; } = string.Empty;
+        public string MasterKey { get; set; } = string.Empty;
+        public string SessionKey { get; set; } = string.Empty;
+        public string GroupName { get; set; } = string.Empty;
+        public string SubgroupName { get; set; } = string.Empty;
+        public string CallbackUrl { get; set; } = string.Empty;
+        public string CallbackClientId { get; set; } = string.Empty;
+        public string CallbackSecretKey { get; set; } = string.Empty;
+    }
+}

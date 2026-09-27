@@ -1,0 +1,87 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">Send Command</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="5" Class="px-2 pt-4">
+            <MudItem xs="12">
+                <MudTextField T="string" Label="Application Name" Value="@AppName" ReadOnly="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudSelect T="string" Label="Command" @bind-Value="_command" Disabled="_busy">
+                    <MudSelectItem Value="@("VERSION")">VERSION</MudSelectItem>
+                    <MudSelectItem Value="@("RESYNC")">RESYNC</MudSelectItem>
+                    <MudSelectItem Value="@("TRACE ON")">TRACE ON</MudSelectItem>
+                    <MudSelectItem Value="@("TRACE OFF")">TRACE OFF</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string" Label="Response" Value="@_response" ReadOnly="true" Lines="3" />
+            </MudItem>
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+                </MudItem>
+            }
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Disabled="_busy">Tutup</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SendAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Send
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private MonitoringManagementService Monitoring { get; set; } = null!;
+    [Inject] private IDialogService DialogService { get; set; } = null!;
+    [Parameter] public string AppName { get; set; } = string.Empty;
+
+    private string _command = "VERSION";
+    private string _response = string.Empty;
+    private bool _busy;
+    private string? _error;
+
+    private async Task SendAsync()
+    {
+        // VERSION is a harmless read-only probe (matches its role as the default selection in
+        // both this and the legacy form) — everything else can affect a live process, so it
+        // gets an extra confirmation step, same spirit as the Approve/Reject confirmation added
+        // for VA Approval (§7.21) beyond what legacy required.
+        if (_command != "VERSION")
+        {
+            var confirmed = await DialogService.ShowMessageBoxAsync(
+                "Kirim Command",
+                $"Yakin ingin mengirim command '{_command}' ke aplikasi live '{AppName}'? Tindakan ini bisa memengaruhi proses yang sedang berjalan.",
+                yesText: "Kirim", cancelText: "Batal");
+
+            if (confirmed != true) return;
+        }
+
+        _busy = true;
+        _error = null;
+        _response = string.Empty;
+
+        var (success, response, error) = await Monitoring.SendApplicationCommandAsync(AppName, _command);
+        _busy = false;
+
+        if (success)
+            _response = string.IsNullOrEmpty(response) ? "No Response" : response;
+        else
+            _error = error ?? "Gagal mengirim command.";
+    }
+
+    private void Close() => MudDialog.Cancel();
+}

@@ -1,0 +1,152 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Storefront" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Branch" : "Tambah Branch")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Issuer" Value="@Issuer" Disabled="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="ID Branch" @bind-Value="_model.IdBranch"
+                                  Disabled="_busy" Required="true" RequiredError="ID Branch wajib diisi" MaxLength="3" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Branch" @bind-Value="_model.Branch"
+                                  Disabled="_busy" Required="true" RequiredError="Branch wajib diisi" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="City" @bind-Value="_model.City" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Address" @bind-Value="_model.Address" Lines="2" Disabled="_busy" MaxLength="255" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Phone" @bind-Value="_model.Phone" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Fax" @bind-Value="_model.Fax" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Email" @bind-Value="_model.Email" InputType="InputType.Email" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Contact" @bind-Value="_model.Contact" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private CardBranchManagementService BranchManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public string Issuer { get; set; } = string.Empty;
+    [Parameter] public CardBranchDto? Branch { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Branch != null)
+        {
+            _model.Id = Branch.Id;
+            _model.IdBranch = Branch.IdBranch ?? string.Empty;
+            _model.Branch = Branch.Branch ?? string.Empty;
+            _model.Address = Branch.Address;
+            _model.City = Branch.City;
+            _model.Phone = Branch.Phone;
+            _model.Fax = Branch.Fax;
+            _model.Email = Branch.Email;
+            _model.Contact = Branch.Contact;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await BranchManagement.UpdateBranchAsync(_model.Id, new UpdateCardBranchRequest
+            {
+                IdBranch = _model.IdBranch,
+                Branch = _model.Branch,
+                Address = _model.Address,
+                City = _model.City,
+                Phone = _model.Phone,
+                Fax = _model.Fax,
+                Email = _model.Email,
+                Contact = _model.Contact
+            });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateCardBranchRequest
+            {
+                Issuer = Issuer,
+                IdBranch = _model.IdBranch,
+                Branch = _model.Branch,
+                Address = _model.Address,
+                City = _model.City,
+                Phone = _model.Phone,
+                Fax = _model.Fax,
+                Email = _model.Email,
+                Contact = _model.Contact
+            };
+            var (success, _, error) = await BranchManagement.CreateBranchAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan branch.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public int Id { get; set; }
+        public string IdBranch { get; set; } = string.Empty;
+        public string Branch { get; set; } = string.Empty;
+        public string? Address { get; set; }
+        public string? City { get; set; }
+        public string? Phone { get; set; }
+        public string? Fax { get; set; }
+        public string? Email { get; set; }
+        public string? Contact { get; set; }
+    }
+}

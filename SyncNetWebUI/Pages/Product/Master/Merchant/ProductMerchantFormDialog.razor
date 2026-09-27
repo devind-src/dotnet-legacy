@@ -1,0 +1,153 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Store" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Merchant" : "Tambah Merchant")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">ID @Item?.Id</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Merchant" @bind-Value="_model.MerchantId" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudAutocomplete T="string" Label="Merchant" @bind-Value="_model.MerchantId"
+                                         SearchFunc="SearchMerchants" Required="true" RequiredError="Merchant wajib diisi"
+                                         CoerceValue="true" Disabled="_busy" MaxLength="15" />
+                    }
+                </MudItem>
+                <MudItem xs="12">
+                    <MudAutocomplete T="string" Label="Product" @bind-Value="_model.ProductId"
+                                     SearchFunc="SearchProducts" ToStringFunc="FormatProduct" Required="true" RequiredError="Product wajib diisi"
+                                     CoerceValue="true" Disabled="_busy" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Notes" @bind-Value="_model.Notes"
+                                  Disabled="_busy" Required="true" RequiredError="Notes wajib diisi" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Primary" Disabled="_busy">
+                        @(_model.Active ? "Aktif" : "Nonaktif")
+                    </MudSwitch>
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductMerchantManagementService ProductMerchantManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public ProductMerchantDto? Item { get; set; }
+    [Parameter] public List<LookupItemDto> Merchants { get; set; } = new();
+    [Parameter] public List<LookupItemDto> Products { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Item != null)
+        {
+            _model.MerchantId = Item.MerchantId ?? string.Empty;
+            _model.ProductId = Item.ProductId;
+            _model.Notes = Item.Notes ?? string.Empty;
+            _model.Active = Item.Active;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchMerchants(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? Merchants.Select(m => m.Key)
+            : Merchants.Where(m => m.Key.Contains(value, StringComparison.OrdinalIgnoreCase)
+                                    || m.Value.Contains(value, StringComparison.OrdinalIgnoreCase))
+                       .Select(m => m.Key);
+        return Task.FromResult(matches);
+    }
+
+    private Task<IEnumerable<string>> SearchProducts(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? Products.Select(p => p.Key)
+            : Products.Where(p => p.Key.Contains(value, StringComparison.OrdinalIgnoreCase)
+                                   || p.Value.Contains(value, StringComparison.OrdinalIgnoreCase))
+                      .Select(p => p.Key);
+        return Task.FromResult(matches);
+    }
+
+    private string? FormatProduct(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return code;
+        var match = Products.FirstOrDefault(p => p.Key == code);
+        return match == null ? code : $"{match.Key} — {match.Value}";
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Item != null)
+        {
+            var request = new UpdateProductMerchantRequest { ProductId = _model.ProductId ?? string.Empty, Notes = _model.Notes, Active = _model.Active };
+            var (success, error) = await ProductMerchantManagement.UpdateProductMerchantAsync(Item.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateProductMerchantRequest { MerchantId = _model.MerchantId, ProductId = _model.ProductId ?? string.Empty, Notes = _model.Notes, Active = _model.Active };
+            var (success, _, error) = await ProductMerchantManagement.CreateProductMerchantAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan product merchant.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string MerchantId { get; set; } = string.Empty;
+        public string? ProductId { get; set; }
+        public string Notes { get; set; } = string.Empty;
+        public bool Active { get; set; } = true;
+    }
+}

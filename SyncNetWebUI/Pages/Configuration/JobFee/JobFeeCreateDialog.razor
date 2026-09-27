@@ -1,0 +1,161 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.RequestQuote" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">Upload Job Fee</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Job Desc" @bind-Value="_model.JobDesc"
+                                  Disabled="_busy" Required="true" RequiredError="Job desc wajib diisi" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Scheduled Date" @bind-Date="_scheduledDate" DateFormat="dd MMM yyyy" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.body2" Class="mb-1">File CSV</MudText>
+                    <InputFile OnChange="OnFileSelected" accept=".csv" disabled="@_busy" />
+                    @if (_selectedFile != null)
+                    {
+                        <MudText Typo="Typo.body2" Class="mt-2">File dipilih: @_selectedFile.Name</MudText>
+                    }
+                    <MudText Typo="Typo.caption" Style="opacity:.65" Class="mt-1">
+                        Hanya file .csv dengan delimiter titik-koma (;) dan header sesuai format.
+                    </MudText>
+                </MudItem>
+                @if (_previewLoading)
+                {
+                    <MudItem xs="12">
+                        <MudProgressLinear Indeterminate="true" />
+                    </MudItem>
+                }
+                else if (_preview != null)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="@(_preview.InvalidRows == 0 ? Severity.Success : Severity.Warning)" Dense="true" Class="mb-2">
+                            @_preview.TotalRows baris terbaca — @_preview.ValidRows valid, @_preview.InvalidRows tidak valid.
+                            @(_preview.InvalidRows == 0 ? " File siap disimpan." : " Perbaiki file sebelum menyimpan.")
+                        </MudAlert>
+                        <MudTable Items="_preview.Rows" Dense="true" Hover="true" Elevation="1" FixedHeader="true" Height="300px">
+                            <HeaderContent>
+                                <MudTh>#</MudTh>
+                                <MudTh>Product</MudTh>
+                                <MudTh>Group</MudTh>
+                                <MudTh>Sub Group</MudTh>
+                                <MudTh>Merchant</MudTh>
+                                <MudTh>Fee Type</MudTh>
+                                <MudTh>Status</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="#">@context.RowNumber</MudTd>
+                                <MudTd DataLabel="Product">@context.ProductId — @context.ProductName</MudTd>
+                                <MudTd DataLabel="Group">@context.GroupName</MudTd>
+                                <MudTd DataLabel="Sub Group">@context.SubgroupName</MudTd>
+                                <MudTd DataLabel="Merchant">@context.MerchantId</MudTd>
+                                <MudTd DataLabel="Fee Type">@context.FeeType</MudTd>
+                                <MudTd DataLabel="Status">
+                                    @if (context.IsValid)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Valid</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudTooltip Text="@context.Error">
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Error">Invalid</MudChip>
+                                        </MudTooltip>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="@(_busy || !CanSubmit)">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private JobFeeManagementService JobFeeManagement { get; set; } = null!;
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private DateTime? _scheduledDate;
+    private IBrowserFile? _selectedFile;
+    private JobFeePreviewResultDto? _preview;
+    private bool _previewLoading;
+    private bool _busy;
+    private string? _error;
+
+    private bool CanSubmit => _selectedFile != null && _preview is { InvalidRows: 0 };
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        _preview = null;
+        _error = null;
+        _previewLoading = true;
+
+        var (success, preview, error) = await JobFeeManagement.PreviewJobFeeAsync(_selectedFile);
+        _previewLoading = false;
+
+        if (success)
+            _preview = preview;
+        else
+            _error = error ?? "Gagal membaca preview file.";
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        if (_selectedFile == null)
+        {
+            _error = "Silahkan pilih file CSV terlebih dahulu.";
+            return;
+        }
+
+        if (!CanSubmit)
+        {
+            _error = "File masih berisi baris tidak valid, perbaiki file terlebih dahulu.";
+            return;
+        }
+
+        _busy = true;
+        _error = null;
+
+        var (success, _, error) = await JobFeeManagement.CreateJobFeeAsync(_model.JobDesc, _scheduledDate, _selectedFile);
+        _busy = false;
+
+        if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+        _error = error ?? "Gagal menambahkan job fee.";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string JobDesc { get; set; } = string.Empty;
+    }
+}

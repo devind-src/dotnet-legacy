@@ -1,0 +1,314 @@
+﻿<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Tune" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Health Check Config" : "Tambah Health Check Config")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">ID @Item?.Id</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                @if (!IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSelect T="string" Label="Kategori" @bind-Value="_routingType" Disabled="_busy">
+                            <MudSelectItem T="string" Value="@("MARGIN")">Topup (Routing by Margin)</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("PRODUCT")">Bill Payment (Routing by Product)</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" Label="Scope" @bind-Value="_scope" Disabled="_busy">
+                            <MudSelectItem T="string" Value="@("global")">Global (semua produk)</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("product")">Produk tertentu</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    @if (_scope == "product")
+                    {
+                        <MudItem xs="12" sm="6">
+                            <MudAutocomplete T="string" Label="Product ID" @bind-Value="_model.InstId"
+                                             SearchFunc="SearchProducts" ToStringFunc="FormatProduct"
+                                             Required="true" RequiredError="Product ID wajib diisi" CoerceValue="true" Disabled="_busy" />
+                        </MudItem>
+                    }
+                }
+                else
+                {
+                    <MudItem xs="12">
+                        <MudTextField T="string" Label="Kategori / Scope" Value="@($"{Item?.RoutingType} — {Item?.InstId ?? "Global (semua produk)"}")" Disabled="true" />
+                    </MudItem>
+                }
+
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Style="opacity:.65">
+                        Biller yang diblokir tidak dikirimi siklus baru sampai cooldown lewat atau di-reset di Supplier Status.
+                        RC dipisah koma; satu rc boleh ada di beberapa kategori. Kategori yang dikosongkan = nonaktif.
+                        Counter hanya direset oleh PAYMENT: PAYMENT sukses (rc 00/0000) mereset Timeout, RC Gagal, dan Pending;
+                        PAYMENT cepat mereset Latency. INQUIRY boleh menambah counter tetapi tidak mereset.
+                    </MudText>
+                </MudItem>
+
+                @* ---- Link Down ---- *@
+                <MudItem xs="12" Class="pb-0">
+                    <HealthCheckSectionTitle Title="Link Down" Hint="Langsung DOWN pada rc pertama (INQUIRY & PAYMENT)" Active="true" />
+                </MudItem>
+                <MudItem xs="12" sm="8">
+                    <MudTextField T="string" Label="RC Link Down" @bind-Value="_model.RcLinkDown" Disabled="_busy"
+                                  Required="true" RequiredError="RC Link Down wajib diisi" HelperText="Mis. 91,1091,89" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int?" Label="Cooldown (menit)" @bind-Value="_model.LinkDownCooldownMinutes" Disabled="_busy"
+                                      Min="1" HelperText="Kosong = reset manual" />
+                </MudItem>
+
+                @* ---- Timeout ---- *@
+                <MudItem xs="12" Class="pb-0">
+                    <HealthCheckSectionTitle Title="Timeout" Hint="SUSPECT setelah N kali berturut-turut. Dihitung dari PAYMENT, direset oleh PAYMENT sukses." Active="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField T="string" Label="RC Timeout" @bind-Value="_model.RcSuspect" Disabled="_busy"
+                                  Required="true" RequiredError="RC Timeout wajib diisi" HelperText="Mis. 68,1068" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int" Label="Max Consecutive" @bind-Value="_model.MaxConsecutiveSuspect" Disabled="_busy" Min="1" Max="100" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int?" Label="Cooldown (menit)" @bind-Value="_model.SuspectCooldownMinutes" Disabled="_busy"
+                                      Min="1" HelperText="Kosong = reset manual" />
+                </MudItem>
+
+                @* ---- RC Gagal ---- *@
+                <MudItem xs="12" Class="pb-0">
+                    <HealthCheckSectionTitle Title="RC Gagal" Hint="SUSPECT setelah N kali berturut-turut. Dihitung dari INQUIRY & PAYMENT, direset oleh PAYMENT sukses." Active="@HasText(_model.RcFailed)" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField T="string" Label="RC Gagal" @bind-Value="_model.RcFailed" Disabled="_busy" Immediate="true"
+                                  HelperText="Mis. 05; kosong = nonaktif" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int" Label="Max Consecutive" @bind-Value="_model.MaxConsecutiveFailed" Disabled="@(_busy || !HasText(_model.RcFailed))" Min="1" Max="100" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int?" Label="Cooldown (menit)" @bind-Value="_model.FailedCooldownMinutes" Disabled="@(_busy || !HasText(_model.RcFailed))"
+                                      Min="1" HelperText="Kosong = reset manual" />
+                </MudItem>
+
+                @* ---- Pending ---- *@
+                <MudItem xs="12" Class="pb-0">
+                    <HealthCheckSectionTitle Title="Pending" Hint="SUSPECT setelah N kali berturut-turut. Dihitung dari PAYMENT, direset oleh PAYMENT sukses." Active="@HasText(_model.RcPending)" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField T="string" Label="RC Pending" @bind-Value="_model.RcPending" Disabled="_busy" Immediate="true"
+                                  HelperText="Mis. 11,1011,09; kosong = nonaktif" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int" Label="Max Consecutive" @bind-Value="_model.MaxConsecutivePending" Disabled="@(_busy || !HasText(_model.RcPending))" Min="1" Max="100" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int?" Label="Cooldown (menit)" @bind-Value="_model.PendingCooldownMinutes" Disabled="@(_busy || !HasText(_model.RcPending))"
+                                      Min="1" HelperText="Kosong = reset manual" />
+                </MudItem>
+
+                @* ---- Latency ---- *@
+                <MudItem xs="12" Class="pb-0">
+                    <HealthCheckSectionTitle Title="Latency" Hint="SUSPECT bila respons lebih lama dari ambang N kali berturut-turut, walau rc sukses. Dihitung dari INQUIRY & PAYMENT, direset oleh PAYMENT yang cepat." Active="@(_model.LatencyThresholdSeconds.HasValue)" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal?" Label="Ambang (detik)" @bind-Value="_model.LatencyThresholdSeconds" Disabled="_busy" Immediate="true"
+                                      Min="1" Max="300" Step="0.5m" Format="0.#" HelperText="Mis. 10; kosong = nonaktif" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int" Label="Max Consecutive" @bind-Value="_model.MaxConsecutiveLatency" Disabled="@(_busy || !_model.LatencyThresholdSeconds.HasValue)" Min="1" Max="100" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="int?" Label="Cooldown (menit)" @bind-Value="_model.LatencyCooldownMinutes" Disabled="@(_busy || !_model.LatencyThresholdSeconds.HasValue)"
+                                      Min="1" HelperText="Kosong = reset manual" />
+                </MudItem>
+
+                @if (SharedCodes.Count > 0)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            RC @string.Join(", ", SharedCodes) ada di lebih dari satu kategori: setiap kategori yang memuatnya ikut menghitung.
+                        </MudAlert>
+                    </MudItem>
+                }
+
+                <MudItem xs="12">
+                    <MudSwitch T="bool" Value="_model.IsActive" ValueChanged="@(v => _model.IsActive = v)" Color="Color.Primary" Disabled="_busy">
+                        @(_model.IsActive ? "Aktif" : "Nonaktif")
+                    </MudSwitch>
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private RouteFailoverConfigManagementService ConfigManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public RouteFailoverConfigDto? Item { get; set; }
+    [Parameter] public List<LookupItemDto> TopupProducts { get; set; } = new();
+    [Parameter] public List<LookupItemDto> BillProducts { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private string _scope = "global";
+    private string _routingType = "MARGIN";
+
+    private List<LookupItemDto> ScopeProducts => _routingType == "PRODUCT" ? BillProducts : TopupProducts;
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Item != null)
+        {
+            _model.InstId = Item.InstId;
+            _model.RcLinkDown = Item.RcLinkDown;
+            _model.RcSuspect = Item.RcSuspect;
+            _model.MaxConsecutiveSuspect = Item.MaxConsecutiveSuspect;
+            _model.LinkDownCooldownMinutes = Item.LinkDownCooldownMinutes;
+            _model.SuspectCooldownMinutes = Item.SuspectCooldownMinutes;
+            _model.RcFailed = Item.RcFailed;
+            _model.MaxConsecutiveFailed = Item.MaxConsecutiveFailed;
+            _model.FailedCooldownMinutes = Item.FailedCooldownMinutes;
+            _model.RcPending = Item.RcPending;
+            _model.MaxConsecutivePending = Item.MaxConsecutivePending;
+            _model.PendingCooldownMinutes = Item.PendingCooldownMinutes;
+            _model.LatencyThresholdSeconds = Item.LatencyThresholdSeconds;
+            _model.MaxConsecutiveLatency = Item.MaxConsecutiveLatency;
+            _model.LatencyCooldownMinutes = Item.LatencyCooldownMinutes;
+            _model.IsActive = Item.IsActive;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchProducts(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? ScopeProducts.Select(p => p.Key)
+            : ScopeProducts.Where(p => p.Key.Contains(value, StringComparison.OrdinalIgnoreCase)
+                                        || p.Value.Contains(value, StringComparison.OrdinalIgnoreCase))
+                            .Select(p => p.Key);
+        return Task.FromResult(matches);
+    }
+
+    private string? FormatProduct(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return code;
+        var match = ScopeProducts.FirstOrDefault(p => p.Key == code);
+        return match == null ? code : $"{match.Key} — {match.Value}";
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Item != null)
+        {
+            var request = new UpdateRouteFailoverConfigRequest();
+            Fill(request);
+            var (success, error) = await ConfigManagement.UpdateConfigAsync(Item.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateRouteFailoverConfigRequest
+            {
+                RoutingType = _routingType,
+                InstId = _scope == "product" ? _model.InstId : null
+            };
+            Fill(request);
+            var (success, _, error) = await ConfigManagement.CreateConfigAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan health check config.";
+        }
+    }
+
+    private void Fill(UpdateRouteFailoverConfigRequest r)
+    {
+        r.RcLinkDown = _model.RcLinkDown;
+        r.LinkDownCooldownMinutes = _model.LinkDownCooldownMinutes;
+        r.RcSuspect = _model.RcSuspect;
+        r.MaxConsecutiveSuspect = _model.MaxConsecutiveSuspect;
+        r.SuspectCooldownMinutes = _model.SuspectCooldownMinutes;
+        r.RcFailed = _model.RcFailed;
+        r.MaxConsecutiveFailed = _model.MaxConsecutiveFailed;
+        r.FailedCooldownMinutes = _model.FailedCooldownMinutes;
+        r.RcPending = _model.RcPending;
+        r.MaxConsecutivePending = _model.MaxConsecutivePending;
+        r.PendingCooldownMinutes = _model.PendingCooldownMinutes;
+        r.LatencyThresholdSeconds = _model.LatencyThresholdSeconds;
+        r.MaxConsecutiveLatency = _model.MaxConsecutiveLatency;
+        r.LatencyCooldownMinutes = _model.LatencyCooldownMinutes;
+        r.IsActive = _model.IsActive;
+    }
+
+    private static bool HasText(string? value) => !string.IsNullOrWhiteSpace(value?.Replace(",", ""));
+
+    private static IEnumerable<string> Codes(string? list) =>
+        (list ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct();
+
+    // rc yang muncul di lebih dari satu kategori (diperbolehkan, hanya diinformasikan)
+    private List<string> SharedCodes =>
+        new[] { _model.RcLinkDown, _model.RcSuspect, _model.RcFailed, _model.RcPending }
+            .SelectMany(Codes)
+            .GroupBy(c => c)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string? InstId { get; set; }
+        public string RcLinkDown { get; set; } = "91,1091";
+        public string RcSuspect { get; set; } = "68,1068";
+        public int MaxConsecutiveSuspect { get; set; } = 3;
+        public int? LinkDownCooldownMinutes { get; set; }
+        public int? SuspectCooldownMinutes { get; set; }
+        public string? RcFailed { get; set; }
+        public int MaxConsecutiveFailed { get; set; } = 3;
+        public int? FailedCooldownMinutes { get; set; }
+        public string? RcPending { get; set; }
+        public int MaxConsecutivePending { get; set; } = 5;
+        public int? PendingCooldownMinutes { get; set; }
+        public decimal? LatencyThresholdSeconds { get; set; }
+        public int MaxConsecutiveLatency { get; set; } = 3;
+        public int? LatencyCooldownMinutes { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+}

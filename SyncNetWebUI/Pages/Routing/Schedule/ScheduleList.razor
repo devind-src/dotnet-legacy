@@ -1,0 +1,298 @@
+@page "/route-schedule"
+@attribute [Authorize]
+@inject RouteScheduleManagementService Schedules
+@inject LookupService Lookups
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Jadwal Routing</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Jadwal Routing</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">
+    Routing > Jadwal Routing — tutup biller sementara (maintenance / cut-off), jam operasional biller, dan prioritas biller
+    pada jam tertentu. Setiap maintenance dibuat sebagai aturan baru supaya riwayatnya terlihat.
+</MudText>
+
+<ApplyChangesBar Message="Aturan jadwal baru, perubahan, dan pembatalan dipakai routing setelah klik Terapkan Perubahan. Jam mulai/selesai tidak perlu diterapkan ulang." />
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+            <MudTextField T="string" @bind-Value="_filter" Label="Cari nama / biller / produk" Immediate="true"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          OnKeyDown="OnSearchKeyDown" Style="width:240px;" />
+            <div style="width:170px;">
+                <MudSelect T="string" Label="Jenis" Value="_ruleType" ValueChanged="OnRuleTypeFilterChanged" Clearable="true">
+                    @foreach (var t in RouteScheduleCodes.RuleTypes)
+                    {
+                        <MudSelectItem T="string" Value="@t">@RouteScheduleCodes.RuleTypeLabel(t)</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+            <div style="width:170px;">
+                <MudSelect T="string" Label="Biller" Value="_nodeId" ValueChanged="OnNodeFilterChanged" Clearable="true">
+                    @foreach (var b in _billers)
+                    {
+                        <MudSelectItem T="string" Value="@b.Key">@b.Value</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+        </MudStack>
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.FactCheck" OnClick="OpenCheckDialog">Cek Jadwal</MudButton>
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">Tambah Aturan</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+    <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="0" Class="mt-2">
+        <MudText Typo="Typo.caption" Class="mr-2">Status:</MudText>
+        @foreach (var s in RouteScheduleCodes.States)
+        {
+            <MudCheckBox T="bool" Value="@_states.Contains(s)" ValueChanged="@((bool v) => ToggleStateAsync(s, v))"
+                         Label="@RouteScheduleCodes.StateLabel(s)" Dense="true" />
+        }
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Nama</MudTh>
+            <MudTh>Jenis</MudTh>
+            <MudTh>Biller</MudTh>
+            <MudTh>Produk</MudTh>
+            <MudTh>Kategori</MudTh>
+            <MudTh>Waktu</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nama">
+                @context.RuleName
+                @if (!string.IsNullOrEmpty(context.Notes))
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@context.Notes</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Jenis">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@RuleTypeColor(context.RuleType)">
+                    @RouteScheduleCodes.RuleTypeLabel(context.RuleType)@(context.Priority.HasValue ? $" {context.Priority}" : "")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Biller">@(context.NodeName ?? "(semua)")</MudTd>
+            <MudTd DataLabel="Produk">@(context.InstId == null ? "(semua)" : $"{context.InstId} {context.ProductName}")</MudTd>
+            <MudTd DataLabel="Kategori">@RouteScheduleCodes.RoutingTypeLabel(context.RoutingType)</MudTd>
+            <MudTd DataLabel="Waktu">@context.WindowText</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Color="@StateColor(context.State)">@RouteScheduleCodes.StateLabel(context.State)</MudChip>
+                @if (context.ActiveNow && context.ActiveUntil.HasValue)
+                {
+                    <MudText Typo="Typo.caption">s.d. @context.ActiveUntil.Value.ToString("dd-MM HH:mm")</MudText>
+                }
+                @if (!context.IsActive && !string.IsNullOrEmpty(context.CancelReason))
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@context.CancelReason</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Aksi">
+                <div style="white-space:nowrap">
+                    @if (Session.UserManagementPermissions.CanEdit && (context.CanEdit || context.CanEditEndOnly))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))"
+                                       title="@(context.CanEditEndOnly ? "Ubah jam selesai" : "Ubah")" />
+                    }
+                    @if (Session.UserManagementPermissions.CanAdd)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" OnClick="@(() => OpenDuplicateDialog(context))"
+                                       title="Duplikat (buat aturan baru dari aturan ini)" />
+                    }
+                    @if (Session.UserManagementPermissions.CanEdit && context.CanCancel)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Block" Size="Size.Small" Color="Color.Warning"
+                                       OnClick="@(() => OpenCancelDialog(context))" title="Batalkan" />
+                    }
+                    @if (Session.UserManagementPermissions.CanDelete && context.CanDelete)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                       OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus (hanya Akan datang)" />
+                    }
+                    <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" OnClick="@(() => OpenHistoryDialog(context))" title="Detail & riwayat" />
+                </div>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada aturan dengan filter ini. Tanpa aturan, semua biller dianggap buka 24 jam.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<RouteScheduleDto> _items = new();
+    private List<LookupItemDto> _billers = new();
+    private List<LookupItemDto> _products = new();
+    private readonly HashSet<string> _states = new()
+    {
+        RouteScheduleCodes.StateUpcoming, RouteScheduleCodes.StateRunning, RouteScheduleCodes.StateActive
+    };
+    private string _filter = string.Empty;
+    private string? _ruleType;
+    private string? _nodeId;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 25;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Large, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _billers = await Lookups.GetRoutingBillersAsync() ?? new();
+        _products = await Lookups.GetRoutingProductsAsync() ?? new();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        int? node = int.TryParse(_nodeId, out var n) ? n : null;
+
+        // tanpa status tercentang = tampilkan semua
+        var result = await Schedules.GetSchedulesAsync(_filter, _states, node, _ruleType);
+        if (result == null)
+        {
+            _error = "Gagal memuat jadwal routing.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private Task OnRuleTypeFilterChanged(string? value)
+    {
+        _ruleType = value;
+        return LoadAsync();
+    }
+
+    private Task OnNodeFilterChanged(string? value)
+    {
+        _nodeId = value;
+        return LoadAsync();
+    }
+
+    private Task ToggleStateAsync(string state, bool on)
+    {
+        if (on) _states.Add(state); else _states.Remove(state);
+        return LoadAsync();
+    }
+
+    private static Color RuleTypeColor(string type) => type switch
+    {
+        RouteScheduleCodes.Closed => Color.Error,
+        RouteScheduleCodes.Open => Color.Success,
+        _ => Color.Info
+    };
+
+    private static Color StateColor(string state) => state switch
+    {
+        RouteScheduleCodes.StateRunning => Color.Warning,
+        RouteScheduleCodes.StateUpcoming => Color.Info,
+        RouteScheduleCodes.StateActive => Color.Success,
+        _ => Color.Default
+    };
+
+    private DialogParameters<ScheduleFormDialog> FormParameters(RouteScheduleDto? item, bool isEdit) => new()
+    {
+        { x => x.Item, item },
+        { x => x.IsEdit, isEdit },
+        { x => x.Billers, _billers },
+        { x => x.Products, _products }
+    };
+
+    private async Task OpenCreateDialog() => await ShowFormAsync(null, false, "Aturan jadwal berhasil ditambahkan.");
+
+    private async Task OpenDuplicateDialog(RouteScheduleDto item) => await ShowFormAsync(item, false, "Aturan baru berhasil dibuat dari duplikat.");
+
+    private async Task OpenEditDialog(RouteScheduleDto item) => await ShowFormAsync(item, true, "Perubahan aturan jadwal berhasil disimpan.");
+
+    private async Task ShowFormAsync(RouteScheduleDto? item, bool isEdit, string successMessage)
+    {
+        var dialog = await DialogService.ShowAsync<ScheduleFormDialog>("Jadwal Routing", FormParameters(item, isEdit), WideDialogOptions);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add(successMessage, Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenCancelDialog(RouteScheduleDto item)
+    {
+        var parameters = new DialogParameters<ScheduleCancelDialog> { { x => x.Item, item } };
+        var dialog = await DialogService.ShowAsync<ScheduleCancelDialog>("Batalkan Aturan", parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Aturan dibatalkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenHistoryDialog(RouteScheduleDto item)
+    {
+        var parameters = new DialogParameters<ScheduleHistoryDialog> { { x => x.Item, item } };
+        await DialogService.ShowAsync<ScheduleHistoryDialog>("Detail Aturan", parameters, WideDialogOptions);
+    }
+
+    private async Task OpenCheckDialog()
+    {
+        var parameters = new DialogParameters<ScheduleCheckDialog>
+        {
+            { x => x.Billers, _billers },
+            { x => x.Products, _products }
+        };
+        await DialogService.ShowAsync<ScheduleCheckDialog>("Cek Jadwal", parameters, WideDialogOptions);
+    }
+
+    private async Task ConfirmDeleteAsync(RouteScheduleDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Aturan",
+            $"Hapus aturan '{item.RuleName}' ({item.WindowText})? Aturan belum pernah berlaku; isinya tetap tercatat di riwayat.",
+            yesText: "Hapus", cancelText: "Batal");
+        if (confirmed != true) return;
+
+        var (success, error) = await Schedules.DeleteAsync(item.Id);
+        if (success)
+        {
+            Snackbar.Add("Aturan dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus aturan.", Severity.Error);
+        }
+    }
+}

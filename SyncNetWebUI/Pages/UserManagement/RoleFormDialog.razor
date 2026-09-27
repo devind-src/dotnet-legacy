@@ -1,0 +1,217 @@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(IsEdit ? "Edit Role" : "Tambah Role")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model">
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudGrid>
+                        <MudItem xs="12" sm="6" md="12">
+                            <MudTextField T="string" Label="Role Name" @bind-Value="_model.RoleName"
+                                          Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Role name wajib diisi"
+                                          MaxLength="30" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="12">
+                            <MudTextField T="string" Label="Role Desc" @bind-Value="_model.RoleDesc"
+                                          Required="true" RequiredError="Role desc wajib diisi" MaxLength="50" Disabled="_busy" />
+                        </MudItem>
+
+                        @if (IsEdit)
+                        {
+                            <MudItem xs="12" sm="6" md="12">
+                                <MudSelect T="string" Label="Status" @bind-Value="_model.Status" Required="true" Disabled="_busy">
+                                    <MudSelectItem T="string" Value="@("1")">Aktif</MudSelectItem>
+                                    <MudSelectItem T="string" Value="@("0")">Nonaktif</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                        }
+
+                        <MudItem xs="12" sm="4" md="12">
+                            <MudSwitch T="bool" Value="_model.FlagAdd" ValueChanged="@(v => _model.FlagAdd = v)" Color="Color.Primary" Disabled="_busy">Hak Tambah (Add)</MudSwitch>
+                        </MudItem>
+                        <MudItem xs="12" sm="4" md="12">
+                            <MudSwitch T="bool" Value="_model.FlagEdit" ValueChanged="@(v => _model.FlagEdit = v)" Color="Color.Primary" Disabled="_busy">Hak Ubah (Edit)</MudSwitch>
+                        </MudItem>
+                        <MudItem xs="12" sm="4" md="12">
+                            <MudSwitch T="bool" Value="_model.FlagDelete" ValueChanged="@(v => _model.FlagDelete = v)" Color="Color.Primary" Disabled="_busy">Hak Hapus (Delete)</MudSwitch>
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
+
+                <MudItem xs="12" md="8">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                        <MudText Typo="Typo.subtitle2">Akses Menu</MudText>
+                        <MudCheckBox T="bool" Value="@IsAllSelected" ValueChanged="ToggleSelectAll" Disabled="_busy"
+                                     Label="Pilih Semua" Dense="true" />
+                    </MudStack>
+
+                    <MudPaper Class="pa-2" Style="max-height:360px; overflow-y:auto;" Outlined="true">
+                        <MudExpansionPanels MultiExpansion="true">
+                            @foreach (var group in MenuGroups)
+                            {
+                                <MudExpansionPanel>
+                                    <TitleContent>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudCheckBox T="bool" Value="@IsGroupSelected(group.Key)"
+                                                         ValueChanged="@(v => ToggleGroup(group.Key, v))"
+                                                         Disabled="_busy" Dense="true"
+                                                         @onclick:stopPropagation="true" />
+                                            <MudText>@group.Key</MudText>
+                                        </MudStack>
+                                    </TitleContent>
+                                    <ChildContent>
+                                        @foreach (var menu in group)
+                                        {
+                                            <div class="ml-8">
+                                                <MudCheckBox T="bool" Value="@_selectedMenuIds.Contains(menu.MenuId)"
+                                                             ValueChanged="@(v => ToggleMenu(menu.MenuId, v))"
+                                                             Disabled="_busy" Dense="true"
+                                                             Label="@MenuLabel(menu)" />
+                                            </div>
+                                        }
+                                    </ChildContent>
+                                </MudExpansionPanel>
+                            }
+                        </MudExpansionPanels>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private RoleManagementService RoleManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<MenuDto> Menus { get; set; } = new();
+    [Parameter] public RoleDetailDto? Role { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private readonly HashSet<int> _selectedMenuIds = new();
+    private bool _busy;
+    private string? _error;
+
+    private IEnumerable<IGrouping<string, MenuDto>> MenuGroups =>
+        Menus.GroupBy(m => string.IsNullOrWhiteSpace(m.Level1) ? "(Tanpa Grup)" : m.Level1);
+
+    private bool IsAllSelected => Menus.Count > 0 && Menus.All(m => _selectedMenuIds.Contains(m.MenuId));
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Role != null)
+        {
+            _model.RoleName = Role.RoleName;
+            _model.RoleDesc = Role.RoleDesc;
+            _model.FlagAdd = Role.FlagAdd;
+            _model.FlagEdit = Role.FlagEdit;
+            _model.FlagDelete = Role.FlagDelete;
+            _model.Status = string.IsNullOrEmpty(Role.Status) ? "1" : Role.Status;
+            foreach (var id in Role.MenuIds) _selectedMenuIds.Add(id);
+        }
+    }
+
+    private static string MenuLabel(MenuDto m) =>
+        string.Join(" ", new[] { m.Level2, m.Level3, m.Level4 }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+    private bool IsGroupSelected(string groupKey) =>
+        Menus.Where(m => (string.IsNullOrWhiteSpace(m.Level1) ? "(Tanpa Grup)" : m.Level1) == groupKey)
+             .All(m => _selectedMenuIds.Contains(m.MenuId));
+
+    private void ToggleMenu(int menuId, bool selected)
+    {
+        if (selected) _selectedMenuIds.Add(menuId);
+        else _selectedMenuIds.Remove(menuId);
+    }
+
+    private void ToggleGroup(string groupKey, bool selected)
+    {
+        var ids = Menus.Where(m => (string.IsNullOrWhiteSpace(m.Level1) ? "(Tanpa Grup)" : m.Level1) == groupKey)
+                       .Select(m => m.MenuId);
+        foreach (var id in ids)
+        {
+            if (selected) _selectedMenuIds.Add(id);
+            else _selectedMenuIds.Remove(id);
+        }
+    }
+
+    private void ToggleSelectAll(bool selected)
+    {
+        _selectedMenuIds.Clear();
+        if (selected)
+            foreach (var m in Menus) _selectedMenuIds.Add(m.MenuId);
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var request = new UpdateRoleRequest
+            {
+                RoleDesc = _model.RoleDesc,
+                FlagAdd = _model.FlagAdd,
+                FlagEdit = _model.FlagEdit,
+                FlagDelete = _model.FlagDelete,
+                Status = _model.Status,
+                MenuIds = _selectedMenuIds.ToList()
+            };
+            var (success, error) = await RoleManagement.UpdateRoleAsync(_model.RoleName, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateRoleRequest
+            {
+                RoleName = _model.RoleName,
+                RoleDesc = _model.RoleDesc,
+                FlagAdd = _model.FlagAdd,
+                FlagEdit = _model.FlagEdit,
+                FlagDelete = _model.FlagDelete,
+                MenuIds = _selectedMenuIds.ToList()
+            };
+            var (success, _, error) = await RoleManagement.CreateRoleAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan role.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string RoleName { get; set; } = string.Empty;
+        public string RoleDesc { get; set; } = string.Empty;
+        public bool FlagAdd { get; set; } = true;
+        public bool FlagEdit { get; set; } = true;
+        public bool FlagDelete { get; set; } = true;
+        public string Status { get; set; } = "1";
+    }
+}

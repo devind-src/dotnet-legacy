@@ -1,0 +1,257 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Cable" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Connection" : "Tambah Connection")</MudText>
+                <MudText Typo="Typo.caption" Style="opacity:.65">Node: @NodeName</MudText>
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Connection Name" @bind-Value="_model.ConnName"
+                                  Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Connection Name wajib diisi" MaxLength="20" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Protocol" @bind-Value="_model.Protocol" Disabled="_busy">
+                        <MudSelectItem T="string" Value="@("0")">TCP/IP 2 bytes exclude header</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("1")">TCP/IP 2 bytes include header</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("2")">TCP/IP 4 bytes exclude header</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("3")">TCP/IP 4 bytes include header</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("4")">TCP/IP Custom</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("5")">TCP/IP None</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("6")">Message Queue</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("7")">Web Service</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("8")">Custom</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            @if (IsTcp)
+            {
+                <MudGrid Spacing="5" Class="mt-1">
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" Label="TCP Header Format" @bind-Value="_model.TcpHeaderFormat" Disabled="_busy">
+                            <MudSelectItem T="string" Value="@("0")">ASC</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("1")">BCD</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" Label="Connection Type" @bind-Value="_model.ConnType" Disabled="_busy">
+                            <MudSelectItem T="string" Value="@("0")">Server</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("1")">Client</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="TCP Footer (hex, contoh FF)" @bind-Value="_model.TcpFooter" MaxLength="2" Disabled="_busy" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="IP Address" @bind-Value="_model.IpAddress" MaxLength="16" Disabled="_busy"
+                                      Required="true" RequiredError="IP Address wajib diisi" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSwitch T="bool" Value="_model.TcpHiLo" ValueChanged="@(v => _model.TcpHiLo = v)" Color="Color.Primary" Disabled="_busy">Hi Lo Byte</MudSwitch>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Port" @bind-Value="_model.Port" MaxLength="5" Disabled="_busy"
+                                      Required="true" RequiredError="Port wajib diisi" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSwitch T="bool" Value="_model.AlwaysConnected" ValueChanged="@(v => _model.AlwaysConnected = v)" Color="Color.Primary" Disabled="_busy">Always Connected</MudSwitch>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="int" Label="Max Connection" @bind-Value="_model.MaxConn" Min="0"
+                                         Disabled="@(_busy || _model.ConnType != "0")" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSwitch T="bool" Value="_model.OneSocketOnly" ValueChanged="@(v => _model.OneSocketOnly = v)" Color="Color.Primary" Disabled="_busy">One Socket Only</MudSwitch>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="int" Label="Retry Delay" @bind-Value="_model.RetryDelay" Disabled="@(_busy || _model.ConnType == "0")">
+                            <MudSelectItem T="int" Value="0">Dynamic</MudSelectItem>
+                            <MudSelectItem T="int" Value="5">5 Seconds</MudSelectItem>
+                            <MudSelectItem T="int" Value="10">10 Seconds</MudSelectItem>
+                            <MudSelectItem T="int" Value="15">15 Seconds</MudSelectItem>
+                            <MudSelectItem T="int" Value="30">30 Seconds</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+            }
+            else if (IsMsQueue)
+            {
+                <MudGrid Spacing="5" Class="mt-1">
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Inbox" @bind-Value="_model.QueueInbox" MaxLength="100" Disabled="_busy"
+                                      Required="true" RequiredError="Inbox wajib diisi" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Outbox" @bind-Value="_model.QueueOutbox" MaxLength="100" Disabled="_busy"
+                                      Required="true" RequiredError="Outbox wajib diisi" />
+                    </MudItem>
+                </MudGrid>
+            }
+            else if (IsWebService)
+            {
+                <MudGrid Spacing="5" Class="mt-1">
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" Label="WS Type" @bind-Value="_model.ConnType" Disabled="_busy">
+                            <MudSelectItem T="string" Value="@("0")">Server</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("1")">Client</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="URL" @bind-Value="_model.WsUrl" MaxLength="100" Disabled="_busy"
+                                      Required="true" RequiredError="URL wajib diisi" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Method" @bind-Value="_model.WsMethod" MaxLength="15" Disabled="_busy"
+                                      Required="true" RequiredError="Method wajib diisi" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Content" @bind-Value="_model.WsContent" MaxLength="100" Disabled="_busy"
+                                      Required="true" RequiredError="Content wajib diisi" />
+                    </MudItem>
+                </MudGrid>
+            }
+            else if (IsCustom)
+            {
+                <MudGrid Spacing="5" Class="mt-1">
+                    <MudItem xs="12">
+                        <MudTextField T="string" Label="File Config" @bind-Value="_model.WsUrl" MaxLength="100" Disabled="_busy"
+                                      Required="true" RequiredError="File Config wajib diisi" />
+                    </MudItem>
+                </MudGrid>
+            }
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ConnectionManagementService ConnectionManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public int NodeId { get; set; }
+    [Parameter] public string NodeName { get; set; } = string.Empty;
+    [Parameter] public ConnectionDto? Connection { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    private static readonly HashSet<string> TcpProtocols = new() { "0", "1", "2", "3", "4", "5" };
+    private bool IsTcp => TcpProtocols.Contains(_model.Protocol);
+    private bool IsMsQueue => _model.Protocol == "6";
+    private bool IsWebService => _model.Protocol == "7";
+    private bool IsCustom => _model.Protocol == "8";
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Connection != null)
+        {
+            _model.ConnName = Connection.ConnName;
+            _model.Protocol = Connection.Protocol ?? "0";
+            _model.TcpHeaderFormat = Connection.TcpHeaderFormat ?? "0";
+            _model.TcpFooter = Connection.TcpFooter;
+            _model.TcpHiLo = Connection.TcpHiLo;
+            _model.ConnType = Connection.ConnType ?? "0";
+            _model.IpAddress = Connection.IpAddress;
+            _model.Port = Connection.Port;
+            _model.MaxConn = Connection.MaxConn ?? 65;
+            _model.RetryDelay = Connection.RetryDelay ?? 0;
+            _model.AlwaysConnected = Connection.AlwaysConnected;
+            _model.OneSocketOnly = Connection.OneSocketOnly;
+            _model.QueueInbox = Connection.QueueInbox;
+            _model.QueueOutbox = Connection.QueueOutbox;
+            _model.WsUrl = Connection.WsUrl;
+            _model.WsMethod = Connection.WsMethod ?? "POST";
+            _model.WsContent = Connection.WsContent ?? "application/json";
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var request = new UpdateConnectionRequest
+            {
+                Protocol = _model.Protocol, TcpHeaderFormat = _model.TcpHeaderFormat, TcpFooter = _model.TcpFooter,
+                TcpHiLo = _model.TcpHiLo, ConnType = _model.ConnType, IpAddress = _model.IpAddress, Port = _model.Port,
+                MaxConn = _model.MaxConn, RetryDelay = _model.RetryDelay, AlwaysConnected = _model.AlwaysConnected,
+                OneSocketOnly = _model.OneSocketOnly, QueueInbox = _model.QueueInbox, QueueOutbox = _model.QueueOutbox,
+                WsUrl = _model.WsUrl, WsMethod = _model.WsMethod, WsContent = _model.WsContent
+            };
+            var (success, error) = await ConnectionManagement.UpdateConnectionAsync(_model.ConnName, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateConnectionRequest
+            {
+                ConnName = _model.ConnName, NodeId = NodeId, Protocol = _model.Protocol,
+                TcpHeaderFormat = _model.TcpHeaderFormat, TcpFooter = _model.TcpFooter, TcpHiLo = _model.TcpHiLo,
+                ConnType = _model.ConnType, IpAddress = _model.IpAddress, Port = _model.Port, MaxConn = _model.MaxConn,
+                RetryDelay = _model.RetryDelay, AlwaysConnected = _model.AlwaysConnected, OneSocketOnly = _model.OneSocketOnly,
+                QueueInbox = _model.QueueInbox, QueueOutbox = _model.QueueOutbox, WsUrl = _model.WsUrl,
+                WsMethod = _model.WsMethod, WsContent = _model.WsContent
+            };
+            var (success, _, error) = await ConnectionManagement.CreateConnectionAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan connection.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string ConnName { get; set; } = string.Empty;
+        public string Protocol { get; set; } = "0";
+        public string TcpHeaderFormat { get; set; } = "0";
+        public string? TcpFooter { get; set; }
+        public bool TcpHiLo { get; set; } = true;
+        public string ConnType { get; set; } = "0";
+        public string? IpAddress { get; set; }
+        public string? Port { get; set; }
+        public int MaxConn { get; set; } = 65;
+        public int RetryDelay { get; set; }
+        public bool AlwaysConnected { get; set; } = true;
+        public bool OneSocketOnly { get; set; } = true;
+        public string? QueueInbox { get; set; }
+        public string? QueueOutbox { get; set; }
+        public string? WsUrl { get; set; }
+        public string? WsMethod { get; set; } = "POST";
+        public string? WsContent { get; set; } = "application/json";
+    }
+}

@@ -1,0 +1,47 @@
+/* Mobile-first: vertical sequence shown by default, horizontal legacy-style layout only once
+   the viewport is wide enough to read two side-by-side rows comfortably. Both layouts render
+   in the DOM; this media query is what actually switches which one is visible — no JS
+   breakpoint detection needed. */
+
+.flow-mobile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+.flow-desktop {
+    display: none;
+}
+
+.left-align {
+    display: flex; /* override dari display:none */
+    flex-direction: column; /* susun ke bawah */
+    align-items: flex-start; /* semua anak rata kiri */
+    text-align: left; /* teks juga rata kiri */
+}
+
+@media (min-width: 640px) {
+    .flow-mobile {
+        display: none;
+    }
+
+    .flow-desktop {
+        display: block;
+    }
+}
+
+.flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.flow-row-label {
+    display: block;
+    text-align: center;
+    letter-spacing: .08em;
+}

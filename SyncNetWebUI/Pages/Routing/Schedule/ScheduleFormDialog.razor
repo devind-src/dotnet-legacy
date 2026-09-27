@@ -1,0 +1,325 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.EventBusy" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@Title</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">ID @Item?.Id · @RouteScheduleCodes.StateLabel(Item?.State)</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="3" Class="px-2 pt-2">
+            @if (EndOnly)
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info" Dense="true">Aturan sedang berlangsung: hanya Jam Selesai yang bisa dimajukan atau diundur.</MudAlert>
+                </MudItem>
+            }
+
+            <MudItem xs="12">
+                <MudTextField T="string" Label="Nama aturan *" @bind-Value="_m.RuleName" MaxLength="50" Disabled="@(_busy || EndOnly)" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudText Typo="Typo.caption">Jenis aturan *</MudText>
+                <MudRadioGroup T="string" Value="_m.RuleType" ValueChanged="OnRuleTypeChanged" Disabled="@(_busy || EndOnly)">
+                    <MudRadio T="string" Value="@RouteScheduleCodes.Closed">Tutup</MudRadio>
+                    <MudRadio T="string" Value="@RouteScheduleCodes.Open">Jam Operasional</MudRadio>
+                    <MudRadio T="string" Value="@RouteScheduleCodes.Priority">Prioritas Jadwal</MudRadio>
+                </MudRadioGroup>
+                <MudText Typo="Typo.caption" Style="opacity:.65">@RuleTypeHint</MudText>
+            </MudItem>
+
+            <MudItem xs="12" Class="pb-0"><MudText Typo="Typo.subtitle2">Berlaku untuk</MudText></MudItem>
+            <MudItem xs="12" sm="4">
+                <MudSelect T="string" Label="Kategori" @bind-Value="_m.RoutingType" Disabled="@(_busy || EndOnly)">
+                    <MudSelectItem T="string" Value="@AllValue">Semua (Topup & Bill Payment)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@RouteScheduleCodes.Product">Bill Payment</MudSelectItem>
+                    <MudSelectItem T="string" Value="@RouteScheduleCodes.Margin">Topup</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudSelect T="string" Label="Biller *" @bind-Value="_m.NodeId" Disabled="@(_busy || EndOnly)">
+                    @foreach (var b in Billers)
+                    {
+                        <MudSelectItem T="string" Value="@b.Key">@b.Value</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudSelect T="string" Label="Produk" @bind-Value="_m.InstId" Clearable="true" Disabled="@(_busy || EndOnly)"
+                           HelperText="Kosong = semua produk biller">
+                    @foreach (var p in Products)
+                    {
+                        <MudSelectItem T="string" Value="@p.Key">@p.Key — @p.Value</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            @if (_m.RuleType == RouteScheduleCodes.Priority)
+            {
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="short?" Label="Priority *" @bind-Value="_m.Priority" Min="1" Max="99" Disabled="@(_busy || EndOnly)"
+                                     HelperText="Urutan cadangan: 1 dipakai dulu, 2 bila 1 tutup/diblokir. Tidak membagi beban; nilai sama tidak dibagi." />
+                </MudItem>
+            }
+
+            <MudItem xs="12" Class="pb-0"><MudText Typo="Typo.subtitle2">Waktu</MudText></MudItem>
+            <MudItem xs="12">
+                <MudRadioGroup T="string" @bind-Value="_m.Recurrence" Disabled="@(_busy || EndOnly)">
+                    <MudRadio T="string" Value="@RouteScheduleCodes.Once">Sekali</MudRadio>
+                    <MudRadio T="string" Value="@RouteScheduleCodes.Daily">Harian</MudRadio>
+                    <MudRadio T="string" Value="@RouteScheduleCodes.Weekly">Mingguan</MudRadio>
+                    <MudRadio T="string" Value="@RouteScheduleCodes.Monthly">Bulanan</MudRadio>
+                </MudRadioGroup>
+            </MudItem>
+
+            @if (_m.Recurrence == RouteScheduleCodes.Once)
+            {
+                <MudItem xs="6" sm="3"><MudDatePicker Label="Mulai *" @bind-Date="_m.StartDate" DateFormat="dd-MM-yyyy" Disabled="@(_busy || EndOnly)" /></MudItem>
+                <MudItem xs="6" sm="3"><MudTimePicker Label="Jam mulai *" @bind-Time="_m.StartTime" AmPm="false" Disabled="@(_busy || EndOnly)" /></MudItem>
+                <MudItem xs="6" sm="3"><MudDatePicker Label="Selesai *" @bind-Date="_m.EndDate" DateFormat="dd-MM-yyyy" Disabled="_busy" /></MudItem>
+                <MudItem xs="6" sm="3"><MudTimePicker Label="Jam selesai *" @bind-Time="_m.EndTime" AmPm="false" Disabled="_busy" HelperText="Jadwal berakhir tepat jam ini" /></MudItem>
+            }
+            else
+            {
+                @if (_m.Recurrence == RouteScheduleCodes.Weekly)
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption">Hari *</MudText>
+                        <MudStack Row="true" Spacing="0" Wrap="Wrap.Wrap">
+                            @foreach (var d in Days)
+                            {
+                                <MudCheckBox T="bool" Value="@_m.WeekDays.Contains(d)" ValueChanged="@((bool v) => ToggleDay(d, v))"
+                                             Label="@RouteScheduleCodes.DayName(d)" Disabled="_busy" Dense="true" />
+                            }
+                        </MudStack>
+                    </MudItem>
+                }
+                @if (_m.Recurrence == RouteScheduleCodes.Monthly)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Tanggal *" @bind-Value="_m.DaysOfMonth" Disabled="_busy"
+                                      HelperText="Mis. 1,15,31 — tanggal yang tidak ada di bulan itu dilewati" />
+                    </MudItem>
+                }
+                <MudItem xs="6" sm="3"><MudTimePicker Label="Jam mulai *" @bind-Time="_m.TimeStart" AmPm="false" Disabled="_busy" /></MudItem>
+                <MudItem xs="6" sm="3"><MudTimePicker Label="Jam selesai *" @bind-Time="_m.TimeEnd" AmPm="false" Disabled="_busy" HelperText="@TimeHint" /></MudItem>
+                <MudItem xs="6" sm="3"><MudDatePicker Label="Berlaku dari" @bind-Date="_m.ValidFrom" DateFormat="dd-MM-yyyy" Disabled="_busy" Clearable="true" /></MudItem>
+                <MudItem xs="6" sm="3"><MudDatePicker Label="Berlaku sampai" @bind-Date="_m.ValidUntil" DateFormat="dd-MM-yyyy" Disabled="_busy" Clearable="true" HelperText="Kosong = tanpa batas" /></MudItem>
+            }
+
+            <MudItem xs="12">
+                <MudTextField T="string" Label="Catatan" @bind-Value="_m.Notes" MaxLength="100" Disabled="@(_busy || EndOnly)" />
+            </MudItem>
+
+            <MudItem xs="12" Class="pb-0">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudText Typo="Typo.subtitle2">Dampak</MudText>
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="PreviewAsync" Disabled="_previewBusy">Hitung dampak</MudButton>
+                    @if (_preview != null)
+                    {
+                        <MudText Typo="Typo.caption" Style="opacity:.65">
+                            @(_m.RuleType == RouteScheduleCodes.Open ? "Di luar jam operasional, mulai" : "Saat jadwal berlaku,") @_preview.At.ToString("dd-MM-yyyy HH:mm")
+                        </MudText>
+                    }
+                </MudStack>
+            </MudItem>
+            <MudItem xs="12">
+                @if (_previewBusy)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else if (_previewError != null)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">@_previewError</MudAlert>
+                }
+                else
+                {
+                    <ScheduleCheckResultView Result="_preview" />
+                }
+            </MudItem>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudItem xs="12"><MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert></MudItem>
+            }
+            <MudItem xs="12">
+                <MudText Typo="Typo.caption" Style="opacity:.65">Setelah disimpan klik Terapkan Perubahan. Jadwal mulai dan selesai otomatis sesuai jam server.</MudText>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private RouteScheduleManagementService Schedules { get; set; } = null!;
+
+    /// <summary>Aturan yang diubah (IsEdit) atau sumber Duplikat (IsEdit = false).</summary>
+    [Parameter] public RouteScheduleDto? Item { get; set; }
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<LookupItemDto> Billers { get; set; } = new();
+    [Parameter] public List<LookupItemDto> Products { get; set; } = new();
+
+    private const string AllValue = "ALL";
+    private static readonly int[] Days = [1, 2, 3, 4, 5, 6, 7];
+
+    private readonly FormModel _m = new();
+    private bool _busy;
+    private string? _error;
+    private bool _previewBusy;
+    private string? _previewError;
+    private ScheduleCheckResultDto? _preview;
+
+    private bool EndOnly => IsEdit && Item is { CanEditEndOnly: true };
+    private string Title => IsEdit ? "Ubah Aturan Jadwal" : Item != null ? "Duplikat Aturan Jadwal" : "Tambah Aturan Jadwal";
+
+    private string RuleTypeHint => _m.RuleType switch
+    {
+        RouteScheduleCodes.Open => "Biller hanya dipakai di dalam jam ini; di luar jam dianggap tutup. Biller tanpa Jam Operasional = buka 24 jam.",
+        RouteScheduleCodes.Priority => "Biller didahulukan pada jam ini untuk produk terpilih (kosong = semua produk biller), apa pun Routing Mode produk (kecuali Static). Aturan per produk mengalahkan aturan semua produk.",
+        _ => "Biller dilewati untuk siklus baru selama jadwal berlaku (maintenance / cut-off). Bila tidak ada biller lain yang buka, transaksi ditolak X15."
+    };
+
+    // jam selesai eksklusif: 01:00-03:00 berlaku 01:00:00 s.d. 02:59:59, pukul 03:00 sudah tidak berlaku
+    private string? TimeHint => _m.TimeStart.HasValue && _m.TimeEnd.HasValue
+        ? _m.TimeEnd == _m.TimeStart ? "Sama dengan jam mulai = 24 jam"
+        : _m.TimeEnd < _m.TimeStart ? "Melewati tengah malam, berakhir jam ini keesokan harinya" : "Jadwal berakhir tepat jam ini"
+        : "Jadwal berakhir tepat jam ini";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Item != null)
+        {
+            _m.RuleName = Item.RuleName;
+            _m.RuleType = Item.RuleType;
+            _m.RoutingType = Item.RoutingType ?? AllValue;
+            _m.NodeId = Item.NodeId?.ToString();
+            _m.InstId = Item.InstId;
+            _m.Priority = Item.Priority;
+            _m.Recurrence = Item.Recurrence;
+            _m.TimeStart = Item.TimeStart;
+            _m.TimeEnd = Item.TimeEnd;
+            _m.WeekDays = RouteScheduleCodes.ParseDays(Item.DaysOfWeek).ToHashSet();
+            _m.DaysOfMonth = Item.DaysOfMonth;
+            _m.ValidFrom = Item.ValidFrom?.ToDateTime(TimeOnly.MinValue);
+            _m.ValidUntil = Item.ValidUntil?.ToDateTime(TimeOnly.MinValue);
+            _m.Notes = Item.Notes;
+
+            if (IsEdit)
+            {
+                _m.StartDate = Item.StartDt?.Date;
+                _m.StartTime = Item.StartDt?.TimeOfDay;
+                _m.EndDate = Item.EndDt?.Date;
+                _m.EndTime = Item.EndDt?.TimeOfDay;
+                await PreviewAsync();
+            }
+            else
+            {
+                // duplikat: nama/biller/cakupan disalin, tanggal diisi ulang admin
+                _m.StartTime = Item.StartDt?.TimeOfDay;
+                _m.EndTime = Item.EndDt?.TimeOfDay;
+            }
+        }
+    }
+
+    private void OnRuleTypeChanged(string value)
+    {
+        _m.RuleType = value;
+        if (value != RouteScheduleCodes.Priority) _m.Priority = null;
+    }
+
+    private void ToggleDay(int day, bool on)
+    {
+        if (on) _m.WeekDays.Add(day); else _m.WeekDays.Remove(day);
+    }
+
+    private SaveRouteScheduleRequest BuildRequest()
+    {
+        bool once = _m.Recurrence == RouteScheduleCodes.Once;
+        return new SaveRouteScheduleRequest
+        {
+            RuleName = _m.RuleName?.Trim() ?? string.Empty,
+            RuleType = _m.RuleType,
+            RoutingType = string.IsNullOrEmpty(_m.RoutingType) || _m.RoutingType == AllValue ? null : _m.RoutingType,
+            NodeId = int.TryParse(_m.NodeId, out var n) ? n : null,
+            InstId = string.IsNullOrWhiteSpace(_m.InstId) ? null : _m.InstId,
+            Priority = _m.RuleType == RouteScheduleCodes.Priority ? _m.Priority : null,
+            Recurrence = _m.Recurrence,
+            StartDt = once && _m.StartDate.HasValue ? _m.StartDate.Value.Date + (_m.StartTime ?? TimeSpan.Zero) : null,
+            EndDt = once && _m.EndDate.HasValue ? _m.EndDate.Value.Date + (_m.EndTime ?? TimeSpan.Zero) : null,
+            TimeStart = once ? null : _m.TimeStart,
+            TimeEnd = once ? null : _m.TimeEnd,
+            DaysOfWeek = _m.Recurrence == RouteScheduleCodes.Weekly ? string.Join(",", _m.WeekDays.OrderBy(d => d)) : null,
+            DaysOfMonth = _m.Recurrence == RouteScheduleCodes.Monthly ? _m.DaysOfMonth : null,
+            ValidFrom = !once && _m.ValidFrom.HasValue ? DateOnly.FromDateTime(_m.ValidFrom.Value) : null,
+            ValidUntil = !once && _m.ValidUntil.HasValue ? DateOnly.FromDateTime(_m.ValidUntil.Value) : null,
+            Notes = _m.Notes
+        };
+    }
+
+    private async Task PreviewAsync()
+    {
+        _previewBusy = true;
+        _previewError = null;
+        var (result, error) = await Schedules.PreviewAsync(BuildRequest(), IsEdit ? Item?.Id : null);
+        _preview = result;
+        _previewError = result == null ? error ?? "Dampak belum bisa dihitung." : null;
+        _previewBusy = false;
+    }
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _error = null;
+        var request = BuildRequest();
+
+        var (success, error) = IsEdit && Item != null
+            ? await Schedules.UpdateAsync(Item.Id, request)
+            : await Schedules.CreateAsync(request);
+        _busy = false;
+
+        if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+        _error = error ?? "Gagal menyimpan aturan.";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string RuleName { get; set; } = string.Empty;
+        public string RuleType { get; set; } = RouteScheduleCodes.Closed;
+        public string RoutingType { get; set; } = AllValue;
+        public string? NodeId { get; set; }
+        public string? InstId { get; set; }
+        public short? Priority { get; set; }
+        public string Recurrence { get; set; } = RouteScheduleCodes.Once;
+        public DateTime? StartDate { get; set; }
+        public TimeSpan? StartTime { get; set; }
+        public DateTime? EndDate { get; set; }
+        public TimeSpan? EndTime { get; set; }
+        public TimeSpan? TimeStart { get; set; }
+        public TimeSpan? TimeEnd { get; set; }
+        public HashSet<int> WeekDays { get; set; } = new();
+        public string? DaysOfMonth { get; set; }
+        public DateTime? ValidFrom { get; set; }
+        public DateTime? ValidUntil { get; set; }
+        public string? Notes { get; set; }
+    }
+}

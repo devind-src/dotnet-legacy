@@ -1,0 +1,150 @@
+@page "/mon-interface"
+@attribute [Authorize]
+@using SyncNetApi.Dtos.RouteMargins
+@using SyncNetWasm.Common
+@implements IDisposable
+@inject MonitoringManagementService Monitoring
+@inject SessionState Session
+@inject IDialogService DialogService
+
+<PageTitle>Interface</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Interface</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Monitoring > Realtime > Interface.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari interface" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.caption" Style="opacity:.65">Auto refresh at: @_lastRefresh</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync" title="Refresh" />
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage" T="InterfaceMonitorDto">
+        <HeaderContent>
+            <MudTh></MudTh>
+            <MudTh>Node ID</MudTh>
+            <MudTh>Node Name</MudTh>
+            <MudTh>App Name</MudTh>
+            <MudTh>Port IN</MudTh>
+            <MudTh>Port OUT</MudTh>
+            <MudTh>Inst ID</MudTh>
+            <MudTh>Last Echo</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel=""><MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@StatusColor(context)" /></MudTd>
+            <MudTd DataLabel="Node ID">@context.NodeId</MudTd>
+            <MudTd DataLabel="Node Name">@context.NodeName</MudTd>
+            <MudTd DataLabel="App Name">@context.AppName</MudTd>
+            <MudTd DataLabel="Port IN">@context.PortIn</MudTd>
+            <MudTd DataLabel="Port OUT">@context.PortOut</MudTd>
+            <MudTd DataLabel="Inst ID">@context.InstId</MudTd>
+            <MudTd DataLabel="Last Echo">@(context.LastEcho?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudTd>
+            <MudTd DataLabel="Status">@MonitoringStatus.NodeStatusLabel(context.Status, context.LastEcho)</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"
+                                   OnClick="@(() => OpenCommandDialog(context))" title="Send Command" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada interface ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<InterfaceMonitorDto> _items = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private string _lastRefresh = DateTime.Now.ToString("HH:mm:ss");
+    private Timer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+
+        // Mirrors legacy Monitoring > Interface auto-refresh cadence (every 5 minutes).
+        _timer = new Timer(_ => _ = AutoRefreshAsync(), null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    }
+
+    private async Task AutoRefreshAsync()
+    {
+        await InvokeAsync(async () =>
+        {
+            _lastRefresh = DateTime.Now.ToString("HH:mm:ss");
+            await LoadAsync();
+            StateHasChanged();
+        });
+    }
+
+    private Color StatusColor(InterfaceMonitorDto item) => MonitoringStatus.NodeStatusLabel(item.Status, item.LastEcho) switch
+    {
+        "OK" => Color.Success,
+        "Warning" => Color.Warning,
+        _ => Color.Error
+    };
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await Monitoring.GetInterfacesAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar interface.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private static readonly DialogOptions CommandDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    private async Task OpenCommandDialog(InterfaceMonitorDto item)
+    {
+        var parameters = new DialogParameters<InterfaceCommandDialog>
+        {
+            { x => x.NodeId, item.NodeId },
+            { x => x.NodeName, item.NodeName },
+            { x => x.AppName, item.AppName ?? string.Empty }
+        };
+        var dialog = await DialogService.ShowAsync<InterfaceCommandDialog>("Send Command", parameters, CommandDialogOptions);
+        await dialog.Result;
+    }
+
+    public void Dispose() => _timer?.Dispose();
+}

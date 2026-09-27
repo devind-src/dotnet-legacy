@@ -1,0 +1,174 @@
+@page "/posbase-bin"
+@attribute [Authorize]
+@inject PosnetBinManagementService BinManagement
+@inject ParticipantManagementService ParticipantManagement
+@inject LookupService LookupManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>BIN</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">BIN</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Kelola pemetaan BIN Posnet per participant.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari participant" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDialog">Tambah BIN</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_items" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>ID</MudTh>
+            <MudTh>Participant</MudTh>
+            <MudTh>Group BIN</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="ID">@context.Id</MudTd>
+            <MudTd DataLabel="Participant">@context.ParticipantId</MudTd>
+            <MudTd DataLabel="Group BIN">@GroupName(context.GroupId)</MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada BIN ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<PosnetBinDto> _items = new();
+    private List<ParticipantDto> _participants = new();
+    private List<LookupItemDto> _groups = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _participants = await ParticipantManagement.GetParticipantsAsync() ?? new();
+        _groups = await LookupManagement.GetCardGroupsAsync() ?? new();
+        await LoadAsync();
+    }
+
+    private string GroupName(int groupId) => _groups.FirstOrDefault(g => g.Key == groupId.ToString())?.Value ?? groupId.ToString();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await BinManagement.GetBinsAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar BIN.";
+            _items = new();
+        }
+        else
+        {
+            _items = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<PosnetBinFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Participants, _participants },
+            { x => x.Groups, _groups }
+        };
+        var dialog = await DialogService.ShowAsync<PosnetBinFormDialog>("Tambah BIN", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("BIN berhasil ditambahkan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(PosnetBinDto bin)
+    {
+        var parameters = new DialogParameters<PosnetBinFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Participants, _participants },
+            { x => x.Groups, _groups },
+            { x => x.Bin, bin }
+        };
+        var dialog = await DialogService.ShowAsync<PosnetBinFormDialog>("Edit BIN", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan BIN berhasil disimpan.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(PosnetBinDto bin)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus BIN",
+            $"Yakin ingin menghapus BIN #{bin.Id}? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await BinManagement.DeleteBinAsync(bin.Id);
+        if (success)
+        {
+            Snackbar.Add("BIN berhasil dihapus.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus BIN.", Severity.Error);
+        }
+    }
+}

@@ -1,0 +1,53 @@
+@page "/tools-pinblock"
+@attribute [Authorize]
+@inject ToolsService Tools
+
+<PageTitle>Pinblock Calculator</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Pinblock Calculator</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Tools > Pinblock Calculator.</MudText>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudStack Spacing="4">
+        <MudSelect T="string" Label="Pinblock Format" @bind-Value="_format" Variant="Variant.Outlined" Disabled="_busy">
+            <MudSelectItem T="string" Value="@("ISO ANSI")">ISO ANSI</MudSelectItem>
+            <MudSelectItem T="string" Value="@("DOCUTEL")">DOCUTEL</MudSelectItem>
+            <MudSelectItem T="string" Value="@("IBM")">IBM</MudSelectItem>
+            <MudSelectItem T="string" Value="@("PLUS")">PLUS</MudSelectItem>
+        </MudSelect>
+        <MudTextField T="string" Label="PAN" @bind-Value="_pan" Variant="Variant.Outlined" MaxLength="16" Disabled="_busy" />
+        <MudTextField T="string" Label="PIN" @bind-Value="_pin" Variant="Variant.Outlined" MaxLength="6" Disabled="_busy" />
+        <MudTextField T="string" Label="Key" @bind-Value="_key" Variant="Variant.Outlined" MaxLength="48" Disabled="_busy" />
+        <MudTextField T="string" Value="_result" Label="Result" Variant="Variant.Outlined" ReadOnly="true" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CalculateAsync" Disabled="_busy" Style="width:fit-content">Calculate</MudButton>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    private string _format = "ISO ANSI";
+    private string _pan = string.Empty;
+    private string _pin = string.Empty;
+    private string _key = string.Empty;
+    private string _result = string.Empty;
+    private string? _error;
+    private bool _busy;
+
+    private async Task CalculateAsync()
+    {
+        _error = null;
+        _busy = true;
+
+        var (result, error) = await Tools.CalculatePinBlockAsync(_format, _pan, _pin, _key);
+
+        _busy = false;
+
+        if (result == null) { _error = error ?? "Gagal menghitung pinblock."; return; }
+        _result = result;
+    }
+}

@@ -1,0 +1,162 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Receipt" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">Query Transaction #@TranNr</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_model == null)
+        {
+            <MudAlert Severity="Severity.Warning">Data tidak ditemukan.</MudAlert>
+        }
+        else
+        {
+            <MudTabs Elevation="0" Rounded="true" PanelClass="pt-4">
+                <MudTabPanel Text="General" Icon="@Icons.Material.Filled.Info">
+                    <MudExpansionPanels MultiExpansion="true">
+                        <MudExpansionPanel Text="GENERAL" Expanded="true">
+                            @foreach (var (label, value) in GeneralFields(_model))
+                            {
+                                <FieldRow Label="@label" Value="@value" />
+                            }
+                        </MudExpansionPanel>
+                        <MudExpansionPanel Text="AMOUNT" Expanded="true">
+                            @foreach (var (label, value) in AmountFields(_model))
+                            {
+                                <FieldRow Label="@label" Value="@value" />
+                            }
+                        </MudExpansionPanel>
+                        <MudExpansionPanel Text="DATE TIME">
+                            @foreach (var (label, value) in DateTimeFields(_model))
+                            {
+                                <FieldRow Label="@label" Value="@value" />
+                            }
+                        </MudExpansionPanel>
+                        <MudExpansionPanel Text="TERMINAL">
+                            @foreach (var (label, value) in TerminalFields(_model))
+                            {
+                                <FieldRow Label="@label" Value="@value" />
+                            }
+                        </MudExpansionPanel>
+                        <MudExpansionPanel Text="DATA REQUEST/RESPONSE">
+                            @foreach (var (label, value) in DataFields(_model))
+                            {
+                                <FieldRow Label="@label" Value="@value" />
+                            }
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Flow" Icon="@Icons.Material.Filled.Timeline">
+                    <FlowTimeline Model="_model" />
+
+                    @if (_model.Reversal != null)
+                    {
+                        <MudDivider Class="my-4" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Reversal (Tran Nr @_model.Reversal.TranNr)</MudText>
+                        <FlowTimeline Model="_model.Reversal" />
+                    }
+                </MudTabPanel>
+            </MudTabs>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Tutup</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private QueryManagementService Queries { get; set; } = null!;
+    [Parameter] public long TranNr { get; set; }
+
+    private TransactionDetailDto? _model;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _model = await Queries.GetTransactionAsync(TranNr);
+        _loading = false;
+    }
+
+    private void Close() => MudDialog.Cancel();
+
+    private static IEnumerable<(string Label, string? Value)> GeneralFields(TransactionDetailDto m) =>
+    [
+        ("Tran Nr", m.TranNr.ToString()),
+        ("Switch Key", m.SwitchKey),
+        ("State", m.State?.ToString()),
+        ("Source Node", m.SourceNode),
+        ("Dest Node", m.DestNode),
+        ("PAN", m.MaskedPan),
+        ("Pos Entry Mode", m.PosEntryMode),
+        ("Message Type", m.MsgType),
+        ("Tran Type", m.TranType),
+        ("Tran Type Ext", m.TranTypeExt),
+        ("From Acc Type", m.FromAccType),
+        ("To Acc Type", m.ToAccType),
+        ("Acq Inst ID", m.AcqInstId),
+        ("Fwd Inst ID", m.FwdInstId),
+        ("Receiving Inst ID", m.ReceivingInstId),
+        ("From Account Number", m.FromAccNumber),
+        ("To Account Number", m.ToAccNumber),
+        ("VA Account Number", m.VaAccNumber),
+        ("Trace Number", m.TraceNumber),
+        ("Reff Number", m.ReffNumber),
+        ("Source Tran", QueryStatus.SourceTranLabel(m.SourceTran)),
+        ("Auth Tran", QueryStatus.AuthTranLabel(m.AuthTran)),
+        ("Tran Reversed", m.TranReversed == "1" ? "Ya" : "Tidak"),
+        ("IP End Point", m.IpEndpoint),
+    ];
+
+    private static IEnumerable<(string Label, string? Value)> AmountFields(TransactionDetailDto m) =>
+    [
+        ("Amount Request", m.AmountTranReq?.FormatAmount()),
+        ("Amount Response", m.AmountTranRsp?.FormatAmount()),
+        ("Amount VA", m.AmountVa?.FormatAmount()),
+        ("Additional Amount", m.AdditionalAmount),
+        ("Balance", m.LastBalance?.FormatAmount()),
+        ("Fee Total", m.FeeTotal?.FormatAmount()),
+        ("Fee Switch", m.FeeSwt?.FormatAmount()),
+        ("Fee Acquirer", m.FeeAcq?.FormatAmount()),
+        ("Fee Merchant", m.FeeMer?.FormatAmount()),
+        ("Fee SubMerchant", m.FeeSub?.FormatAmount()),
+        ("Fee Biller", m.FeeBil?.FormatAmount()),
+        ("Fee Issuer", m.FeeIss?.FormatAmount()),
+        ("Currency", m.Currency),
+    ];
+
+    private static IEnumerable<(string Label, string? Value)> DateTimeFields(TransactionDetailDto m) =>
+    [
+        ("Tran Date Time", m.TranDatetime),
+        ("Date Settle Request", m.DateSettleReq),
+        ("Date Settle Response", m.DateSettleRsp),
+        ("Time Request", m.TimeReq?.ToString("yyyy-MM-dd HH:mm:ss.fff")),
+        ("Time Response", m.TimeRsp?.ToString("yyyy-MM-dd HH:mm:ss.fff")),
+    ];
+
+    private static IEnumerable<(string Label, string? Value)> TerminalFields(TransactionDetailDto m) =>
+    [
+        ("Merchant ID", m.MerchantId),
+        ("Merchant Type", m.MerchantType),
+        ("Terminal ID", m.TerminalId),
+    ];
+
+    private static IEnumerable<(string Label, string? Value)> DataFields(TransactionDetailDto m) =>
+    [
+        ("Resp Code Response", m.RespCodeRsp),
+        ("Resp Code Reversal", m.RespCodeRev),
+        ("Resp Code Advice", m.RespCodeAdv),
+        ("ICC Data", m.IccData),
+        ("Original Data", m.OrigData),
+        ("Node Data Request", m.NodeDataReq),
+        ("Node Data Response", m.NodeDataRsp),
+    ];
+}

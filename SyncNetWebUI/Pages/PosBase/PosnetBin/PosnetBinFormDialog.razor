@@ -1,0 +1,114 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.CreditCard" />
+            </MudAvatar>
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit BIN" : "Tambah BIN")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Participant" Value="_model.ParticipantId" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudSelect T="string" Label="Participant" @bind-Value="_model.ParticipantId" Required="true" RequiredError="Participant wajib dipilih" Disabled="_busy">
+                            @foreach (var p in Participants)
+                            {
+                                <MudSelectItem T="string" Value="@p.ParticipantId">@p.ParticipantId - @p.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect T="int" Label="Group BIN" @bind-Value="_model.GroupId" Required="true" RequiredError="Group wajib dipilih" Disabled="_busy">
+                        @foreach (var g in Groups)
+                        {
+                            <MudSelectItem T="int" Value="@int.Parse(g.Key)">@g.Value</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private PosnetBinManagementService BinManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<ParticipantDto> Participants { get; set; } = new();
+    [Parameter] public List<LookupItemDto> Groups { get; set; } = new();
+    [Parameter] public PosnetBinDto? Bin { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Bin != null)
+        {
+            _model.Id = Bin.Id;
+            _model.ParticipantId = Bin.ParticipantId;
+            _model.GroupId = Bin.GroupId;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit)
+        {
+            var (success, error) = await BinManagement.UpdateBinAsync(_model.Id, new UpdatePosnetBinRequest { GroupId = _model.GroupId });
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreatePosnetBinRequest { ParticipantId = _model.ParticipantId, GroupId = _model.GroupId };
+            var (success, _, error) = await BinManagement.CreateBinAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan BIN.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public int Id { get; set; }
+        public string ParticipantId { get; set; } = string.Empty;
+        public int GroupId { get; set; }
+    }
+}

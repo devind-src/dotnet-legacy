@@ -1,0 +1,223 @@
+@inject LookupService LookupManagement
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Storefront" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Sub Merchant" : "Tambah Sub Merchant")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">@_model.SubMerchantId</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2">
+            <MudTabs Elevation="0" Rounded="false" SliderColor="Color.Primary" TabPanelsClass="pa-6" Class="mt-2">
+                <MudTabPanel Text="General" ToolTip="General" Icon="@Icons.Material.Filled.Info">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Sub Merchant ID" @bind-Value="_model.SubMerchantId"
+                                          Disabled="@(IsEdit || _busy)" Required="true" RequiredError="Sub Merchant ID wajib diisi" MaxLength="15" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Sub Merchant ID Ext" @bind-Value="_model.SubMerchantIdExt"
+                                          Disabled="@(IsEdit || _busy)" MaxLength="15" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudAutocomplete T="string" Label="Merchant" @bind-Value="_model.MerchantId"
+                                             SearchFunc="SearchMerchants" ToStringFunc="@(id => MerchantLabel(id))"
+                                             Required="true" RequiredError="Merchant wajib dipilih" Disabled="_busy"
+                                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                                             CoerceValue="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Sub Merchant Name" @bind-Value="_model.Name" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker Label="Date Join" @bind-Date="_dateJoin" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSwitch T="bool" Value="_model.Active" ValueChanged="@(v => _model.Active = v)" Color="Color.Success" Disabled="_busy">
+                                @(_model.Active ? "Active" : "Not Active")
+                            </MudSwitch>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Address" ToolTip="Address" Icon="@Icons.Material.Filled.Place">
+                    <MudGrid Spacing="5">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Alamat" @bind-Value="_model.Address" MaxLength="50" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudAutocomplete T="string" Label="Kota" @bind-Value="_model.City" SearchFunc="SearchCities"
+                                             Disabled="_busy" Clearable="true"
+                                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                                             CoerceValue="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Kode Pos" @bind-Value="_model.Zipcode" MaxLength="5" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Telepon" @bind-Value="_model.Phone" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Fax" @bind-Value="_model.Fax" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Email" @bind-Value="_model.Email" InputType="InputType.Email" MaxLength="30" Disabled="_busy" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private SubMerchantManagementService SubMerchantManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public List<MerchantDto> Merchants { get; set; } = new();
+    [Parameter] public SubMerchantDto? SubMerchant { get; set; }
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private DateTime? _dateJoin;
+    private bool _busy;
+    private string? _error;
+    private List<LookupItemDto> _cities = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cities = await LookupManagement.GetCitiesAsync() ?? new();
+
+        if (IsEdit && SubMerchant != null)
+        {
+            _model.SubMerchantId = SubMerchant.SubMerchantId;
+            _model.SubMerchantIdExt = SubMerchant.SubMerchantIdExt ?? string.Empty;
+            _model.MerchantId = SubMerchant.MerchantId ?? string.Empty;
+            _model.Name = SubMerchant.Name ?? string.Empty;
+            if (DateTime.TryParseExact(SubMerchant.DateJoin, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var d))
+                _dateJoin = d;
+            _model.City = SubMerchant.City ?? string.Empty;
+            _model.Address = SubMerchant.Address ?? string.Empty;
+            _model.Zipcode = SubMerchant.Zipcode ?? string.Empty;
+            _model.Phone = SubMerchant.Phone ?? string.Empty;
+            _model.Fax = SubMerchant.Fax ?? string.Empty;
+            _model.Email = SubMerchant.Email ?? string.Empty;
+            _model.Active = SubMerchant.Active;
+        }
+    }
+
+    private string MerchantLabel(string? id) => Merchants.FirstOrDefault(m => m.MerchantId == id) is { } m ? $"{m.MerchantId} - {m.Name}" : (id ?? string.Empty);
+
+    private Task<IEnumerable<string>> SearchMerchants(string value, CancellationToken ct)
+    {
+        var results = string.IsNullOrWhiteSpace(value)
+            ? Merchants.Select(m => m.MerchantId)
+            : Merchants.Where(m => m.MerchantId.Contains(value, StringComparison.OrdinalIgnoreCase) || (m.Name ?? "").Contains(value, StringComparison.OrdinalIgnoreCase)).Select(m => m.MerchantId);
+        return Task.FromResult(results.Take(20));
+    }
+
+    private Task<IEnumerable<string>> SearchCities(string value, CancellationToken ct)
+    {
+        var results = string.IsNullOrWhiteSpace(value)
+            ? _cities.Select(c => c.Value)
+            : _cities.Where(c => c.Value.Contains(value, StringComparison.OrdinalIgnoreCase)).Select(c => c.Value);
+        return Task.FromResult(results.Take(20));
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+        var dateJoinStr = _dateJoin?.ToString("yyyyMMdd");
+
+        if (IsEdit)
+        {
+            var request = new UpdateSubMerchantRequest
+            {
+                SubMerchantIdExt = _model.SubMerchantIdExt,
+                MerchantId = _model.MerchantId,
+                Name = _model.Name,
+                City = _model.City,
+                Address = _model.Address,
+                Zipcode = _model.Zipcode,
+                Phone = _model.Phone,
+                Fax = _model.Fax,
+                Email = _model.Email,
+                Active = _model.Active,
+                DateJoin = dateJoinStr
+            };
+            var (success, error) = await SubMerchantManagement.UpdateSubMerchantAsync(_model.SubMerchantId, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateSubMerchantRequest
+            {
+                SubMerchantId = _model.SubMerchantId,
+                SubMerchantIdExt = _model.SubMerchantIdExt,
+                MerchantId = _model.MerchantId,
+                Name = _model.Name,
+                City = _model.City,
+                Address = _model.Address,
+                Zipcode = _model.Zipcode,
+                Phone = _model.Phone,
+                Fax = _model.Fax,
+                Email = _model.Email,
+                Active = _model.Active,
+                DateJoin = dateJoinStr
+            };
+            var (success, _, error) = await SubMerchantManagement.CreateSubMerchantAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan sub merchant.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string SubMerchantId { get; set; } = string.Empty;
+        public string SubMerchantIdExt { get; set; } = string.Empty;
+        public string MerchantId { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string Zipcode { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Fax { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public bool Active { get; set; } = true;
+    }
+}

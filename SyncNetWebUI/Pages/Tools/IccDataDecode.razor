@@ -1,0 +1,59 @@
+@page "/tools-iccdata-decode"
+@attribute [Authorize]
+@inject ToolsService Tools
+
+<PageTitle>ICC Data Decode</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">ICC Data Decode</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Tools > ICC Data Decode.</MudText>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudStack Spacing="4">
+        <MudTextField T="string" Label="Value" @bind-Value="_value" Variant="Variant.Outlined" Lines="3" Disabled="_busy" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="DecodeAsync" Disabled="_busy" Style="width:fit-content">Decode</MudButton>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+        }
+
+        @if (_entries.Count > 0)
+        {
+            <MudTable Items="_entries" Hover="true" Dense="true" Elevation="0" Class="mt-2">
+                <HeaderContent>
+                    <MudTh>Tag</MudTh>
+                    <MudTh>Length</MudTh>
+                    <MudTh>Value</MudTh>
+                    <MudTh>Description</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Tag">@context.Tag</MudTd>
+                    <MudTd DataLabel="Length">@context.Length</MudTd>
+                    <MudTd DataLabel="Value" Style="font-family:monospace;word-break:break-all;">@context.ValueHex</MudTd>
+                    <MudTd DataLabel="Description">@context.TagName</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    private string _value = string.Empty;
+    private List<IccTlvEntryDto> _entries = new();
+    private string? _error;
+    private bool _busy;
+
+    private async Task DecodeAsync()
+    {
+        _error = null;
+        _busy = true;
+
+        var (result, error) = await Tools.DecodeIccDataAsync(_value);
+
+        _busy = false;
+
+        if (result == null) { _error = error ?? "Gagal decode data."; _entries = new(); return; }
+        _entries = result;
+    }
+}

@@ -1,0 +1,14 @@
+<MudDivider Class="mb-2" />
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+    <MudText Typo="Typo.subtitle2">@Title</MudText>
+    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(Active ? Color.Success : Color.Default)">
+        @(Active ? "Aktif" : "Nonaktif")
+    </MudChip>
+</MudStack>
+<MudText Typo="Typo.caption" Style="opacity:.65">@Hint</MudText>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Hint { get; set; } = string.Empty;
+    [Parameter] public bool Active { get; set; }
+}

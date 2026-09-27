@@ -1,0 +1,157 @@
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.Sell" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6">@(IsEdit ? "Edit Merchant Price" : "Tambah Merchant Price")</MudText>
+                @if (IsEdit)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.65">ID @Item?.Id</MudText>
+                }
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model" Class="px-2 pt-4">
+            <MudGrid Spacing="5">
+                <MudItem xs="12" sm="6">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Merchant" @bind-Value="_model.MerchantId" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudAutocomplete T="string" Label="Merchant" @bind-Value="_model.MerchantId"
+                                         SearchFunc="SearchMerchants" Required="true" RequiredError="Merchant wajib diisi"
+                                         CoerceValue="true" Disabled="_busy" MaxLength="15" />
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    @if (IsEdit)
+                    {
+                        <MudTextField T="string" Label="Product ID" Value="@FormatProduct(_model.BillerCode)" Disabled="true" />
+                    }
+                    else
+                    {
+                        <MudAutocomplete T="string" Label="Product ID" @bind-Value="_model.BillerCode"
+                                         SearchFunc="SearchProducts" ToStringFunc="FormatProduct" Required="true" RequiredError="Product ID wajib diisi"
+                                         CoerceValue="true" Disabled="_busy" MaxLength="15" />
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int?" Label="Denom" @bind-Value="_model.Denom" Disabled="_busy" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int?" Label="Harga Jual" @bind-Value="_model.HargaJual" Disabled="_busy" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Dense="true">@_error</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_busy">Batal</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_busy">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Simpan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Inject] private ProductMerchantPriceManagementService PriceManagement { get; set; } = null!;
+    [Parameter] public bool IsEdit { get; set; }
+    [Parameter] public ProductMerchantPriceDto? Item { get; set; }
+    [Parameter] public List<LookupItemDto> Merchants { get; set; } = new();
+    [Parameter] public List<LookupItemDto> TopupProducts { get; set; } = new();
+
+    private MudForm _form = null!;
+    private readonly FormModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (IsEdit && Item != null)
+        {
+            _model.MerchantId = Item.MerchantId ?? string.Empty;
+            _model.BillerCode = Item.BillerCode;
+            _model.Denom = Item.Denom;
+            _model.HargaJual = Item.HargaJual;
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchMerchants(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? Merchants.Select(m => m.Key)
+            : Merchants.Where(m => m.Key.Contains(value, StringComparison.OrdinalIgnoreCase)
+                                    || m.Value.Contains(value, StringComparison.OrdinalIgnoreCase))
+                       .Select(m => m.Key);
+        return Task.FromResult(matches);
+    }
+
+    private Task<IEnumerable<string>> SearchProducts(string? value, CancellationToken ct)
+    {
+        var matches = string.IsNullOrWhiteSpace(value)
+            ? TopupProducts.Select(p => p.Key)
+            : TopupProducts.Where(p => p.Key.Contains(value, StringComparison.OrdinalIgnoreCase)
+                                        || p.Value.Contains(value, StringComparison.OrdinalIgnoreCase))
+                            .Select(p => p.Key);
+        return Task.FromResult(matches);
+    }
+
+    private string? FormatProduct(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return code;
+        var match = TopupProducts.FirstOrDefault(p => p.Key == code);
+        return match == null ? code : $"{match.Key} — {match.Value}";
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _busy = true;
+        _error = null;
+
+        if (IsEdit && Item != null)
+        {
+            var request = new UpdateProductMerchantPriceRequest { Denom = _model.Denom, HargaJual = _model.HargaJual };
+            var (success, error) = await PriceManagement.UpdatePriceAsync(Item.Id, request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menyimpan perubahan.";
+        }
+        else
+        {
+            var request = new CreateProductMerchantPriceRequest { MerchantId = _model.MerchantId ?? string.Empty, BillerCode = _model.BillerCode ?? string.Empty, Denom = _model.Denom, HargaJual = _model.HargaJual };
+            var (success, _, error) = await PriceManagement.CreatePriceAsync(request);
+            _busy = false;
+
+            if (success) { MudDialog.Close(DialogResult.Ok(true)); return; }
+            _error = error ?? "Gagal menambahkan merchant price.";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class FormModel
+    {
+        public string? MerchantId { get; set; }
+        public string? BillerCode { get; set; }
+        public int? Denom { get; set; }
+        public int? HargaJual { get; set; }
+    }
+}

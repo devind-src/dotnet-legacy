@@ -1,0 +1,184 @@
+@page "/usermgmt-role"
+@attribute [Authorize]
+@inject RoleManagementService RoleManagement
+@inject MenuManagementService MenuManagement
+@inject SessionState Session
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Role Management</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Role Management</MudText>
+<MudText Typo="Typo.body1" Style="opacity:.65" Class="mb-6">Kelola role dan hak akses menu.</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2">
+        <MudTextField T="string" @bind-Value="_filter" Label="Cari role" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="OnSearchKeyDown" Class="flex-grow-1" Style="max-width:320px;" />
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Search" OnClick="LoadRolesAsync" title="Cari" />
+            @if (Session.UserManagementPermissions.CanAdd)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AddModerator"
+                           OnClick="OpenCreateDialog">Tambah Role</MudButton>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="_roles" Hover="true" Dense="true" Elevation="1" @bind-RowsPerPage="_rowsPerPage">
+        <HeaderContent>
+            <MudTh>Role Name</MudTh>
+            <MudTh>Deskripsi</MudTh>
+            <MudTh>Add</MudTh>
+            <MudTh>Edit</MudTh>
+            <MudTh>Delete</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Aksi</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Role Name">@context.RoleName</MudTd>
+            <MudTd DataLabel="Deskripsi">@context.RoleDesc</MudTd>
+            <MudTd DataLabel="Add">@(context.FlagAdd ? "Ya" : "Tidak")</MudTd>
+            <MudTd DataLabel="Edit">@(context.FlagEdit ? "Ya" : "Tidak")</MudTd>
+            <MudTd DataLabel="Delete">@(context.FlagDelete ? "Ya" : "Tidak")</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Color="@(context.Status == "1" ? Color.Success : Color.Default)">
+                    @(context.Status == "1" ? "Aktif" : "Nonaktif")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Aksi">
+                @if (Session.UserManagementPermissions.CanEdit)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" title="Edit" />
+                }
+                @if (Session.UserManagementPermissions.CanDelete)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" title="Hapus" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Style="opacity:.65">Tidak ada role ditemukan.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private List<RoleDto> _roles = new();
+    private List<MenuDto> _menus = new();
+    private string _filter = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+    private int _rowsPerPage = 10;
+    private static readonly DialogOptions WideDialogOptions = new() { MaxWidth = MaxWidth.Large, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _menus = await MenuManagement.GetMenusAsync() ?? new();
+        await LoadRolesAsync();
+    }
+
+    private async Task LoadRolesAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var result = await RoleManagement.GetRolesAsync(_filter);
+        if (result == null)
+        {
+            _error = "Gagal memuat daftar role.";
+            _roles = new();
+        }
+        else
+        {
+            _roles = result;
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadRolesAsync();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<RoleFormDialog>
+        {
+            { x => x.IsEdit, false },
+            { x => x.Menus, _menus }
+        };
+        var dialog = await DialogService.ShowAsync<RoleFormDialog>("Tambah Role", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Role berhasil ditambahkan.", Severity.Success);
+            await LoadRolesAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(RoleDto role)
+    {
+        var detail = await RoleManagement.GetRoleAsync(role.RoleName);
+        if (detail == null)
+        {
+            Snackbar.Add("Gagal memuat detail role.", Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters<RoleFormDialog>
+        {
+            { x => x.IsEdit, true },
+            { x => x.Menus, _menus },
+            { x => x.Role, detail }
+        };
+        var dialog = await DialogService.ShowAsync<RoleFormDialog>("Edit Role", parameters, WideDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Perubahan role berhasil disimpan.", Severity.Success);
+            await LoadRolesAsync();
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(RoleDto role)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Hapus Role",
+            $"Yakin ingin menghapus role '{role.RoleName}'? Tindakan ini tidak bisa dibatalkan.",
+            yesText: "Hapus", cancelText: "Batal");
+
+        if (confirmed != true) return;
+
+        var (success, error) = await RoleManagement.DeleteRoleAsync(role.RoleName);
+        if (success)
+        {
+            Snackbar.Add("Role berhasil dihapus.", Severity.Success);
+            await LoadRolesAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Gagal menghapus role.", Severity.Error);
+        }
+    }
+}

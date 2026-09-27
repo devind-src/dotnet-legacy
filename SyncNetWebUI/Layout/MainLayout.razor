@@ -1,0 +1,132 @@
+@inherits LayoutComponentBase
+@implements IAsyncDisposable
+@inject AuthService AuthService
+@inject ThemeState Theme
+@inject NavigationManager Navigation
+@inject IdleTimerService IdleTimer
+@inject IDialogService DialogService
+@inject AppVersionCheckService AppVersionCheck
+@inject ISnackbar Snackbar
+
+<MudLayout>
+    <MudAppBar Elevation="1" Color="Color.Primary">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
+        <MudText Typo="Typo.h6" Class="ml-2">Dashboard</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@(Theme.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                        Color="Color.Inherit" OnClick="@Theme.Toggle" />
+        <AuthorizeView Context="authContext">
+            <Authorized>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="ml-2">
+                    <MudAvatar Size="Size.Small" Color="Color.Secondary">@InitialFor(authContext.User.Identity?.Name)</MudAvatar>
+                    <MudText Typo="Typo.body2" Class="d-none d-sm-flex mr-1">@authContext.User.Identity?.Name</MudText>
+                    @* MudMenu's ActivatorContent never opens in this MudBlazor version (its
+                       popover registers but ChildContent is never rendered into it — verified
+                       via DOM inspection, isOpened stays false on every click) even though
+                       MudSelect/MudDialog popovers elsewhere in this app work fine. Two plain
+                       MudIconButtons sidestep it entirely and use the exact same
+                       button+OnClick pattern already proven to work for the theme/drawer
+                       toggles above. *@
+                    <MudTooltip Text="Ganti Password">
+                        <MudIconButton Icon="@Icons.Material.Filled.LockReset" Color="Color.Inherit"
+                                       OnClick="@(() => Navigation.NavigateTo("/profile/change-password"))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Logout">
+                        <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" OnClick="LogoutAsync" />
+                    </MudTooltip>
+                </MudStack>
+            </Authorized>
+        </AuthorizeView>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="2">
+        <MudDrawerHeader Class="d-flex align-center gap-3">
+            <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Primary" Style="font-size:2rem;" />
+            <MudText Typo="Typo.h6" Style="font-weight:700;">SyncNet</MudText>
+        </MudDrawerHeader>
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private IDialogReference? _idleDialog;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        IdleTimer.WarningShow += OnIdleWarningShow;
+        IdleTimer.TimedOut += OnIdleTimedOutAsync;
+        await IdleTimer.StartAsync();
+
+        AppVersionCheck.UpdateAvailable += OnAppUpdateAvailable;
+        await AppVersionCheck.StartAsync();
+    }
+
+    private void OnAppUpdateAvailable()
+    {
+        _ = InvokeAsync(() =>
+        {
+            Snackbar.Add("Versi baru tersedia.", Severity.Info, config =>
+            {
+                config.RequireInteraction = true;
+                config.Action = "Reload";
+                config.ActionColor = Color.Primary;
+                config.OnClick = _ =>
+                {
+                    Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+                    return Task.CompletedTask;
+                };
+            });
+            StateHasChanged();
+        });
+    }
+
+    private void OnIdleWarningShow()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            var parameters = new DialogParameters<IdleWarningDialog> { { x => x.IdleTimer, IdleTimer } };
+            var options = new DialogOptions { BackdropClick = false, CloseButton = false };
+            _idleDialog = await DialogService.ShowAsync<IdleWarningDialog>("Peringatan Sesi", parameters, options);
+            await _idleDialog.Result;
+            _idleDialog = null;
+        });
+    }
+
+    private async Task OnIdleTimedOutAsync()
+    {
+        _idleDialog?.Close();
+        _idleDialog = null;
+
+        var returnUrl = Uri.EscapeDataString(Navigation.ToBaseRelativePath(Navigation.Uri));
+        await AuthService.LogoutAsync();
+        await InvokeAsync(() => Navigation.NavigateTo($"/login?reason=idle&returnUrl={returnUrl}", forceLoad: false));
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: false);
+    }
+
+    private static string InitialFor(string? name) =>
+        string.IsNullOrEmpty(name) ? "?" : name[..1].ToUpperInvariant();
+
+    public async ValueTask DisposeAsync()
+    {
+        IdleTimer.WarningShow -= OnIdleWarningShow;
+        IdleTimer.TimedOut -= OnIdleTimedOutAsync;
+        await IdleTimer.StopAsync();
+
+        AppVersionCheck.UpdateAvailable -= OnAppUpdateAvailable;
+        await AppVersionCheck.DisposeAsync();
+    }
+}

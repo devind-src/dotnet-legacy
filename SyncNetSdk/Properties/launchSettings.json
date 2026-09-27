@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "SyncNetSdk": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:62727;http://localhost:62728"
+    }
+  }
+}

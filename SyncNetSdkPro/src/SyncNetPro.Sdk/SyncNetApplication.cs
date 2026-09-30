@@ -79,7 +79,8 @@ public static class SyncNetServiceCollectionExtensions
         services.TryAddSingleton<INodeRegistry, NodeRegistry>();
         services.TryAddSingleton<ICoreCorrelationKeyProvider, CoreSwitchKeyProvider>();
 
-        services.TryAddSingleton<TraceWriter>();
+        services.TryAddSingleton(sp => new TraceWriter(
+            sp.GetRequiredService<IOptions<SyncNetOptions>>(), sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<CoreEnvironment>()));
         services.TryAddSingleton<ITraceWriter>(sp => sp.GetRequiredService<TraceWriter>());
         services.TryAddSingleton<TraceSinkFactory>();
         services.TryAddSingleton<StartupSignal>();

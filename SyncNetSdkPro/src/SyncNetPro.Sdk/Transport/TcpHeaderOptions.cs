@@ -47,6 +47,10 @@ public sealed record TcpHeaderOptions(
     TcpEndianMode Endian = TcpEndianMode.BigEndian,
     int MaxPayloadLength = ushort.MaxValue)
 {
-    /// <summary>Framing kanal Core, command port, dan Log Services: 2 byte biner big-endian, exclude.</summary>
-    public static TcpHeaderOptions Default { get; } = new();
+    /// <summary>
+    /// Framing kanal Core, command port, dan Log Services: 2 byte biner big-endian, exclude.
+    /// Selalu instance baru — deserializer (mis. Newtonsoft) dapat mengisi properti <c>init</c> lewat reflection,
+    /// sehingga instance bersama bisa berubah tanpa disadari.
+    /// </summary>
+    public static TcpHeaderOptions Default => new();
 }

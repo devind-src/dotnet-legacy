@@ -45,6 +45,19 @@ public class LengthPrefixCodecTests
     }
 
     [Fact]
+    public void Codec_is_not_affected_by_later_changes_to_its_options()
+    {
+        // Regresi: Newtonsoft dapat mengisi properti init lewat reflection pada objek yang sudah ada.
+        var options = new TcpHeaderOptions();
+        var codec = new LengthPrefixCodec(options);
+        Newtonsoft.Json.JsonConvert.PopulateObject("""{ "HeaderType": "Bcd2Byte" }""", options);
+
+        Assert.Equal(TcpHeaderType.Bcd2Byte, options.HeaderType);
+        Assert.Equal(TcpHeaderType.Binary2Byte, codec.Options.HeaderType);
+        Assert.NotSame(TcpHeaderOptions.Default, TcpHeaderOptions.Default);
+    }
+
+    [Fact]
     public void Legacy_golden_covers_all_variants() => Assert.Equal(192, LegacyHeaders().Count);
 
     [Theory]
@@ -135,6 +148,38 @@ public class TcpFrameClientServerTests
         await using var client = new TcpFrameClient("127.0.0.1", 1, LengthPrefixCodec.Default, new TcpFrameClientOptions(), NullLogger.Instance);
 
         await Assert.ThrowsAsync<NotConnectedException>(() => client.SendAsync("x"u8.ToArray()));
+    }
+
+    [Fact]
+    public async Task Second_listener_on_same_port_fails_instead_of_sharing_connections()
+    {
+        // SO_REUSEPORT (efek ReuseAddress di Linux) membuat dua listener diam-diam berbagi port.
+        await using var first = new TcpFrameServer(new IPEndPoint(IPAddress.Loopback, 0), LengthPrefixCodec.Default, new TcpFrameServerOptions(), NullLogger.Instance);
+        await first.StartAsync();
+        await using var second = new TcpFrameServer(first.LocalEndPoint, LengthPrefixCodec.Default, new TcpFrameServerOptions(), NullLogger.Instance);
+
+        await Assert.ThrowsAsync<System.Net.Sockets.SocketException>(() => second.StartAsync());
+    }
+
+    [Fact]
+    public async Task Listener_can_restart_on_same_port_while_old_connections_linger()
+    {
+        var server = new TcpFrameServer(new IPEndPoint(IPAddress.Loopback, 0), LengthPrefixCodec.Default, new TcpFrameServerOptions(), NullLogger.Instance)
+        {
+            FrameReceived = (c, p) => c.SendAsync(p),
+        };
+        await server.StartAsync();
+        int port = server.LocalEndPoint.Port;
+        await using (var client = new TcpFrameClient("127.0.0.1", port, LengthPrefixCodec.Default, new TcpFrameClientOptions { AutoReconnect = false }, NullLogger.Instance))
+        {
+            await client.StartAsync();
+            await Wait.UntilAsync(() => client.IsConnected, "terkoneksi");
+            await client.SendAsync("x"u8.ToArray());
+        }
+
+        await server.StopAsync(); // sisi server menutup lebih dulu → TIME_WAIT
+        await using var restarted = new TcpFrameServer(new IPEndPoint(IPAddress.Loopback, port), LengthPrefixCodec.Default, new TcpFrameServerOptions(), NullLogger.Instance);
+        await restarted.StartAsync();
     }
 
     [Fact]

@@ -81,33 +81,41 @@ File JSON/YAML di `simcore/scenarios/` proyek interface (dibuat oleh template):
 ## 4. Contoh Pemakaian
 
 ```bash
-# jalankan simcore dengan konfigurasi node dari proyek interface
-syncnet-simcore up --config simcore/simcore.json
+# buat simcore/simcore.json + contoh skenario
+syncnet-simcore init --node BILLER_ABC
 
-# kirim transaksi ke interface (Core → interface, kanal Sink)
-syncnet-simcore send --node BILLER_ABC --scenario inquiry-sukses
+# jalankan simcore + Web UI (http://127.0.0.1:5080)
+syncnet-simcore up -c simcore/simcore.json -s simcore/scenarios
 
-# jalankan seluruh skenario sebagai regression test
-syncnet-simcore run --scenario simcore/scenarios --report junit.xml
+# jalankan satu skenario pada instance 'up' yang sedang berjalan
+syncnet-simcore send --scenario inquiry-sukses
+
+# perintah ke command port interface
+syncnet-simcore cmd -p 17000 VERSION
+
+# jalankan seluruh skenario sebagai regression test (exit code 1 bila gagal)
+syncnet-simcore run -c simcore/simcore.json -s simcore/scenarios --report junit.xml
 ```
 
-Unit test interface (in-process):
+Unit test interface (in-process, paket `SyncNetPro.Sdk.Testing`):
 
 ```csharp
 [Fact]
 public async Task Inquiry_is_forwarded_and_mapped()
 {
-    await using var core   = await SimCore.StartAsync(SimCoreOptions.FromFile("simcore/simcore.json"));
-    await using var biller = await FakeIsoRemote.StartAsync(spec: new BillerAbcIsoSpec())
-        .Reply(req => req.ToResponse().Set(39, "00").Set(48, "NAMA PELANGGAN"));
-    await using var app    = await InterfaceHost.StartAsync<BillerAbcInterface>(core, biller);
+    await using SimCore core = await SimCore.StartAsync(SimCoreOptions.Load("simcore/simcore.json"));
+    await using var app = await SimInterfaceHost.StartAsync<BillerAbcInterface>(core);
 
-    CoreResponse rsp = await core.Sink("BILLER_ABC").SendAsync(Scenarios.Inquiry());
+    SimResult result = await core.SendAsync("BILLER_ABC", new CoreRequest { /* ... */ });
 
-    Assert.Equal("00", rsp.RespCode);
+    Assert.Equal(SimOutcome.Responded, result.Outcome);
+    Assert.Equal("00", result.Response!.ResponseCode);
     Assert.Empty(core.ContractWarnings);
 }
 ```
+
+`SimInterfaceHost` menjalankan host interface sungguhan (DI, kanal Core, command port, trace ke
+Log Services SimCore) dengan port dari `SimCore` dan baru kembali setelah kedua sisi terkoneksi.
 
 ## 5. Arsitektur SimCore
 
@@ -136,3 +144,20 @@ public async Task Inquiry_is_forwarded_and_mapped()
 - Kode respons, routing, fee, dan otorisasi Core tidak disimulasikan (hanya dari skenario).
 - Kolom `private_data` milik Core (mis. `mode_timeout`) diisi nilai default yang dapat diatur di skenario.
 - Uji performa/ketahanan final tetap harus dilakukan terhadap Core sebenarnya di UAT.
+
+## 7. Status Implementasi (Fase 4)
+
+| Fitur desain | Status |
+|--------------|--------|
+| Listener Sink/Source, framing, korelasi, duplikat 94, link down 91 | ✅ `SimCore` |
+| Timeout + auto reversal (`msgtype 0400`, `original_data`), late/unmatched response | ✅ |
+| Validasi kontrak (properti tidak dikenal → saran `additional_data`, tipe, field kunci, `resp_code`/`authorized_by`) | ✅ `ContractValidator` |
+| Mode respons Source | ✅ `Fixed` (termasuk delay), `Rules` (per `tran_type`/`tran_type_ext`/nominal), `None` (uji timeout). Mode `echo` tercakup oleh `Fixed` (response dibuat dari request via `CoreResponse.From`) |
+| Command client, Log Services receiver | ✅ |
+| Konfigurasi node | ✅ file `Json` (`NodeSource=Json`, lihat `samples/Sample.Outbound/appsettings.Development.json`). NodeSource via HTTP SimCore: backlog |
+| Remote stub TCP / HTTP | ✅ `RemoteStub` (balasan tetap/per pola) |
+| Skenario JSON, placeholder `{{stan}}`, `{{now:…}}`, `{{rrn}}`, `{{random:n}}`, `{{env:…}}`, `expect`, JUnit | ✅ `ScenarioRunner` |
+| Web UI | ✅ Minimal API + halaman statis + Server-Sent Events (lebih ringan daripada Blazor/SignalR; tanpa dependensi tambahan) |
+| Container | ✅ `tools/SyncNetPro.SimCore/Dockerfile` (publikasi image di CI: backlog) |
+| Skenario YAML, record & replay, HSM stub, status node dari interface | ⏳ backlog (HSM stub bersama modul `Hsm` fase 5) |
+| Uji kesetaraan `ApiBillerJson` lama terhadap SimCore | ⏳ butuh direktori `Core/Bin` lama (SDK lama membaca config Core sejak konstruktor); dijalankan di lingkungan UAT |

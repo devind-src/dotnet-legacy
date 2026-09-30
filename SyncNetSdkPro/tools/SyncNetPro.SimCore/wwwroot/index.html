@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SyncNet SimCore</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%232f6fed%22/%3E%3Cpath d=%22M4 5h8M4 8h8M4 11h5%22 stroke=%22white%22 stroke-width=%221.6%22/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #5d6677; --border: #dde1e7;
+    --accent: #2457d6; --ok: #1b7f4b; --bad: #c0392b; --warn: #b7791f; --code: #f1f3f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #12151b; --panel: #1a1e26; --text: #e6e9ef; --muted: #9aa3b2; --border: #2b313c;
+      --accent: #7aa2ff; --ok: #4cc38a; --bad: #ff7b6b; --warn: #f0b85a; --code: #222834; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin: 0; }
+  header .sub { color: var(--muted); }
+  main { display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 16px; padding: 16px 20px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+  section { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 16px; min-width: 0; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+  .up { background: var(--ok); } .down { background: var(--bad); } .na { background: var(--border); }
+  select, input, textarea, button { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+  textarea { width: 100%; min-height: 220px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+  button { background: var(--accent); color: #fff; border: 0; cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
+  .log { max-height: 60vh; overflow: auto; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+  .entry { border-bottom: 1px solid var(--border); padding: 6px 2px; }
+  .entry .meta { color: var(--muted); }
+  .entry pre { margin: 4px 0 0; white-space: pre-wrap; word-break: break-all; background: var(--code); padding: 6px; border-radius: 4px; display: none; }
+  .entry.open pre { display: block; }
+  .tag { font-size: 11px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border); margin-left: 4px; }
+  .warn { color: var(--warn); } .bad { color: var(--bad); } .ok { color: var(--ok); }
+  .tabs button { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .tabs button.active { color: var(--accent); border-color: var(--accent); }
+  #result { white-space: pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; background: var(--code); padding: 8px; border-radius: 6px; max-height: 260px; overflow: auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>SyncNet SimCore</h1>
+  <span class="sub" id="app">memuat…</span>
+</header>
+<main>
+  <div>
+    <section>
+      <h2>Node</h2>
+      <table id="nodes"><thead><tr><th>Node</th><th>Sink (out)</th><th>Source (in)</th><th>Diterima</th></tr></thead><tbody></tbody></table>
+      <p class="sub" id="extra"></p>
+    </section>
+    <section>
+      <h2>Kirim request ke interface</h2>
+      <div class="row">
+        <select id="node"></select>
+        <button class="secondary" data-tpl="INQ">INQ</button>
+        <button class="secondary" data-tpl="PAY">PAY</button>
+        <button class="secondary" data-tpl="ADV">ADV</button>
+        <button class="secondary" data-tpl="REV">REV</button>
+      </div>
+      <textarea id="request" spellcheck="false"></textarea>
+      <div class="row"><button id="send">Kirim</button><span class="sub">placeholder: {{stan}}, {{now:MMddHHmmss}}, {{rrn}}, {{random:n}}</span></div>
+      <div id="result">—</div>
+    </section>
+    <section>
+      <h2>Skenario</h2>
+      <div id="scenarios" class="sub">—</div>
+    </section>
+    <section>
+      <h2>Command port interface</h2>
+      <div class="row"><input id="cmd" placeholder="VERSION" style="flex:1"><button id="sendCmd">Kirim</button></div>
+      <div id="cmdResult" class="sub"></div>
+    </section>
+  </div>
+  <div>
+    <section>
+      <div class="row tabs"><button class="active" data-tab="messages">Pesan</button><button data-tab="traces">Trace (Log Services)</button><button class="secondary" id="clear">Bersihkan tampilan</button></div>
+      <div class="log" id="messages"></div>
+      <div class="log" id="traces" hidden></div>
+    </section>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const api = async (path, body) => {
+  const r = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  return r.json();
+};
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const dot = (has, ok) => `<span class="dot ${!has ? 'na' : ok ? 'up' : 'down'}"></span>`;
+
+const templates = {
+  INQ: { msgtype: '0200', tran_type: 'INQ', tran_type_ext: 'PLNPOST', amount_tran: 0 },
+  PAY: { msgtype: '0200', tran_type: 'PAY', tran_type_ext: 'PLNPOST', amount_tran: 150000 },
+  ADV: { msgtype: '0220', tran_type: 'ADV', tran_type_ext: 'PLNPOST', amount_tran: 150000 },
+  REV: { msgtype: '0400', tran_type: 'REV', tran_type_ext: 'PLNPOST', amount_tran: 150000 },
+};
+function setTemplate(t) {
+  $('#request').value = JSON.stringify({ ...templates[t], trace_number: '{{stan}}', datetime_tran: '{{now:MMddHHmmss}}',
+    terminal_id: 'TERM0001', merchant_id: 'MERCHANT01', refnum: '{{rrn}}', to_acc_number: '532110000001' }, null, 2);
+}
+document.querySelectorAll('[data-tpl]').forEach(b => b.onclick = () => setTemplate(b.dataset.tpl));
+setTemplate('INQ');
+
+async function refresh() {
+  const s = await api('/api/status');
+  $('#app').textContent = `${s.appName} · ${s.contractWarnings} peringatan kontrak`;
+  $('#nodes tbody').innerHTML = s.nodes.map(n => `<tr><td>${esc(n.name)} <span class="tag">${n.category}</span></td>
+    <td>${dot(n.sinkPort, n.sinkConnected)}${n.sinkPort || '-'}</td><td>${dot(n.sourcePort, n.sourceConnected)}${n.sourcePort || '-'}</td><td>${n.received}</td></tr>`).join('');
+  const sel = $('#node');
+  if (sel.options.length !== s.nodes.length) sel.innerHTML = s.nodes.map(n => `<option>${esc(n.name)}</option>`).join('');
+  const extras = [];
+  if (s.logServicesPort) extras.push(`Log Services: port ${s.logServicesPort}`);
+  if (s.commandTarget) extras.push(`Command interface: ${s.commandTarget.host}:${s.commandTarget.port}`);
+  s.stubs.forEach(x => extras.push(`Stub ${x.name} (${x.type}) port ${x.port}: ${x.requests} request`));
+  $('#extra').textContent = extras.join(' · ');
+}
+
+$('#send').onclick = async () => {
+  let request;
+  try { request = JSON.parse($('#request').value); } catch (e) { $('#result').textContent = 'JSON tidak valid: ' + e.message; return; }
+  $('#result').textContent = 'menunggu…';
+  const r = await api('/api/send', { node: $('#node').value, request });
+  $('#result').innerHTML = r.error ? `<span class="bad">${esc(r.error)}</span>`
+    : `<b class="${r.outcome === 'Responded' ? 'ok' : 'bad'}">${r.outcome}</b> · ${r.elapsedMs} ms` +
+      (r.warnings?.length ? `<div class="warn">${r.warnings.map(esc).join('<br>')}</div>` : '') +
+      (r.response ? '\n' + esc(JSON.stringify(r.response, null, 2)) : '');
+};
+
+$('#sendCmd').onclick = async () => {
+  const r = await api('/api/command', { text: $('#cmd').value || 'VERSION' });
+  $('#cmdResult').innerHTML = r.error ? `<span class="bad">${esc(r.error)}</span>` : `balasan: <b>${esc(r.reply)}</b>`;
+};
+
+async function loadScenarios() {
+  const list = await api('/api/scenarios');
+  if (!list.length) { $('#scenarios').textContent = 'Tidak ada skenario (jalankan dengan --scenarios).'; return; }
+  $('#scenarios').innerHTML = list.map(s => `<div class="row"><button class="secondary" data-run="${esc(s.name)}">Jalankan</button> ${esc(s.name)} <span class="tag">${esc(s.node ?? (s.command ? 'command' : ''))}</span></div>`).join('')
+    + '<div class="row"><button data-run="">Jalankan semua</button></div><div id="scenarioResult"></div>';
+  document.querySelectorAll('[data-run]').forEach(b => b.onclick = async () => {
+    const res = await api('/api/scenarios/run', b.dataset.run ? { name: b.dataset.run } : {});
+    $('#scenarioResult').innerHTML = res.error ? `<span class="bad">${esc(res.error)}</span>` : res.map(r =>
+      `<div><b class="${r.passed ? 'ok' : 'bad'}">${r.passed ? 'PASS' : 'FAIL'}</b> ${esc(r.name)} ${r.failures.map(f => `<div class="warn">- ${esc(f)}</div>`).join('')}</div>`).join('');
+  });
+}
+
+function addEntry(target, html, json) {
+  const div = document.createElement('div');
+  div.className = 'entry';
+  div.innerHTML = html + `<pre>${esc(json)}</pre>`;
+  div.onclick = () => div.classList.toggle('open');
+  target.prepend(div);
+  while (target.children.length > 500) target.lastChild.remove();
+}
+const pretty = s => { try { return JSON.stringify(JSON.parse(s), null, 2); } catch { return s; } };
+function showMessage(m) {
+  const arrow = m.direction === 'ToInterface' ? '→ interface' : '← interface';
+  const parsed = (() => { try { return JSON.parse(m.json); } catch { return {}; } })();
+  const summary = [parsed.msgtype, parsed.tran_type, parsed.trace_number, parsed.resp_code && ('rc ' + parsed.resp_code)].filter(Boolean).join(' · ');
+  addEntry($('#messages'),
+    `<span class="meta">${new Date(m.time).toLocaleTimeString()}</span> <b>${esc(m.node)}</b> <span class="tag">${m.channel}</span> ${arrow} ${esc(summary)}` +
+    (m.note ? ` <span class="warn">${esc(m.note)}</span>` : '') +
+    (m.warnings.length ? `<div class="warn">${m.warnings.map(esc).join('<br>')}</div>` : ''), pretty(m.json));
+}
+function showTrace(t) {
+  const p = (() => { try { return JSON.parse(t.json); } catch { return {}; } })();
+  addEntry($('#traces'), `<span class="meta">${new Date(t.time).toLocaleTimeString()}</span> <b>${esc(p.FileName)}</b> <span class="tag">${esc(p.LogType)}</span> ${esc(p.Title)}`, p.Detail ?? '');
+}
+
+document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('active', x === b));
+  $('#messages').hidden = b.dataset.tab !== 'messages';
+  $('#traces').hidden = b.dataset.tab !== 'traces';
+});
+$('#clear').onclick = () => { $('#messages').innerHTML = ''; $('#traces').innerHTML = ''; };
+
+(async () => {
+  (await api('/api/messages?limit=100')).forEach(showMessage);
+  (await api('/api/traces?limit=100')).forEach(showTrace);
+  const events = new EventSource('/api/events');
+  events.addEventListener('message', e => showMessage(JSON.parse(e.data)));
+  events.addEventListener('trace', e => showTrace(JSON.parse(e.data)));
+  await refresh();
+  await loadScenarios();
+  setInterval(refresh, 2000);
+})();
+</script>
+</body>
+</html>

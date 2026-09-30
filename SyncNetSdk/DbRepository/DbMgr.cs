@@ -9,7 +9,8 @@ using System.Threading.Tasks;
 
 namespace SyncNet.DbRepository
 {
-    public class DbMgr : SyncNet.Routing.Failover.ISupplierStatusStore, SyncNet.Routing.Schedule.IRoutingScheduleStore
+    public class DbMgr : SyncNet.Routing.Failover.ISupplierStatusStore, SyncNet.Routing.Schedule.IRoutingScheduleStore,
+        SyncNet.Routing.Commitment.ICommitmentStore
     {
         public enum EnumStatusApp { DOWN = 0, UP = 1 }
 
@@ -570,6 +571,165 @@ namespace SyncNet.DbRepository
             v == DBNull.Value || v == null
                 ? []
                 : v.ToString().Split(',').Select(s => int.TryParse(s.Trim(), out var d) ? d : 0).Where(d => d > 0).ToList();
+        #endregion
+
+        #region Volume & Tiering
+        // aturan Volume & Tiering aktif (Fase 5). aturan yang berakhir sejak awal bulan lalu ikut dimuat
+        // untuk pemeriksaan target terlewat; SDK sendiri menyaring masa berlaku per hari.
+        public async Task<List<CommitmentRuleModel>> GetCommitmentRules()
+        {
+            var res = new List<CommitmentRuleModel>();
+            var today = DateTime.Today;
+
+            string query = @"SELECT c.id,c.rule_name,c.rule_type,c.routing_type,sn.node_name,c.inst_id,c.metric,c.period_type,
+                c.threshold_value,c.warn_pct,c.valid_from,c.valid_until,c.created_dt
+                FROM sw_routes_commitment c
+                JOIN sw_nodes sn ON sn.node_id=c.node_id
+                WHERE c.status='1'
+                  AND (c.valid_until IS NULL OR c.valid_until >= @from::date)";
+
+            var tbl = await GetRecordsAsync(query, new { from = new DateTime(today.Year, today.Month, 1).AddMonths(-1) });
+            foreach (DataRow row in tbl.Rows)
+            {
+                res.Add(new CommitmentRuleModel
+                {
+                    Id = Convert.ToInt32(row["id"]),
+                    Name = row["rule_name"].ToString(),
+                    RuleType = row["rule_type"].ToString(),
+                    RoutingType = row["routing_type"].ToString(),
+                    NodeName = row["node_name"].ToString(),
+                    InstId = row["inst_id"] == DBNull.Value ? null : row["inst_id"].ToString(),
+                    Metric = row["metric"].ToString(),
+                    PeriodType = row["period_type"].ToString(),
+                    Threshold = Convert.ToDecimal(row["threshold_value"]),
+                    WarnPct = row["warn_pct"] == DBNull.Value ? null : Convert.ToInt16(row["warn_pct"]),
+                    ValidFrom = ToDate(row["valid_from"]),
+                    ValidUntil = ToDate(row["valid_until"]),
+                    CreatedDt = row["created_dt"] == DBNull.Value ? null : Convert.ToDateTime(row["created_dt"])
+                });
+            }
+
+            return res;
+        }
+
+        // saklar ON/OFF global (M507). tanpa baris = OFF; tabel belum ada = exception (SDK menganggap OFF)
+        public async Task<bool> IsCommitmentActive()
+        {
+            string value = await GetFieldValueAsync("SELECT is_active FROM sw_routes_commitment_config WHERE id = 1");
+            return value == "1";
+        }
+
+        // agregat per biller + produk sejak awal bulan lalu: hari ini, kemarin, bulan ini, bulan lalu (C27).
+        // memakai PK (volume_date di depan); hasil = biller beraturan × produk, bukan baris harian.
+        public async Task<List<VolumeTotalModel>> GetVolumeTotals(DateTime today, IReadOnlyCollection<string> nodeNames)
+        {
+            var res = new List<VolumeTotalModel>();
+            if (nodeNames.Count == 0) return res;
+
+            var monthStart = new DateTime(today.Year, today.Month, 1);
+            string query = @"SELECT routing_type,node_name,inst_id,
+                COALESCE(SUM(tran_count)  FILTER (WHERE volume_date = @today::date),0)      AS today_count,
+                COALESCE(SUM(tran_amount) FILTER (WHERE volume_date = @today::date),0)      AS today_amount,
+                COALESCE(SUM(tran_count)  FILTER (WHERE volume_date = @yesterday::date),0)  AS yesterday_count,
+                COALESCE(SUM(tran_amount) FILTER (WHERE volume_date = @yesterday::date),0)  AS yesterday_amount,
+                COALESCE(SUM(tran_count)  FILTER (WHERE volume_date >= @month_start::date AND volume_date <= @today::date),0) AS month_count,
+                COALESCE(SUM(tran_amount) FILTER (WHERE volume_date >= @month_start::date AND volume_date <= @today::date),0) AS month_amount,
+                COALESCE(SUM(tran_count)  FILTER (WHERE volume_date < @month_start::date),0) AS prev_month_count,
+                COALESCE(SUM(tran_amount) FILTER (WHERE volume_date < @month_start::date),0) AS prev_month_amount
+                FROM sw_routes_volume
+                WHERE volume_date >= @prev_month_start::date AND volume_date <= @today::date AND node_name = ANY(@nodes)
+                GROUP BY routing_type,node_name,inst_id";
+
+            var tbl = await GetRecordsAsync(query, new
+            {
+                today = today.Date,
+                yesterday = today.Date.AddDays(-1),
+                month_start = monthStart,
+                prev_month_start = monthStart.AddMonths(-1),
+                nodes = nodeNames.ToArray()
+            });
+            foreach (DataRow row in tbl.Rows)
+            {
+                res.Add(new VolumeTotalModel
+                {
+                    RoutingType = row["routing_type"].ToString(),
+                    NodeName = row["node_name"].ToString(),
+                    InstId = row["inst_id"].ToString(),
+                    TodayCount = Convert.ToInt64(row["today_count"]),
+                    TodayAmount = Convert.ToDecimal(row["today_amount"]),
+                    YesterdayCount = Convert.ToInt64(row["yesterday_count"]),
+                    YesterdayAmount = Convert.ToDecimal(row["yesterday_amount"]),
+                    MonthCount = Convert.ToInt64(row["month_count"]),
+                    MonthAmount = Convert.ToDecimal(row["month_amount"]),
+                    PrevMonthCount = Convert.ToInt64(row["prev_month_count"]),
+                    PrevMonthAmount = Convert.ToDecimal(row["prev_month_amount"])
+                });
+            }
+
+            return res;
+        }
+
+        // delta volume ditambahkan dalam satu transaksi (aman untuk banyak instance API Channel)
+        public async Task AddVolumes(IReadOnlyList<VolumeModel> deltas)
+        {
+            const string sqltext = @"INSERT INTO sw_routes_volume
+                (volume_date,routing_type,node_name,inst_id,tran_count,tran_amount,updated_dt)
+                VALUES(@volume_date::date,@routing_type,@node_name,@inst_id,@tran_count,@tran_amount,@updated_dt)
+                ON CONFLICT (volume_date,routing_type,node_name,inst_id) DO UPDATE SET
+                    tran_count = sw_routes_volume.tran_count + EXCLUDED.tran_count,
+                    tran_amount = sw_routes_volume.tran_amount + EXCLUDED.tran_amount,
+                    updated_dt = EXCLUDED.updated_dt";
+
+            var now = DateTime.Now;
+            var commands = deltas
+                .Where(d => d.NodeName?.Length <= 20 && d.InstId?.Length <= 20)
+                .Select(d => (sqltext, (object)new
+                {
+                    volume_date = d.Date.Date,
+                    routing_type = d.RoutingType,
+                    node_name = d.NodeName,
+                    inst_id = d.InstId,
+                    tran_count = d.Count,
+                    tran_amount = d.Amount,
+                    updated_dt = now
+                }))
+                .ToList();
+            if (commands.Count == 0) return;
+
+            var result = await ExecuteAsync(commands);
+            if (result.IsSuccess == false)
+                throw new InvalidOperationException(result.ErrorMessage);
+        }
+
+        public async Task InsertCommitmentLogs(IReadOnlyList<CommitmentLogModel> logs)
+        {
+            const string sqltext = @"INSERT INTO sw_routes_commitment_log
+                (commitment_id,rule_type,routing_type,node_name,inst_id,metric,period_type,period_start,event,
+                 volume_value,threshold_value,created_dt)
+                VALUES(@commitment_id,@rule_type,@routing_type,@node_name,@inst_id,@metric,@period_type,@period_start::date,@event,
+                 @volume_value,@threshold_value,@created_dt)
+                ON CONFLICT ON CONSTRAINT uq_sw_routes_commitment_log_event DO NOTHING";
+
+            var commands = logs.Select(l => (sqltext, (object)new
+            {
+                commitment_id = l.CommitmentId,
+                rule_type = l.RuleType,
+                routing_type = l.RoutingType,
+                node_name = l.NodeName,
+                inst_id = l.InstId,
+                metric = l.Metric,
+                period_type = l.PeriodType,
+                period_start = l.PeriodStart.Date,
+                @event = l.Event,
+                volume_value = l.VolumeValue,
+                threshold_value = l.ThresholdValue,
+                created_dt = l.CreatedDt
+            })).ToList();
+
+            var result = await ExecuteAsync(commands);
+            if (result.IsSuccess == false)
+                throw new InvalidOperationException(result.ErrorMessage);
+        }
         #endregion
 
         #region Fees

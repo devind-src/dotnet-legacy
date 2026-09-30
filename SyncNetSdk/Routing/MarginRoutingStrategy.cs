@@ -2,6 +2,7 @@ using SyncNet.Constants;
 using SyncNet.DbRepository;
 using SyncNet.Fees;
 using SyncNet.Models;
+using SyncNet.Routing.Commitment;
 using SyncNet.Routing.Failover;
 using SyncNet.Routing.Schedule;
 using System.Collections.Generic;
@@ -20,6 +21,8 @@ namespace SyncNet.Routing
     // Jadwal Routing (Fase 3): supplier Tutup / di luar Jam Operasional dikeluarkan lebih dulu,
     // Prioritas Jadwal didahulukan; tidak ada supplier buka = ditolak. STATIC: supplier pilihan tutup
     // = ditolak. tombol darurat OFF: jadwal diabaikan.
+    // Volume & Tiering (Fase 5, mode dynamic): supplier yang kuotanya habis dibuang (semua habis = kuota
+    // diabaikan), supplier yang mengejar target didahulukan setelah Prioritas Jadwal. STATIC: diabaikan.
     public class MarginRoutingStrategy : IRoutingStrategy
     {
         private class MarginRoute
@@ -33,14 +36,16 @@ namespace SyncNet.Routing
         private readonly PriceRepository _priceRepository;
         private readonly SupplierStatusRepository _supplierStatus;
         private readonly RoutingScheduleRepository _schedule;
+        private readonly CommitmentRepository _commitment;
         private readonly DbMgr _dbMgr;
 
         public MarginRoutingStrategy(PriceRepository priceRepository, SupplierStatusRepository supplierStatus,
-            RoutingScheduleRepository schedule)
+            RoutingScheduleRepository schedule, CommitmentRepository commitment = null)
         {
             _priceRepository = priceRepository;
             _supplierStatus = supplierStatus;
             _schedule = schedule;
+            _commitment = commitment;
             _dbMgr = new DbMgr();
         }
 
@@ -108,15 +113,31 @@ namespace SyncNet.Routing
             if (IsFailoverActive(productId) == false)
                 return Task.FromResult(RouteSelection.To(ordered[0].SupplierId));
 
-            var sched = _schedule.Apply(ordered, p => p.SupplierId, SupplierStatusRepository.ROUTING_MARGIN, productId);
+            const string rt = SupplierStatusRepository.ROUTING_MARGIN;
+            var sched = _schedule.Apply(ordered, p => p.SupplierId, rt, productId);
             if (sched.AllClosed == true)
                 return Task.FromResult(RouteSelection.Reject(ordered[0].SupplierId, sched.ClosedBy?.Id));
 
-            var open = sched.Open;
+            var now = _schedule.Now;
+            bool IsScheduled(SupplierPriceModel p) => _schedule.SchedulePriority(rt, productId, p.SupplierId, now).HasValue;
 
-            if (mode == RoutingMode.LOAD_BALANCE && sched.FirstIsScheduled == false)
+            var open = sched.Open;
+            HashSet<string> targeted = [];
+            if (_commitment != null)
             {
+                var commit = _commitment.Apply(open, p => p.SupplierId, IsScheduled, rt, productId);
+                open = commit.Open;
+                targeted = commit.Targeted;
+            }
+
+            if (mode == RoutingMode.LOAD_BALANCE)
+            {
+                //Prioritas Jadwal / Target Tier yang sehat didahulukan; selain itu acak berbobot
                 var eligible = open.Where(p => _supplierStatus.IsEligible(p.SupplierId) == true).ToList();
+                var preferred = eligible.FirstOrDefault(p => IsScheduled(p) == true || targeted.Contains(p.SupplierId) == true);
+                if (preferred != null)
+                    return Task.FromResult(RouteSelection.To(preferred.SupplierId));
+
                 var picked = WeightedPicker.Pick(eligible, p => p.LbWeight);
                 if (picked != null)
                     return Task.FromResult(RouteSelection.To(picked.SupplierId));

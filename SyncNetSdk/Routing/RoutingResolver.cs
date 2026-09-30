@@ -1,5 +1,6 @@
 ﻿using SyncNet.Constants;
 using SyncNet.Models;
+using SyncNet.Routing.Commitment;
 using SyncNet.Routing.Failover;
 using SyncNet.Routing.Schedule;
 using System;
@@ -49,17 +50,19 @@ namespace SyncNet.Routing
         private readonly ProductRoutingStrategy _productRouting;
         private readonly SupplierStatusRepository _supplierStatus;
         private readonly RoutingScheduleRepository _schedule;
+        private readonly CommitmentRepository _commitment;
         private readonly StickyRouteResolver _sticky;
 
         public RoutingResolver(StaticRoutingStrategy staticRouting, MarginRoutingStrategy marginRouting,
             ProductRoutingStrategy productRouting, SupplierStatusRepository supplierStatus,
-            RoutingScheduleRepository schedule)
+            RoutingScheduleRepository schedule, CommitmentRepository commitment = null)
         {
             _staticRouting = staticRouting;
             _marginRouting = marginRouting;
             _productRouting = productRouting;
             _supplierStatus = supplierStatus;
             _schedule = schedule;
+            _commitment = commitment;
             _sticky = new StickyRouteResolver();
         }
 
@@ -68,6 +71,7 @@ namespace SyncNet.Routing
         {
             await _supplierStatus.Initialize();
             await _schedule.Initialize();
+            if (_commitment != null) await _commitment.Initialize();
             await _staticRouting.Initialize();
             await _marginRouting.Initialize();
             await _productRouting.Initialize();
@@ -317,14 +321,39 @@ namespace SyncNet.Routing
         // advice/reversal tidak dihitung sebagai kegagalan baru. aturan per tran type (mis.
         // timeout dan pending hanya dari PAYMENT, inquiry sukses hanya mereset rc gagal) ada
         // di SupplierStatusRepository. latencyMs = lama respons yang diukur aplikasi channel.
+        //
+        // Volume & Tiering (Fase 5): PAYMENT, ADVICE, dan REVERSAL sukses juga dicatat sebagai volume biller
+        // (bila fitur ON), apa pun routing mode dan tombol darurat (kuota kontrak tetap dihitung). amount =
+        // nominal transaksi; switchKey = kunci PAYMENT ini, originalSwitchKey = kunci PAYMENT asal pada
+        // ADVICE/REVERSAL; tranDate = tanggal PAYMENT (asal).
         public async Task RecordResultAsync(string supplierId, string routingType, string tranType,
-            string rcCode, string productId, long? denom, string traceNumber, int? latencyMs = null)
+            string rcCode, string productId, long? denom, string traceNumber, int? latencyMs = null,
+            decimal? amount = null, string switchKey = null, string originalSwitchKey = null, DateTime? tranDate = null)
         {
+            RecordVolume(supplierId, routingType, tranType, rcCode, productId, amount ?? denom ?? 0, switchKey, originalSwitchKey, tranDate);
+
             if (_supplierStatus.IsFailoverEnabled(routingType) == false) return;
             if (tranType != TranType.INQUIRY && tranType != TranType.PAYMENT) return;
 
             await _supplierStatus.RecordResponseAsync(supplierId, routingType, tranType == TranType.PAYMENT,
                 rcCode, latencyMs, productId, denom, traceNumber);
+        }
+
+        // volume saja, tanpa health check: dipakai untuk transaksi yang dirutekan statis oleh core
+        // (bill payment tanpa sink_node, supplierId = primary produk)
+        public void RecordVolume(string supplierId, string routingType, string tranType, string rcCode,
+            string productId, decimal amount, string switchKey = null, string originalSwitchKey = null, DateTime? tranDate = null)
+        {
+            _commitment?.RecordVolume(routingType, supplierId, productId, tranType, rcCode, amount, switchKey, originalSwitchKey, tranDate);
+        }
+
+        // Volume & Tiering aktif (C19): aplikasi channel boleh melewati pencatatan bila OFF
+        public bool IsVolumeActive => _commitment?.IsActive == true;
+
+        // tulis volume yang belum tersimpan (dipanggil saat aplikasi berhenti normal)
+        public Task FlushVolumeAsync()
+        {
+            return _commitment?.FlushAsync() ?? Task.CompletedTask;
         }
     }
 }

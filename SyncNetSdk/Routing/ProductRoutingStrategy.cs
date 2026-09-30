@@ -1,5 +1,6 @@
 using SyncNet.Constants;
 using SyncNet.DbRepository;
+using SyncNet.Routing.Commitment;
 using SyncNet.Routing.Failover;
 using SyncNet.Routing.Schedule;
 using System.Collections.Generic;
@@ -17,6 +18,8 @@ namespace SyncNet.Routing
     // STATIC ditangani RoutingResolver (tanpa failover).
     // Jadwal Routing (Fase 3): biller yang Tutup / di luar Jam Operasional dikeluarkan sebelum health
     // check, biller dengan Prioritas Jadwal didahulukan; tidak ada biller buka = ditolak.
+    // Volume & Tiering (Fase 5): setelah jadwal, biller yang kuotanya habis dibuang (semua habis = kuota
+    // diabaikan) dan biller yang mengejar target didahulukan setelah Prioritas Jadwal.
     public class ProductRoutingStrategy
     {
         private class Candidate
@@ -37,12 +40,15 @@ namespace SyncNet.Routing
 
         private readonly SupplierStatusRepository _supplierStatus;
         private readonly RoutingScheduleRepository _schedule;
+        private readonly CommitmentRepository _commitment;
         private readonly DbMgr _dbMgr;
 
-        public ProductRoutingStrategy(SupplierStatusRepository supplierStatus, RoutingScheduleRepository schedule)
+        public ProductRoutingStrategy(SupplierStatusRepository supplierStatus, RoutingScheduleRepository schedule,
+            CommitmentRepository commitment = null)
         {
             _supplierStatus = supplierStatus;
             _schedule = schedule;
+            _commitment = commitment;
             _dbMgr = new DbMgr();
         }
 
@@ -124,25 +130,41 @@ namespace SyncNet.Routing
                 _supplierStatus.IsFailoverEnabled(SupplierStatusRepository.ROUTING_PRODUCT) == true;
         }
 
-        // pilihan untuk siklus baru: buang biller yang tutup menurut jadwal, lalu kandidat eligible
-        // pertama menurut mode (Prioritas Jadwal di depan). semua yang buka diblokir health = biller
-        // buka pertama; tidak ada yang buka = ditolak.
+        // pilihan untuk siklus baru: buang biller yang tutup menurut jadwal (L2), buang biller yang
+        // kuotanya habis (L3), lalu kandidat eligible pertama menurut urutan Prioritas Jadwal -> Target
+        // Tier -> mode. semua yang tersisa diblokir health = kandidat pertama; tidak ada yang buka = ditolak.
         public Task<RouteSelection> SelectNodeAsync(string productId, string mode)
         {
             if (_routes.TryGetValue(productId, out var route) == false || route.Candidates.Count == 0)
                 return Task.FromResult(RouteSelection.To(string.Empty));
 
+            const string rt = SupplierStatusRepository.ROUTING_PRODUCT;
             var ordered = Order(route.Candidates, mode);
-            var sched = _schedule.Apply(ordered, c => c.NodeName, SupplierStatusRepository.ROUTING_PRODUCT, productId);
+            var sched = _schedule.Apply(ordered, c => c.NodeName, rt, productId);
 
             if (sched.AllClosed == true)
                 return Task.FromResult(RouteSelection.Reject(route.Candidates[0].NodeName, sched.ClosedBy?.Id));
 
-            var open = sched.Open;
+            var now = _schedule.Now;
+            bool IsScheduled(Candidate c) => _schedule.SchedulePriority(rt, productId, c.NodeName, now).HasValue;
 
-            if (mode == RoutingMode.LOAD_BALANCE && sched.FirstIsScheduled == false)
+            var open = sched.Open;
+            HashSet<string> targeted = [];
+            if (_commitment != null)
             {
+                var commit = _commitment.Apply(open, c => c.NodeName, IsScheduled, rt, productId);
+                open = commit.Open;
+                targeted = commit.Targeted;
+            }
+
+            if (mode == RoutingMode.LOAD_BALANCE)
+            {
+                //Prioritas Jadwal / Target Tier yang sehat didahulukan; selain itu acak berbobot
                 var eligible = open.Where(c => _supplierStatus.IsEligible(c.NodeName) == true).ToList();
+                var preferred = eligible.FirstOrDefault(c => IsScheduled(c) == true || targeted.Contains(c.NodeName) == true);
+                if (preferred != null)
+                    return Task.FromResult(RouteSelection.To(preferred.NodeName));
+
                 var picked = WeightedPicker.Pick(eligible, c => c.LbWeight);
                 if (picked != null)
                     return Task.FromResult(RouteSelection.To(picked.NodeName));

@@ -1,0 +1,39 @@
+# Build results
+**/bin/
+**/obj/
+[Bb]uild/
+[Ll]ogs/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet packages
+*.nupkg
+packages/
+*.snupkg
+
+# Resharper
+_ReSharper*/
+*.DotSettings.user
+
+# Rider
+.idea/
+
+# Backup & temp files
+*.bak
+*.tmp
+*.temp
+*.log
+
+# Publish outputs
+publish/
+*.pubxml
+*.publishproj
+
+# Others
+*.dbmdl
+*.jfm

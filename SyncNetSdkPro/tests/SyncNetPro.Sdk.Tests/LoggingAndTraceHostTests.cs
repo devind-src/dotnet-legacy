@@ -72,12 +72,12 @@ public class LoggingAndTraceHostTests
 
             string traceDir = Path.Combine(home, "Traces", "test-app");
             await Wait.UntilAsync(() => Directory.Exists(traceDir) && Directory.GetFiles(traceDir, "biller_*.log").Length == 1, "file trace node");
-            string traceText = File.ReadAllText(Directory.GetFiles(traceDir, "biller_*.log")[0]);
-            Assert.Contains("<0210> Message from BILLER 10.0.0.9:7000", traceText, StringComparison.Ordinal);
+            string traceFile = Directory.GetFiles(traceDir, "biller_*.log")[0];
+            await Wait.UntilAsync(() => Wait.ReadShared(traceFile).Contains("<0210> Message from BILLER 10.0.0.9:7000", StringComparison.Ordinal), "trace handler tertulis");
 
             string logDir = Path.Combine(home, "Logs");
             await Wait.UntilAsync(() => Directory.Exists(logDir) && Directory.GetFiles(logDir, "test-app_*.log").Length == 1, "file log aplikasi");
-            await Wait.UntilAsync(() => File.ReadAllText(Directory.GetFiles(logDir, "test-app_*.log")[0]).Contains("WARN peringatan dari handler", StringComparison.Ordinal), "log handler tertulis");
+            await Wait.UntilAsync(() => Wait.ReadShared(Directory.GetFiles(logDir, "test-app_*.log")[0]).Contains("WARN peringatan dari handler", StringComparison.Ordinal), "log handler tertulis");
         }
         finally
         {

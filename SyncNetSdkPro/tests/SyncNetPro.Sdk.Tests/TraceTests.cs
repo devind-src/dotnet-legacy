@@ -79,7 +79,7 @@ public class TraceTests
         Assert.Equal(50, writer.OverflowCount);
         Assert.Equal(0, writer.LostCount);
         string[] files = Directory.GetFiles(dir.Combine("api-biller"), "biller_*.log");
-        string text = File.ReadAllText(Assert.Single(files));
+        string text = Wait.ReadShared(Assert.Single(files));
         for (int i = 100; i < 150; i++) Assert.Contains($"isi-{i}\n", text, StringComparison.Ordinal);
         int queued = 0;
         while (writer.Reader.TryRead(out _)) queued++;
@@ -105,6 +105,24 @@ public class TraceTests
 
         string file = dir.Combine("api-biller", "biller-abc_20260930_10.log");
         Assert.Equal("[30 Sep 2026 10:15:30.123] <0200> Message to BILLER ABC\nisi\n\n", File.ReadAllText(file));
+    }
+
+    [Fact]
+    public async Task Trace_file_stays_writable_while_an_operator_is_reading_it()
+    {
+        using var dir = new TempDirectory();
+        using var sink = new FileTraceSink(dir.Path);
+        static TraceRecord Record(string title) => new() { Datetime = new DateTime(2026, 9, 30, 10, 0, 0), AppName = "app", FileName = "node", Title = title };
+        Assert.True(await sink.TrySendAsync(Record("satu"), "{}", CancellationToken.None));
+        string file = dir.Combine("app", "node_20260930_10.log");
+
+        using (var reader = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+        {
+            Assert.True(await sink.TrySendAsync(Record("dua"), "{}", CancellationToken.None));
+            Assert.True(sink.TryWrite(Record("tiga")));
+        }
+
+        Assert.Equal("[30 Sep 2026 10:00:00.000] satu\n[30 Sep 2026 10:00:00.000] dua\n[30 Sep 2026 10:00:00.000] tiga\n", Wait.ReadShared(file));
     }
 
     [Fact]

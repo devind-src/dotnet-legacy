@@ -72,6 +72,7 @@ internal sealed class FakeCore : IAsyncDisposable
     /// <summary>Core mengirim request ke interface (kanal sink).</summary>
     public async Task SendToInterfaceAsync(CoreRequest request)
     {
+        await Wait.UntilAsync(() => _sink.Connections.Any(c => c.IsOpen), "koneksi sink diterima FakeCore");
         FramedConnection connection = _sink.Connections.First(c => c.IsOpen);
         await connection.SendAsync(_codec.Serializer.SerializeToUtf8Bytes(request));
     }
@@ -79,6 +80,7 @@ internal sealed class FakeCore : IAsyncDisposable
     /// <summary>Core mengirim response "spontan" ke interface (kanal source).</summary>
     public async Task SendSourceResponseAsync(CoreResponse response)
     {
+        await Wait.UntilAsync(() => _source.Connections.Any(c => c.IsOpen), "koneksi source diterima FakeCore");
         FramedConnection connection = _source.Connections.First(c => c.IsOpen);
         await connection.SendAsync(_codec.Serializer.SerializeToUtf8Bytes(response));
     }

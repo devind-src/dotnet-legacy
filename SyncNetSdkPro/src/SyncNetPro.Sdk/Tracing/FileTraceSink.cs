@@ -27,7 +27,7 @@ public sealed class FileTraceSink(string directory, bool legacyWindowsNames = fa
         try
         {
             Directory.CreateDirectory(folder);
-            await File.AppendAllTextAsync(file, text, cancellationToken).ConfigureAwait(false);
+            await SharedFile.AppendAsync(file, text, cancellationToken).ConfigureAwait(false);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -50,7 +50,7 @@ public sealed class FileTraceSink(string directory, bool legacyWindowsNames = fa
         try
         {
             Directory.CreateDirectory(folder);
-            File.AppendAllText(file, text);
+            SharedFile.Append(file, text);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

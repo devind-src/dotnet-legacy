@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SyncNetPro.Contracts</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>SyncNetPro.Contracts</PackageId>
+    <Description>Kontrak pesan antara interface dan SyncNet Core (CoreRequest/CoreResponse, serializer, framing TCP). Format wire kompatibel byte-per-byte dengan SyncNetSdk lama.</Description>
+    <PackageTags>syncnet;contracts;switching</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SyncNetPro.Contracts.Tests" />
+  </ItemGroup>
+
+</Project>

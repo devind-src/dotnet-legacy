@@ -1,0 +1,93 @@
+name: SyncNetSdkPro
+
+on:
+  push:
+    branches: [main]
+    tags: ['sdkpro-v*']
+    paths:
+      - 'SyncNetSdkPro/**'
+      - 'SyncNetSdk/**'
+      - '.github/workflows/syncnetsdkpro.yml'
+  pull_request:
+    paths:
+      - 'SyncNetSdkPro/**'
+      - 'SyncNetSdk/**'
+      - '.github/workflows/syncnetsdkpro.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: SyncNetSdkPro
+
+jobs:
+  build-test:
+    name: Build & test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # MinVer membutuhkan riwayat tag
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: SyncNetSdkPro/global.json
+
+      - name: Build
+        run: dotnet build SyncNetSdkPro.slnx -c Release
+
+      - name: Start PostgreSQL (Linux)
+        if: runner.os == 'Linux'
+        working-directory: .
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -c "CREATE USER sdkpro WITH PASSWORD 'sdkpro' SUPERUSER;" -c "CREATE DATABASE sdkpro_test OWNER sdkpro;"
+          echo "SYNCNET_TEST_PG=Host=127.0.0.1;Database=sdkpro_test;Username=sdkpro;Password=sdkpro" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: dotnet test --solution SyncNetSdkPro.slnx -c Release --no-build
+
+  golden-check:
+    # Golden file harus identik dengan output SDK lama; gagal bila ada yang tidak sinkron.
+    name: Golden files up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: SyncNetSdkPro/global.json
+      - name: Regenerate from legacy SyncNetSdk
+        run: dotnet run --project tools/SyncNetPro.GoldenGenerator -c Release
+      - name: Verify no diff
+        run: git diff --exit-code -- tests/SyncNetPro.Contracts.Tests/Golden tests/SyncNetPro.Sdk.Tests/Golden
+
+  publish:
+    name: Publish to GitHub Packages
+    if: startsWith(github.ref, 'refs/tags/sdkpro-v')
+    needs: [build-test, golden-check]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: SyncNetSdkPro/global.json
+      - name: Pack
+        run: dotnet pack SyncNetSdkPro.slnx -c Release -o artifacts
+      - name: Push
+        working-directory: SyncNetSdkPro/artifacts
+        run: >
+          dotnet nuget push "*.nupkg"
+          --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          --api-key "${{ secrets.GITHUB_TOKEN }}"
+          --skip-duplicate

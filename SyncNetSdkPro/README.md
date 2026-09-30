@@ -1,0 +1,101 @@
+# SyncNetSdkPro
+
+SDK modern untuk membangun interface inbound/outbound antara **SyncNet Core** dan sistem
+eksternal. Pengganti `SyncNetSdk` untuk interface **baru**; interface lama tetap memakai SDK lama.
+
+- Analisa & desain: [`docs/`](docs/README.md)
+- Status: **Fase 3 — Transport remote selesai**, berikutnya fase 4 SimCore (lihat [dok. 08](docs/08-roadmap-testing-risiko.md))
+
+## Isi
+
+| Path | Keterangan |
+|------|------------|
+| `src/SyncNetPro.Contracts` | Kontrak pesan ke Core: `CoreRequest`, `CoreResponse`, serializer, framing TCP (`CoreFrame`), `MessageTypes`, `TranType`, `AuthorizedBy`, helper `additional_data` |
+| `src/SyncNetPro.Sdk` | Inti SDK: host, `SyncNetInterface`, kanal Core, koneksi eksternal (TCP/HTTP klien & server), konfigurasi node, command port, trace & log, status |
+| `samples/Sample.Outbound` | Contoh interface outbound minimal (jalan tanpa Core/DB dengan `DOTNET_ENVIRONMENT=Development`) |
+| `tests/SyncNetPro.Contracts.Tests` | Unit test + **golden test** byte-per-byte terhadap SDK lama |
+| `tests/SyncNetPro.Sdk.Tests` | Test SDK: golden header TCP/LogModel/command, FakeCore via socket, integrasi PostgreSQL (bila `SYNCNET_TEST_PG` diisi) |
+| `tools/SyncNetPro.GoldenGenerator` | Generator golden file; mereferensikan `../SyncNetSdk` (read-only) |
+| `.github/workflows/syncnetsdkpro.yml` (root repo) | CI Ubuntu + Windows, cek golden file, publish ke GitHub Packages |
+
+## Prasyarat
+
+- .NET SDK 10.0.1xx (lihat `global.json`)
+
+## Build & test
+
+```bash
+cd SyncNetSdkPro
+dotnet build SyncNetSdkPro.slnx
+dotnet test --solution SyncNetSdkPro.slnx
+```
+
+Test integrasi PostgreSQL (opsional):
+
+```bash
+export SYNCNET_TEST_PG="Host=127.0.0.1;Database=sdkpro_test;Username=sdkpro;Password=sdkpro"
+dotnet test --solution SyncNetSdkPro.slnx
+```
+
+## Membuat interface (ringkas)
+
+```csharp
+// Program.cs
+var builder = SyncNetApplication.CreateBuilder(args);
+builder.AddSyncNetInterface<MyBillerInterface>();
+await builder.Build().RunAsync();
+
+// MyBillerInterface.cs — override hanya yang dibutuhkan
+public sealed class MyBillerInterface : SyncNetInterface
+{
+    public override Task<CoreResponse?> OnCoreRequestAsync(CoreRequestContext ctx, CancellationToken ct) =>
+        Task.FromResult<CoreResponse?>(ctx.Request.ToResponse("00", "Approved"));
+}
+```
+
+Meneruskan ke sistem eksternal (koneksi dari `sw_connections`):
+
+```csharp
+public override async Task<CoreResponse?> OnCoreRequestAsync(CoreRequestContext ctx, CancellationToken ct)
+{
+    // TCP: korelasi otomatis lewat GetRemoteCorrelationKey
+    byte[] reply = await ctx.Remote.SendAndReceiveAsync(BuildIso(ctx.Request), key: Key(ctx.Request), cancellationToken: ct);
+
+    // HTTP: base URL = ws_url
+    RemoteHttpResponse rsp = await ctx.Remote.Http.SendAsync(RemoteHttpRequest.Json("/bill/inquiry", dto), ct);
+    ...
+}
+```
+
+Mode pengembangan tanpa Core/DB: `SyncNet:NodeSource=Json` + `SyncNet:Nodes` (lihat `samples/Sample.Outbound/appsettings.Development.json`).
+Produksi: cukup `SyncNet:AppName`; konfigurasi DB, path log/trace, RabbitMQ dibaca dari instalasi Core
+(`SYNCNET_HOME` atau default `C:\SyncNet` / `/opt/SyncNet`).
+
+## Golden file
+
+Golden file di `tests/*/Golden` **dihasilkan oleh SDK lama**, tidak diedit manual.
+Regenerasi (mis. setelah menambah kasus di generator):
+
+```bash
+dotnet run --project tools/SyncNetPro.GoldenGenerator
+```
+
+CI gagal bila golden file tidak sinkron dengan output SDK lama.
+
+## Contoh pemakaian kontrak
+
+```csharp
+using SyncNetPro.Contracts;
+
+CoreRequest request = CoreMessageCodec.Default.DecodePayload<CoreRequest>(payload);
+
+CoreResponse response = request.ToResponse("00", "Approved");   // msgtype 0200 → 0210, pos_entry_mode disalin
+response.SetAdditionalData("customer_name", "BUDI");               // data tambahan hanya lewat additional_data
+
+byte[] frame = CoreMessageCodec.Default.EncodeFrame(response);      // header 2 byte + JSON UTF-8
+```
+
+## Rilis
+
+Tag `sdkpro-vX.Y.Z` → CI mem-publish paket ke GitHub Packages
+(`https://nuget.pkg.github.com/devind-src/index.json`). Versi dihitung MinVer dari tag.

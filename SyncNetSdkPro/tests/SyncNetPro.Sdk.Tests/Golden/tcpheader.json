@@ -1,0 +1,1730 @@
+[
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 1,
+    "header": "0001",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9,
+    "header": "0009",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 50,
+    "header": "0032",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 255,
+    "header": "00FF",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 256,
+    "header": "0100",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 999,
+    "header": "03E7",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 1000,
+    "header": "03E8",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 4095,
+    "header": "0FFF",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9995,
+    "header": "270B",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9999,
+    "header": "270F",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 65533,
+    "header": "FFFD",
+    "decoded": 65533,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 65535,
+    "header": "FFFF",
+    "decoded": 65535,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 1,
+    "header": "0100",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9,
+    "header": "0900",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 50,
+    "header": "3200",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 255,
+    "header": "FF00",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 256,
+    "header": "0001",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 999,
+    "header": "E703",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 1000,
+    "header": "E803",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 4095,
+    "header": "FF0F",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9995,
+    "header": "0B27",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9999,
+    "header": "0F27",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 65533,
+    "header": "FDFF",
+    "decoded": 65533,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 65535,
+    "header": "FFFF",
+    "decoded": 65535,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 1,
+    "header": "0003",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9,
+    "header": "000B",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 50,
+    "header": "0034",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 255,
+    "header": "0101",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 256,
+    "header": "0102",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 999,
+    "header": "03E9",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 1000,
+    "header": "03EA",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 4095,
+    "header": "1001",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9995,
+    "header": "270D",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9999,
+    "header": "2711",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 65533,
+    "header": "FFFF",
+    "decoded": 65533,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 65535,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 1,
+    "header": "0300",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9,
+    "header": "0B00",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 50,
+    "header": "3400",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 255,
+    "header": "0101",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 256,
+    "header": "0201",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 999,
+    "header": "E903",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 1000,
+    "header": "EA03",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 4095,
+    "header": "0110",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9995,
+    "header": "0D27",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9999,
+    "header": "1127",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 65533,
+    "header": "FFFF",
+    "decoded": 65533,
+    "error": false
+  },
+  {
+    "type": "Binary2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 65535,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 1,
+    "header": "0001",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9,
+    "header": "0009",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 50,
+    "header": "0050",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 255,
+    "header": "0255",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 256,
+    "header": "0256",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 999,
+    "header": "0999",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 1000,
+    "header": "1000",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 4095,
+    "header": "4095",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9995,
+    "header": "9995",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9999,
+    "header": "9999",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 65533,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 65535,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 1,
+    "header": "0001",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9,
+    "header": "0009",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 50,
+    "header": "0050",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 255,
+    "header": "0255",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 256,
+    "header": "0256",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 999,
+    "header": "0999",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 1000,
+    "header": "1000",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 4095,
+    "header": "4095",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9995,
+    "header": "9995",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9999,
+    "header": "9999",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 65533,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 65535,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 1,
+    "header": "0003",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9,
+    "header": "0011",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 50,
+    "header": "0052",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 255,
+    "header": "0257",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 256,
+    "header": "0258",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 999,
+    "header": "1001",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 1000,
+    "header": "1002",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 4095,
+    "header": "4097",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9995,
+    "header": "9997",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9999,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 65533,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 65535,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 1,
+    "header": "0003",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9,
+    "header": "0011",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 50,
+    "header": "0052",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 255,
+    "header": "0257",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 256,
+    "header": "0258",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 999,
+    "header": "1001",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 1000,
+    "header": "1002",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 4095,
+    "header": "4097",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9995,
+    "header": "9997",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9999,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 65533,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Bcd2Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 65535,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 1,
+    "header": "00000001",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9,
+    "header": "00000009",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 50,
+    "header": "00000032",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 255,
+    "header": "000000FF",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 256,
+    "header": "00000100",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 999,
+    "header": "000003E7",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 1000,
+    "header": "000003E8",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 4095,
+    "header": "00000FFF",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9995,
+    "header": "0000270B",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9999,
+    "header": "0000270F",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 65533,
+    "header": "0000FFFD",
+    "decoded": 65533,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 65535,
+    "header": "0000FFFF",
+    "decoded": 65535,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 1,
+    "header": "01000000",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9,
+    "header": "09000000",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 50,
+    "header": "32000000",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 255,
+    "header": "FF000000",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 256,
+    "header": "00010000",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 999,
+    "header": "E7030000",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 1000,
+    "header": "E8030000",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 4095,
+    "header": "FF0F0000",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9995,
+    "header": "0B270000",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9999,
+    "header": "0F270000",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 65533,
+    "header": "FDFF0000",
+    "decoded": 65533,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 65535,
+    "header": "FFFF0000",
+    "decoded": 65535,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 1,
+    "header": "00000005",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9,
+    "header": "0000000D",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 50,
+    "header": "00000036",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 255,
+    "header": "00000103",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 256,
+    "header": "00000104",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 999,
+    "header": "000003EB",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 1000,
+    "header": "000003EC",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 4095,
+    "header": "00001003",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9995,
+    "header": "0000270F",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9999,
+    "header": "00002713",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 65533,
+    "header": "00010001",
+    "decoded": 65533,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 65535,
+    "header": "00010003",
+    "decoded": 65535,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 1,
+    "header": "05000000",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9,
+    "header": "0D000000",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 50,
+    "header": "36000000",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 255,
+    "header": "03010000",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 256,
+    "header": "04010000",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 999,
+    "header": "EB030000",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 1000,
+    "header": "EC030000",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 4095,
+    "header": "03100000",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9995,
+    "header": "0F270000",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9999,
+    "header": "13270000",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 65533,
+    "header": "01000100",
+    "decoded": 65533,
+    "error": false
+  },
+  {
+    "type": "Binary4Byte",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 65535,
+    "header": "03000100",
+    "decoded": 65535,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 1,
+    "header": "30303031",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9,
+    "header": "30303039",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 50,
+    "header": "30303530",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 255,
+    "header": "30323535",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 256,
+    "header": "30323536",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 999,
+    "header": "30393939",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 1000,
+    "header": "31303030",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 4095,
+    "header": "34303935",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9995,
+    "header": "39393935",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 9999,
+    "header": "39393939",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 65533,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "BigEndian",
+    "length": 65535,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 1,
+    "header": "30303031",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9,
+    "header": "30303039",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 50,
+    "header": "30303530",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 255,
+    "header": "30323535",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 256,
+    "header": "30323536",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 999,
+    "header": "30393939",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 1000,
+    "header": "31303030",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 4095,
+    "header": "34303935",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9995,
+    "header": "39393935",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 9999,
+    "header": "39393939",
+    "decoded": 9999,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 65533,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Exclude",
+    "endian": "LittleEndian",
+    "length": 65535,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 1,
+    "header": "30303035",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9,
+    "header": "30303133",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 50,
+    "header": "30303534",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 255,
+    "header": "30323539",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 256,
+    "header": "30323630",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 999,
+    "header": "31303033",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 1000,
+    "header": "31303034",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 4095,
+    "header": "34303939",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9995,
+    "header": "39393939",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 9999,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 65533,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "BigEndian",
+    "length": 65535,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 1,
+    "header": "30303035",
+    "decoded": 1,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9,
+    "header": "30303133",
+    "decoded": 9,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 50,
+    "header": "30303534",
+    "decoded": 50,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 255,
+    "header": "30323539",
+    "decoded": 255,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 256,
+    "header": "30323630",
+    "decoded": 256,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 999,
+    "header": "31303033",
+    "decoded": 999,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 1000,
+    "header": "31303034",
+    "decoded": 1000,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 4095,
+    "header": "34303939",
+    "decoded": 4095,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9995,
+    "header": "39393939",
+    "decoded": 9995,
+    "error": false
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 9999,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 65533,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  },
+  {
+    "type": "Ascii4Digit",
+    "mode": "Include",
+    "endian": "LittleEndian",
+    "length": 65535,
+    "header": "",
+    "decoded": 0,
+    "error": true
+  }
+]

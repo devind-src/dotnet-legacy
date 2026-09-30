@@ -73,10 +73,10 @@ Total ±3,5–5 bulan kalender hingga 1.0.0, dapat dipercepat dengan paralelisas
 | # | Pertanyaan | Rekomendasi |
 |---|------------|-------------|
 | Q1 | Apakah Core boleh menerima properti JSON tambahan dari interface (untuk round-trip `private_data` penuh)? | Tidak di fase 1 (perilaku lama); evaluasi setelah konfirmasi tim Core |
-| Q2 | `CoreResponse.From(request)` mengikuti perilaku SDK (tanpa `msgtype`) atau Core (isi `msgtype` respons)? | Ikuti SDK lama (default), sediakan opsi eksplisit |
+| Q2 | `CoreResponse.From(request)` mengikuti perilaku SDK (tanpa `msgtype`) atau Core (isi `msgtype` respons)? | Isi `msgtype` response |
 | Q3 | Serializer target jangka panjang: Newtonsoft atau System.Text.Json? | Newtonsoft di 1.x; STJ di 2.x setelah golden test stabil |
 | Q4 | Distribusi paket: feed NuGet internal apa (Azure Artifacts, GitHub Packages, BaGet)? | GitHub Packages (repo sudah di GitHub) |
 | Q5 | Apakah SDK baru tetap perlu obfuscation? | Tidak untuk SDK (butuh debuggability); tetap untuk Core bila diinginkan |
-| Q6 | Modul Routing/Fee: tetap di SDK atau dipindah ke layanan terpisah? | Port sebagai modul opsional dulu; kandidat layanan terpisah di masa depan |
-| Q7 | Versi minimum OS Linux target (RHEL/Ubuntu) dan apakah container menjadi target deploy? | Ubuntu 22.04+/RHEL 9+, container opsional |
+| Q6 | Modul Routing/Fee: tetap di SDK atau dipindah ke layanan terpisah? | Dibuat .dll terpisah agar update kebutuhan bisnis tidak berdampak ke SDK |
+| Q7 | Versi minimum OS Linux target (RHEL/Ubuntu) dan apakah container menjadi target deploy? | Ubuntu 22.04+/26 LTS, container opsional |
 | Q8 | Nama file log di Windows: ikut normalisasi baru atau tetap nama lama? | Normalisasi baru (sama di semua OS), opsi legacy tersedia |

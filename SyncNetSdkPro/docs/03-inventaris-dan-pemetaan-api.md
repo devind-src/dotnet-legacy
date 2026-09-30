@@ -94,14 +94,16 @@ meng-override yang dibutuhkan.
 | **Library/** `NbLogger` | GANTI | `ILogger` + file sink |
 | `NbCache` / `INbCache`, `Common/CacheData` | GANTI | Korelasi dibangun ke SDK (`PendingRequestStore`); bila perlu cache umum: `IMemoryCache`/`HybridCache` |
 | `NbConvert`, `NbFormat`, `NbString`, `NbMath`, `NbRandom`, `NbMessage` (`GetMsgTypeResp` dipindah ke `SyncNetPro.Contracts` untuk `CoreResponse.From`) | PERTAHANKAN sebagian (paket `SyncNetPro.Toolkit`) | Hanya fungsi yang dipakai interface: hex/bytes, format biner untuk trace, padding, MTI response. Hapus duplikasi dengan BCL (`Convert.ToHexString`, `RandomNumberGenerator`). |
-| `NbTlvEmv`, `NbTlvQris`, `NbCard` | MODUL | `SyncNetPro.Toolkit.Payments` (opsional) |
+| `NbTlvEmv`, `NbTlvQris`, `NbCard` | MODUL | `SyncNetPro.Toolkit`: `EmvTlv`, `NumericTlv`, `PinBlock`, `Luhn`, `KeyCheckValue` (fase 5) |
 | `NbTrace`, `NbTranMgr`, `NbStrUtil`, `NbXml`, `NbApp`, `NbDateTime`, `NbSystem` | HAPUS | Tidak dipakai / digantikan BCL |
 | **Helpers/** `NetHelper`, `ConvertHelper`, `DataHelper`, `TcpHelper` | GABUNG ke Toolkit | `DataHelper.GetMasking` → `Masking.Pan(...)` |
 | `CredenHelper` | GANTI | `IConfigProtector` (dekripsi nilai konfigurasi terenkripsi Core, kompatibel format lama) |
 | `IsoHelper` | HAPUS | Tidak dipakai |
-| **IsoMessage/** `Iso8583`, `FieldFormatter`, `IFieldFormatter`, `Field`, `IsoConverter` | MODUL (`SyncNetPro.Iso8583`) | API dirapikan: `IsoMessage.Parse(bytes, spec)`, `msg[11]`, `msg.Pack()`; framing TCP dipisah dari packer (tidak ada lagi `Pack(SdkTcpHeader)`) |
+| **IsoMessage/** `Iso8583`, `FieldFormatter`, `IFieldFormatter`, `Field` | MODUL (`SyncNetPro.Iso8583`) | `IsoMessage`, `IsoSpec` (+ `IsoSpec.Legacy` = tabel `FieldFormatter`), `IsoMessage.Parse(spec, bytes)`, `msg[11]`, `msg.Pack()`; framing TCP dipisah dari packer (tidak ada lagi `Pack(SdkTcpHeader)`) |
+| `IsoConverter` (Request/Response ↔ ISO, XML field 127) | HAPUS | Tidak dipakai interface/Core mana pun; hanya pemetaan processing code yang dipertahankan (`ProcessingCode`) |
 | **HSM/** `HsmService`, `HsmErrCode` | MODUL (`SyncNetPro.Hsm`) | Klien typed `IHsmClient` via `IHttpClientFactory` |
-| **Cryptography/** `AesAlgorithm`, `DesAlgorithm`, `HashProvider` | MODUL (Toolkit.Crypto) | Dipertahankan untuk kebutuhan PIN/MAC (3DES) & hash; berbasis API BCL modern |
+| **Cryptography/** `DesAlgorithm` | MODUL (Toolkit) | `DesEcb.EncryptHex/DecryptHex` (DES/3DES ECB), `KeyCheckValue.Compute`; `EncryptText/DecryptText` (format internal Core) tidak diport |
+| `AesAlgorithm`, `HashProvider` | HAPUS | Satu baris BCL: `Aes.Create()`, `SHA256.HashData(...)`, `HMACSHA512.HashData(key, data)` |
 | **DbRepository/** `DbMgr` (query node/koneksi/status) | GANTI | `INodeConfigurationSource` (implementasi: `PostgresNodeConfigurationSource`, `JsonNodeConfigurationSource` untuk dev/SimCore) + `INodeStatusReporter` |
 | `DbMgr` (query umum `Execute/GetRecords/GetRow/...` sync+async) | GANTI | Tidak diekspos; interface yang butuh DB memakai `NpgsqlDataSource` + Dapper sendiri (didaftarkan via `AddSyncNetDatabase()`) |
 | `DbMgr` (routing, fee, produk, volume, commitment) | MODUL | `SyncNetPro.Routing` (lihat bawah) |
@@ -123,3 +125,22 @@ meng-override yang dibutuhkan.
 
 Hasilnya: inti SDK (`SyncNetPro.Sdk`) diperkirakan < 40% ukuran SDK lama, dan developer
 interface baru hanya perlu mempelajari ±10 tipe publik (dok. 04 §4).
+
+## 6. Realisasi Modul Fase 5
+
+| SDK lama | SDK baru | Catatan |
+|----------|----------|---------|
+| `new Iso8583(new IsoTemplate())` + `PutField`/`GetField` | `new IsoMessage(spec, mti).Set(n, v)` / `msg[n]` | Nilai divalidasi saat di-set (panjang tetap/maks, numerik, 1 byte); field tak terdefinisi ditolak |
+| `FieldFormatter` turunan (`IsoTemplate`) | `IsoSpec.Legacy.ToBuilder().Field(...).Build()` | Sama seperti SDK lama: tabel default + field yang ditimpa |
+| `Unpack(bytes) != 0` + `GetLastError()` | `IsoMessage.Parse` (exception) / `TryParse` | `IsoFormatException.Field`/`Offset` |
+| `GetFormattedMessage`/`GetFormattedSimple`/`GetTrace` | `Format`/`FormatSimple`/`FormatTrace` | Tata letak sama, `\n` di semua OS, data sensitif disamarkan |
+| `NbConvert.ToBCD/FromBCD`, `AsciiToEbcdic` | `Bcd.Encode/Decode`, `Ebcdic.Encode/Decode` | Byte langsung (tanpa string Latin-1), EBCDIC tanpa registrasi manual |
+| `NbFormat.FormatBinary/FormatString` | `HexDump.Format/Printable` | |
+| `NbCard.CreatePinBlock/GetKeyCheckValue/GetLuhnCheckDigit/IsCreditCardValid/SetCheckDigit` | `PinBlock.Create`, `KeyCheckValue.Compute`, `Luhn.CheckDigit/IsValid/Append` | |
+| `NbTlvEmv.ParseTLV/ConstructTLV/GetInfo` | `EmvTlv.Parse/Build/Describe` | Tag berulang dipertahankan |
+| `NbTlvQris` | `NumericTlv` | Error format dilempar, bukan hasil sebagian |
+| `HsmService.*` (statis) | `IHsmClient` (DI) | JSON request identik |
+| `RoutingResolver`, `*RoutingStrategy`, `SupplierStatusRepository`, `RoutingScheduleRepository`, `CommitmentRepository`, `StickyRouteResolver` | `RoutingResolver`, `StaticRouting`/`MarginRouting`/`ProductRouting`, `SupplierHealthTracker`, `RoutingSchedule`, `CommitmentTracker`, `IRoutingCycleStore` + `SwitchKeys` | Logika 1:1 (golden); jam via `TimeProvider`, log via `ILogger` |
+| `BillPaymentFeeCalculator`, `MarginCalculator`, `PriceRepository` | `ProductFeeCalculator`, `MarginCalculator`, `PriceBook` | `GetFees` → `Calculate` (sinkron), hasil `SyncNetPro.Contracts.Fees` |
+| `DbMgr` (query routing/fee) | `PostgresRoutingStore` | SQL sama; `new ...()` di konstruktor diganti DI; `Initialize` dipanggil otomatis oleh `ISyncNetModule` |
+

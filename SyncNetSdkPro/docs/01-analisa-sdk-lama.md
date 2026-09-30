@@ -143,6 +143,28 @@ Keputusan tim: **semua bug wajib diperbaiki di SDK baru** — tidak ada bug yang
 | B11 listener TCP berbagi port di Linux (`XTcpListener` lama juga memasang `ReuseAddress`; di Linux .NET menambahkan `SO_REUSEPORT` sehingga dua proses dapat listen di port yang sama dan koneksi dibagi acak) | `TcpFrameServer`: Windows `ExclusiveAddressUse`, Linux/macOS hanya `SO_REUSEADDR` (seperti Kestrel) — listener kedua gagal `Address already in use` — **selesai** (test `Second_listener_on_same_port_fails_instead_of_sharing_connections`, `Listener_can_restart_on_same_port_while_old_connections_linger`) | 4 ✅ |
 | B12 opsi header default dipakai bersama lalu termutasi (ditemukan di SDK baru saat fase 4) | `TcpHeaderOptions.Default` selalu instance baru; `LengthPrefixCodec` menyalin opsi — **selesai** (test `Codec_is_not_affected_by_later_changes_to_its_options`) | 4 ✅ |
 | B13 trace dibuang saat antrean penuh | Keputusan tim: trace adalah jejak audit. Trace yang tidak muat antrean langsung ditulis ke file fallback (`OverflowCount`); `LostCount` hanya naik bila file pun gagal — **selesai** (test `Full_queue_writes_overflow_to_fallback_file_instead_of_dropping`) | 4 ✅ |
+| B14 `NbConvert.FromBCD` men-decode lewat UTF-8: byte BCD ≥ 0x80 (digit 80–99, bitmap dengan field 1/9/17/25/33/41/49/57) menjadi `C2xx` | `Bcd.Decode` langsung dari byte; unpack field BCD, bitmap BCD, TPDU benar — golden `bcd-high-digits`, `bcd-even`, `bcd-tpdu` | 5 ✅ |
+| B15 Track 2 BCD ganjil (pad kanan) di-unpack dengan membuang digit **pertama**; ICC field 55 rusak tanpa error (`rc = 0`) | Pad kiri/kanan ditangani simetris (`IsoFieldSpec.PadRight`) — golden `bcd-track2-odd`, `bcd-track2-icc` | 5 ✅ |
+| B16 MTI BCD + bitmap ASCII: offset unpack salah | Offset dihitung dari encoding MTI & bitmap masing-masing — golden `bcd-mti-ascii-bitmap` | 5 ✅ |
+| B17 Data BCD dengan indikator panjang ASCII: di-pack BCD tetapi di-unpack mentah | Encode/decode simetris (`IsoLengthUnit`) — golden `bcd-data-ascii-length` | 5 ✅ |
+| B18 Bitmap BCD dengan bitmap sekunder tidak dapat di-unpack | Bitmap sekunder dibaca sesuai encoding bitmap — golden `bcd-secondary-bitmap` | 5 ✅ |
+| B19 Field fixed tidak divalidasi saat pack: nilai kurang/lebih panjang merusak offset seluruh pesan di sisi penerima | Nilai divalidasi saat di-set/pack (`IsoFormatException` dengan nomor field) — golden `ascii-fixed-short` | 5 ✅ |
+| B20 Karakter > U+00FF di field ISO melempar `OverflowException` (varian B4) | Ditolak dengan pesan jelas per field | 5 ✅ |
+| B21 EBCDIC hanya berfungsi bila konstruktor `AppProcessor` sudah mendaftarkan code page | `Ebcdic` mendaftarkan provider sendiri | 5 ✅ |
+| B22 Trace ISO menampilkan PAN, PIN block, track, ICC dalam teks jelas (termasuk hex dump) | `IsoFormatOptions.Default` menyamarkan field 2 (6+4), 35, 45, 52, 55 di daftar field **dan** hex dump; parse gagal hanya menampilkan byte sebelum error | 5 ✅ |
+| B23 `DesAlgorithm.EncryptHex` dengan kunci salah panjang mengembalikan `0000000000000000` diam-diam | `DesEcb` melempar `ArgumentException` | 5 ✅ |
+| B24 `NbCard.CreatePinBlock` tetap mengenkripsi walau validasi PIN/PAN gagal (error hanya di `out`) | `PinBlock.Create` melempar sebelum enkripsi | 5 ✅ |
+| B25 PIN block ISO-0 memakai `pan.Substring(3, 12)` (salah untuk PAN 17–19 digit) dan menulis panjang PIN 10–12 sebagai 2 digit desimal | 12 digit kanan tanpa check digit; panjang PIN hex | 5 ✅ |
+| B26 PIN block Docutel memotong PIN > 6 digit diam-diam | Ditolak | 5 ✅ |
+| B27 `IsCreditCardValid` menolak PAN 12 dan 17–19 digit | `Luhn.IsValid` 12–19 digit | 5 ✅ |
+| B28 `NbTlvEmv.ParseTLV` gagal (`ArgumentException`) pada tag berulang dan `IndexOutOfRange` pada data terpotong | `EmvTlv.Parse` mempertahankan tag berulang, `FormatException` yang jelas | 5 ✅ |
+| B29 `NbTlvQris.ExtractTlvMessage` menelan error dan mengembalikan hasil sebagian | `NumericTlv.Parse` melempar; `TryParse` tersedia | 5 ✅ |
+| B30 `HsmService`: body bukan JSON / HTTP error melempar exception tak tertangani ke handler interface | `IHsmClient` mengembalikan `96` + pesan; timeout per panggilan | 5 ✅ |
+| B31 `PriceRepository`/`StaticRoutingStrategy` mengosongkan dictionary di tempat saat RESYNC (request yang berjalan membaca data kosong/rusak) | Snapshot baru lalu ditukar — test `Price_reload_never_exposes_an_empty_book_to_running_requests` | 5 ✅ |
+| B32 Switch key sticky routing memakai `ToUpper()` yang bergantung culture | `ToUpperInvariant` | 5 ✅ |
+| B33 `DbMgr.AddVolumes` membuang delta dengan nama > 20 karakter tanpa jejak | Tetap tidak dapat disimpan, tetapi dicatat di log | 5 ✅ |
+| B34 (`ApiChannel`) flush volume dipanggil sebelum kanal berhenti; transaksi terakhir bisa belum tercatat | `ISyncNetModule.StopAsync` dipanggil setelah kanal Core ditutup | 5 ✅ |
+| B35 `IsoConverter.GetPCode` menghasilkan processing code 2–4 digit bila jenis rekening kosong | `ProcessingCode.FromTranType` mengisi `00` | 5 ✅ |
 | Core: `to_acc_type = from_acc_type` pada `Response(Request)` | `CoreResponse.From` menyalin `to_acc_type` dengan benar — **selesai** (test `Does_not_replicate_core_to_acc_type_bug`) | 1 ✅ |
 | `CredenHelper.DecryptValue` diam-diam mengembalikan `""` bila dekripsi password gagal | `LegacyCoreConfiguration` melempar `InvalidDataException` yang jelas — **selesai** | 2 ✅ |
 | Aliasing sub-objek pada `Response(Request)` lama (mengubah response ikut mengubah request) | `CoreResponse.From` menyalin sub-objek — **selesai** | 1 ✅ |

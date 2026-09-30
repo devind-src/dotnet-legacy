@@ -3,25 +3,37 @@ using Microsoft.Extensions.Options;
 
 namespace SyncNetPro.Sdk.Tracing;
 
-/// <summary>Antrean trace in-memory; dikirim oleh <see cref="TraceDispatcher"/>.</summary>
-public sealed class TraceWriter : ITraceWriter
+/// <summary>
+/// Antrean trace in-memory; dikirim oleh <see cref="TraceDispatcher"/>. Trace transaksi adalah jejak audit:
+/// bila antrean penuh, trace langsung ditulis ke file fallback (tidak pernah dibuang).
+/// </summary>
+public sealed class TraceWriter : ITraceWriter, IDisposable
 {
     private readonly Channel<TraceRecord> _queue;
     private readonly TimeProvider _time;
     private readonly string _appName;
+    private readonly FileTraceSink _overflow;
     private volatile bool _enabled;
-    private long _dropped;
+    private long _overflowed;
+    private long _lost;
 
-    /// <summary>Membuat penulis trace.</summary>
-    public TraceWriter(IOptions<SyncNetOptions> options, TimeProvider time)
+    /// <summary>Membuat penulis trace dengan folder fallback dari lingkungan Core.</summary>
+    public TraceWriter(IOptions<SyncNetOptions> options, TimeProvider time, Configuration.CoreEnvironment environment)
+        : this(options, time, (environment ?? throw new ArgumentNullException(nameof(environment))).TraceDirectory)
+    {
+    }
+
+    /// <summary>Membuat penulis trace dengan folder fallback tertentu.</summary>
+    public TraceWriter(IOptions<SyncNetOptions> options, TimeProvider time, string overflowDirectory)
     {
         ArgumentNullException.ThrowIfNull(options);
+        _overflow = new FileTraceSink(overflowDirectory, options.Value.Logging.LegacyWindowsFileNames);
         _time = time;
         _appName = options.Value.AppName;
         _enabled = options.Value.Trace.Enabled && options.Value.Trace.Sink != TraceSinkKind.None;
         _queue = Channel.CreateBounded<TraceRecord>(new BoundedChannelOptions(options.Value.Trace.QueueCapacity)
         {
-            // Wait: TryWrite mengembalikan false saat penuh sehingga trace yang dibuang bisa dihitung.
+            // Wait: TryWrite mengembalikan false saat penuh sehingga trace dapat dialihkan ke file.
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
         });
@@ -30,13 +42,19 @@ public sealed class TraceWriter : ITraceWriter
     /// <inheritdoc />
     public bool IsEnabled => _enabled;
 
-    /// <summary>Jumlah trace yang dibuang karena antrean penuh.</summary>
-    public long DroppedCount => Interlocked.Read(ref _dropped);
+    /// <summary>Jumlah trace yang ditulis langsung ke file karena antrean penuh.</summary>
+    public long OverflowCount => Interlocked.Read(ref _overflowed);
+
+    /// <summary>Jumlah trace yang gagal ditulis ke mana pun (antrean penuh dan file tidak dapat ditulis).</summary>
+    public long LostCount => Interlocked.Read(ref _lost);
 
     internal ChannelReader<TraceRecord> Reader => _queue.Reader;
 
     /// <inheritdoc />
     public void SetEnabled(bool enabled) => _enabled = enabled;
+
+    /// <inheritdoc />
+    public void Dispose() => _overflow.Dispose();
 
     /// <inheritdoc />
     public void Message(string nodeName, TraceDirection direction, string title, string content, string? remoteAddress = null)
@@ -65,7 +83,11 @@ public sealed class TraceWriter : ITraceWriter
             Detail = detail,
         };
 
+        if (_queue.Writer.TryWrite(record)) return;
+
+        // Antrean penuh (mis. Log Services lambat/terputus): tulis langsung ke file fallback — jejak audit tidak dibuang.
         // Tidak mencatat ke ILogger di sini: logger file juga meneruskan ke trace (hindari rekursi).
-        if (!_queue.Writer.TryWrite(record)) Interlocked.Increment(ref _dropped);
+        Interlocked.Increment(ref _overflowed);
+        if (!_overflow.TryWrite(record)) Interlocked.Increment(ref _lost);
     }
 }

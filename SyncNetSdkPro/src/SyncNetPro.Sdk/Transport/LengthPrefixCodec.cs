@@ -17,7 +17,7 @@ public sealed class LengthPrefixCodec : ITcpFrameCodec
     {
         ArgumentNullException.ThrowIfNull(options);
         if (options.MaxPayloadLength <= 0) throw new ArgumentOutOfRangeException(nameof(options), "MaxPayloadLength harus > 0.");
-        _options = options;
+        _options = options with { }; // salinan sendiri: tidak terpengaruh perubahan objek milik pemanggil
     }
 
     /// <summary>Codec default kanal Core (2 byte biner big-endian, exclude).</summary>

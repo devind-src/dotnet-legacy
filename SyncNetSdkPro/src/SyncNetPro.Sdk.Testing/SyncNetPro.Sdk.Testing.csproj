@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SyncNetPro.Sdk.Testing</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>SyncNetPro.Sdk.Testing</PackageId>
+    <Description>SimCore: simulator SyncNet Core (kanal sink/source, validasi kontrak, Log Services, command port, stub sistem eksternal, skenario) untuk mengembangkan dan menguji interface tanpa menginstal Core.</Description>
+    <PackageTags>syncnet;simcore;testing;simulator</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SyncNetPro.Sdk\SyncNetPro.Sdk.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SyncNetPro.SimCore.Tests" />
+  </ItemGroup>
+
+</Project>

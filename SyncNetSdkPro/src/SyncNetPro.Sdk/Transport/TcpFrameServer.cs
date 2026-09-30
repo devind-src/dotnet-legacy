@@ -27,6 +27,7 @@ public sealed class TcpFrameServer : IAsyncDisposable
     private readonly ILogger _logger;
     private readonly ConcurrentDictionary<EndPoint, FramedConnection> _peers = new();
     private Socket? _listener;
+    private IPEndPoint? _localEndPoint;
     private CancellationTokenSource? _cts;
     private Task? _acceptLoop;
 
@@ -49,7 +50,7 @@ public sealed class TcpFrameServer : IAsyncDisposable
     public Func<FramedConnection, Task>? Disconnected { get; set; }
 
     /// <summary>Alamat yang didengarkan (berguna bila port 0).</summary>
-    public IPEndPoint LocalEndPoint => (IPEndPoint?)_listener?.LocalEndPoint ?? _bind;
+    public IPEndPoint LocalEndPoint => _localEndPoint ?? _bind;
 
     /// <summary>Koneksi aktif.</summary>
     public IReadOnlyCollection<FramedConnection> Connections => [.. _peers.Values];
@@ -63,15 +64,47 @@ public sealed class TcpFrameServer : IAsyncDisposable
         if (_listener is not null) throw new InvalidOperationException("Server sudah berjalan.");
 
         var listener = new Socket(_bind.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-        listener.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-        listener.Bind(_bind);
+        ConfigureAddressReuse(listener);
+        try
+        {
+            listener.Bind(_bind);
+        }
+        catch
+        {
+            listener.Dispose();
+            throw;
+        }
+
         listener.Listen(512);
+        _localEndPoint = (IPEndPoint)listener.LocalEndPoint!;
         _listener = listener;
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _acceptLoop = Task.Run(() => AcceptLoopAsync(_cts.Token), CancellationToken.None);
         _logger.LogDebug("Mendengarkan di {EndPoint}", LocalEndPoint);
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Port boleh dipakai ulang segera setelah restart (koneksi lama TIME_WAIT), tetapi dua listener aktif
+    /// tidak boleh berbagi port. <c>SocketOptionName.ReuseAddress</c> di Linux/macOS juga memasang
+    /// <c>SO_REUSEPORT</c> sehingga listener kedua diam-diam ikut menerima koneksi — karena itu hanya
+    /// <c>SO_REUSEADDR</c> yang dipasang (sama dengan Kestrel), dan di Windows port dikunci eksklusif.
+    /// </summary>
+    internal static void ConfigureAddressReuse(Socket listener)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            listener.ExclusiveAddressUse = true;
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            listener.SetRawSocketOption(1 /* SOL_SOCKET */, 2 /* SO_REUSEADDR */, BitConverter.GetBytes(1));
+        }
+        else if (OperatingSystem.IsMacOS() || OperatingSystem.IsFreeBSD())
+        {
+            listener.SetRawSocketOption(0xFFFF /* SOL_SOCKET */, 0x0004 /* SO_REUSEADDR */, BitConverter.GetBytes(1));
+        }
     }
 
     /// <summary>Mengirim ke koneksi tertentu.</summary>
@@ -96,6 +129,7 @@ public sealed class TcpFrameServer : IAsyncDisposable
         _cts.Dispose();
         _cts = null;
         _listener = null;
+        _localEndPoint = null;
         _acceptLoop = null;
     }
 
@@ -112,6 +146,10 @@ public sealed class TcpFrameServer : IAsyncDisposable
                 socket = await _listener!.AcceptAsync(ct).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException)
+            {
+                break;
+            }
+            catch (SocketException) when (ct.IsCancellationRequested)
             {
                 break;
             }

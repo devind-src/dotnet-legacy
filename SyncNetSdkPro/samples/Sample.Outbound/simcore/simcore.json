@@ -1,0 +1,29 @@
+{
+  "AppName": "API Sample",
+  "BindAddress": "127.0.0.1",
+  "Nodes": [
+    {
+      "Name": "SAMPLE_BILLER",
+      "Category": "BillerIssuer",
+      "PortIn": 17001,
+      "PortOut": 17002,
+      "RequestTimeoutSeconds": 30,
+      "AdviceTimeoutSeconds": 30,
+      "AutoReversal": false,
+      "Responder": {
+        "Mode": "Fixed",
+        "ResponseCode": "00",
+        "ResponseMessage": "Approved",
+        "DelayMs": 0,
+        "Rules": []
+      }
+    }
+  ],
+  "LogServicesPort": 17009,
+  "Interface": {
+    "Host": "127.0.0.1",
+    "Port": 17000
+  },
+  "RemoteStubs": [],
+  "HistoryLimit": 2000
+}

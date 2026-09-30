@@ -25,12 +25,13 @@ public class TraceTests
         Assert.Equal(Golden("logmodel.json"), TraceDispatcher.Serialize(record));
     }
 
-    private static TraceWriter Writer(bool enabled = true, int capacity = 100)
+    private static TraceWriter Writer(bool enabled = true, int capacity = 100, string? overflowDirectory = null)
     {
         var options = new SyncNetOptions { AppName = "API Biller" };
         options.Trace.Enabled = enabled;
         options.Trace.QueueCapacity = capacity;
-        return new TraceWriter(Options.Create(options), new FakeTimeProvider(new DateTimeOffset(2026, 9, 30, 10, 0, 0, TimeSpan.Zero)));
+        return new TraceWriter(Options.Create(options), new FakeTimeProvider(new DateTimeOffset(2026, 9, 30, 10, 0, 0, TimeSpan.Zero)),
+            overflowDirectory ?? Path.Combine(Path.GetTempPath(), "trace-" + Guid.NewGuid().ToString("N")));
     }
 
     [Fact]
@@ -67,12 +68,22 @@ public class TraceTests
     }
 
     [Fact]
-    public void Full_queue_counts_dropped_records()
+    public void Full_queue_writes_overflow_to_fallback_file_instead_of_dropping()
     {
-        TraceWriter writer = Writer(capacity: 100);
-        for (int i = 0; i < 150; i++) writer.Info("N", $"t{i}");
+        // Keputusan tim: trace transaksi adalah jejak audit — tidak boleh ada yang hilang.
+        using var dir = new TempDirectory();
+        TraceWriter writer = Writer(capacity: 100, overflowDirectory: dir.Path);
 
-        Assert.Equal(50, writer.DroppedCount);
+        for (int i = 0; i < 150; i++) writer.Message("BILLER", TraceDirection.Outgoing, "0200", $"isi-{i}", "remote");
+
+        Assert.Equal(50, writer.OverflowCount);
+        Assert.Equal(0, writer.LostCount);
+        string[] files = Directory.GetFiles(dir.Combine("api-biller"), "biller_*.log");
+        string text = Wait.ReadShared(Assert.Single(files));
+        for (int i = 100; i < 150; i++) Assert.Contains($"isi-{i}\n", text, StringComparison.Ordinal);
+        int queued = 0;
+        while (writer.Reader.TryRead(out _)) queued++;
+        Assert.Equal(100, queued);
         Assert.Null(typeof(ITraceWriter).GetMethod("Clear"));
     }
 
@@ -94,6 +105,24 @@ public class TraceTests
 
         string file = dir.Combine("api-biller", "biller-abc_20260930_10.log");
         Assert.Equal("[30 Sep 2026 10:15:30.123] <0200> Message to BILLER ABC\nisi\n\n", File.ReadAllText(file));
+    }
+
+    [Fact]
+    public async Task Trace_file_stays_writable_while_an_operator_is_reading_it()
+    {
+        using var dir = new TempDirectory();
+        using var sink = new FileTraceSink(dir.Path);
+        static TraceRecord Record(string title) => new() { Datetime = new DateTime(2026, 9, 30, 10, 0, 0), AppName = "app", FileName = "node", Title = title };
+        Assert.True(await sink.TrySendAsync(Record("satu"), "{}", CancellationToken.None));
+        string file = dir.Combine("app", "node_20260930_10.log");
+
+        using (var reader = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+        {
+            Assert.True(await sink.TrySendAsync(Record("dua"), "{}", CancellationToken.None));
+            Assert.True(sink.TryWrite(Record("tiga")));
+        }
+
+        Assert.Equal("[30 Sep 2026 10:00:00.000] satu\n[30 Sep 2026 10:00:00.000] dua\n[30 Sep 2026 10:00:00.000] tiga\n", Wait.ReadShared(file));
     }
 
     [Fact]

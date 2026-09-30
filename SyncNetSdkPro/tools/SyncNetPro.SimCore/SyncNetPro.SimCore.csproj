@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>SyncNetPro.SimCore</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>syncnet-simcore</ToolCommandName>
+    <PackageId>SyncNetPro.SimCore</PackageId>
+    <Description>SimCore: simulator SyncNet Core (CLI + Web UI) untuk mengembangkan interface tanpa menginstal Core.</Description>
+    <PackageTags>syncnet;simcore;simulator;tool</PackageTags>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SyncNetPro.Sdk.Testing\SyncNetPro.Sdk.Testing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot\index.html" LogicalName="simcore.index.html" />
+    <Content Remove="wwwroot\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SyncNetPro.SimCore.Tests" />
+  </ItemGroup>
+
+</Project>

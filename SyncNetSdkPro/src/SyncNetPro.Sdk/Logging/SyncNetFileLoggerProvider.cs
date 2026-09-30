@@ -62,7 +62,7 @@ public sealed class SyncNetFileLoggerProvider : ILoggerProvider, ISupportExterna
                 try
                 {
                     Directory.CreateDirectory(_directory);
-                    await File.AppendAllTextAsync(file, text).ConfigureAwait(false);
+                    await SharedFile.AppendAsync(file, text).ConfigureAwait(false);
                     break;
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

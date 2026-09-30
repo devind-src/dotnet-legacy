@@ -4,7 +4,7 @@ SDK modern untuk membangun interface inbound/outbound antara **SyncNet Core** da
 eksternal. Pengganti `SyncNetSdk` untuk interface **baru**; interface lama tetap memakai SDK lama.
 
 - Analisa & desain: [`docs/`](docs/README.md)
-- Status: **Fase 3 — Transport remote selesai**, berikutnya fase 4 SimCore (lihat [dok. 08](docs/08-roadmap-testing-risiko.md))
+- Status: **Fase 4 — SimCore selesai**, berikutnya fase 5 modul (lihat [dok. 08](docs/08-roadmap-testing-risiko.md))
 
 ## Isi
 
@@ -12,9 +12,12 @@ eksternal. Pengganti `SyncNetSdk` untuk interface **baru**; interface lama tetap
 |------|------------|
 | `src/SyncNetPro.Contracts` | Kontrak pesan ke Core: `CoreRequest`, `CoreResponse`, serializer, framing TCP (`CoreFrame`), `MessageTypes`, `TranType`, `AuthorizedBy`, helper `additional_data` |
 | `src/SyncNetPro.Sdk` | Inti SDK: host, `SyncNetInterface`, kanal Core, koneksi eksternal (TCP/HTTP klien & server), konfigurasi node, command port, trace & log, status |
+| `src/SyncNetPro.Sdk.Testing` | SimCore in-process untuk unit/integration test interface (`SimCore`, `SimInterfaceHost`, skenario, remote stub) |
+| `tools/SyncNetPro.SimCore` | .NET tool `syncnet-simcore` (CLI + Web UI) dan `Dockerfile` |
 | `samples/Sample.Outbound` | Contoh interface outbound minimal (jalan tanpa Core/DB dengan `DOTNET_ENVIRONMENT=Development`) |
 | `tests/SyncNetPro.Contracts.Tests` | Unit test + **golden test** byte-per-byte terhadap SDK lama |
 | `tests/SyncNetPro.Sdk.Tests` | Test SDK: golden header TCP/LogModel/command, FakeCore via socket, integrasi PostgreSQL (bila `SYNCNET_TEST_PG` diisi) |
+| `tests/SyncNetPro.SimCore.Tests` | Test SimCore: perilaku Core, skenario, Web API, CLI |
 | `tools/SyncNetPro.GoldenGenerator` | Generator golden file; mereferensikan `../SyncNetSdk` (read-only) |
 | `.github/workflows/syncnetsdkpro.yml` (root repo) | CI Ubuntu + Windows, cek golden file, publish ke GitHub Packages |
 
@@ -36,6 +39,26 @@ Test integrasi PostgreSQL (opsional):
 export SYNCNET_TEST_PG="Host=127.0.0.1;Database=sdkpro_test;Username=sdkpro;Password=sdkpro"
 dotnet test --solution SyncNetSdkPro.slnx
 ```
+
+## SimCore — jalan tanpa Core
+
+```bash
+# 1. buat simcore/simcore.json + contoh skenario (port default: command 17000, in 17001, out 17002, log 17009)
+dotnet run --project tools/SyncNetPro.SimCore -- init --node SAMPLE_BILLER
+
+# 2. jalankan simulator + Web UI (http://127.0.0.1:5080)
+dotnet run --project tools/SyncNetPro.SimCore -- up -c simcore/simcore.json -s simcore/scenarios
+
+# 3. di terminal lain jalankan interface dalam mode Development
+DOTNET_ENVIRONMENT=Development dotnet run --project samples/Sample.Outbound
+
+# 4. regression test skenario (exit code 1 bila gagal, laporan JUnit untuk CI)
+dotnet run --project tools/SyncNetPro.SimCore -- run -c simcore/simcore.json -s simcore/scenarios --report junit.xml
+```
+
+`samples/Sample.Outbound/simcore/` berisi konfigurasi & skenario siap pakai untuk sample. Setelah
+dipublikasikan, tool dapat dipasang dengan `dotnet tool install -g SyncNetPro.SimCore` (perintah `syncnet-simcore`).
+Unit test in-process: lihat [dok. 07 §4](docs/07-simcore.md#4-contoh-pemakaian).
 
 ## Membuat interface (ringkas)
 

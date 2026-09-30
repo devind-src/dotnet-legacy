@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Modul Routing/Fee (keputusan Q6): paket terpisah dengan versi independen dari SDK inti.
+    Rilis dengan tag git "routing-v1.2.3" tanpa perlu merilis SyncNetPro.Sdk.
+  -->
+  <PropertyGroup>
+    <RootNamespace>SyncNetPro.Routing</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>SyncNetPro.Routing</PackageId>
+    <Description>Routing biller/supplier dan kalkulasi fee untuk interface channel SyncNet: routing statis/margin/produk, failover (health check), Jadwal Routing, Volume &amp; Tiering, fee bill payment dan margin topup.</Description>
+    <PackageTags>syncnet;routing;fee;failover</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <MinVerTagPrefix>routing-v</MinVerTagPrefix>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SyncNetPro.Sdk\SyncNetPro.Sdk.csproj" />
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SyncNetPro.Routing.Tests" />
+  </ItemGroup>
+
+</Project>

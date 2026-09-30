@@ -28,6 +28,11 @@
     <MinVerDefaultPreReleaseIdentifiers>preview.0</MinVerDefaultPreReleaseIdentifiers>
   </PropertyGroup>
 
+  <!-- Rilis routing-v*: paket SDK yang direferensikan SyncNetPro.Routing memakai versi rilis sdkpro-v* terakhir. -->
+  <PropertyGroup Condition="'$(SdkReleaseVersion)' != '' and '$(MSBuildProjectName)' != 'SyncNetPro.Routing'">
+    <MinVerVersionOverride>$(SdkReleaseVersion)</MinVerVersionOverride>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>

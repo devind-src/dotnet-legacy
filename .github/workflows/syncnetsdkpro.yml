@@ -3,7 +3,7 @@ name: SyncNetSdkPro
 on:
   push:
     branches: [main]
-    tags: ['sdkpro-v*']
+    tags: ['sdkpro-v*', 'routing-v*']
     paths:
       - 'SyncNetSdkPro/**'
       - 'SyncNetSdk/**'
@@ -62,14 +62,26 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: SyncNetSdkPro/global.json
+      - name: Start PostgreSQL (golden resolver routing)
+        working-directory: .
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -c "CREATE USER sdkpro WITH PASSWORD 'sdkpro' SUPERUSER;" -c "CREATE DATABASE sdkpro_test OWNER sdkpro;"
+          echo "SYNCNET_TEST_PG=Host=127.0.0.1;Database=sdkpro_test;Username=sdkpro;Password=sdkpro" >> "$GITHUB_ENV"
       - name: Regenerate from legacy SyncNetSdk
         run: dotnet run --project tools/SyncNetPro.GoldenGenerator -c Release
       - name: Verify no diff
-        run: git diff --exit-code -- tests/SyncNetPro.Contracts.Tests/Golden tests/SyncNetPro.Sdk.Tests/Golden tests/SyncNetPro.Iso8583.Tests/Golden tests/SyncNetPro.Toolkit.Tests/Golden tests/SyncNetPro.Hsm.Tests/Golden
+        run: >
+          git diff --exit-code --
+          tests/SyncNetPro.Contracts.Tests/Golden tests/SyncNetPro.Sdk.Tests/Golden tests/SyncNetPro.Iso8583.Tests/Golden
+          tests/SyncNetPro.Toolkit.Tests/Golden tests/SyncNetPro.Hsm.Tests/Golden tests/SyncNetPro.Routing.Tests/Golden
 
   publish:
+    # sdkpro-v*  : semua paket SDK kecuali SyncNetPro.Routing
+    # routing-v* : hanya SyncNetPro.Routing (versi independen, keputusan Q6); dependensi SyncNetPro.Sdk/Contracts
+    #              dipatok ke tag sdkpro-v* terakhir agar selalu menunjuk versi yang sudah dipublikasikan.
     name: Publish to GitHub Packages
-    if: startsWith(github.ref, 'refs/tags/sdkpro-v')
+    if: startsWith(github.ref, 'refs/tags/sdkpro-v') || startsWith(github.ref, 'refs/tags/routing-v')
     needs: [build-test, golden-check]
     runs-on: ubuntu-latest
     permissions:
@@ -82,8 +94,17 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: SyncNetSdkPro/global.json
-      - name: Pack
-        run: dotnet pack SyncNetSdkPro.slnx -c Release -o artifacts
+      - name: Pack SDK
+        if: startsWith(github.ref, 'refs/tags/sdkpro-v')
+        run: |
+          dotnet pack SyncNetSdkPro.slnx -c Release -o artifacts
+          rm -f artifacts/SyncNetPro.Routing.*
+      - name: Pack Routing
+        if: startsWith(github.ref, 'refs/tags/routing-v')
+        run: |
+          SDK_TAG=$(git describe --tags --match 'sdkpro-v*' --abbrev=0)
+          dotnet pack src/SyncNetPro.Routing/SyncNetPro.Routing.csproj -c Release -o artifacts -p:SdkReleaseVersion=${SDK_TAG#sdkpro-v}
+          find artifacts -name '*.nupkg' ! -name 'SyncNetPro.Routing.*' -delete
       - name: Push
         working-directory: SyncNetSdkPro/artifacts
         run: >

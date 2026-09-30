@@ -6,6 +6,7 @@
     <Project Path="src/SyncNetPro.Contracts/SyncNetPro.Contracts.csproj" />
     <Project Path="src/SyncNetPro.Hsm/SyncNetPro.Hsm.csproj" />
     <Project Path="src/SyncNetPro.Iso8583/SyncNetPro.Iso8583.csproj" />
+    <Project Path="src/SyncNetPro.Routing/SyncNetPro.Routing.csproj" />
     <Project Path="src/SyncNetPro.Sdk.Testing/SyncNetPro.Sdk.Testing.csproj" />
     <Project Path="src/SyncNetPro.Sdk/SyncNetPro.Sdk.csproj" />
     <Project Path="src/SyncNetPro.Toolkit/SyncNetPro.Toolkit.csproj" />
@@ -14,6 +15,7 @@
     <Project Path="tests/SyncNetPro.Contracts.Tests/SyncNetPro.Contracts.Tests.csproj" />
     <Project Path="tests/SyncNetPro.Hsm.Tests/SyncNetPro.Hsm.Tests.csproj" />
     <Project Path="tests/SyncNetPro.Iso8583.Tests/SyncNetPro.Iso8583.Tests.csproj" />
+    <Project Path="tests/SyncNetPro.Routing.Tests/SyncNetPro.Routing.Tests.csproj" />
     <Project Path="tests/SyncNetPro.Sdk.Tests/SyncNetPro.Sdk.Tests.csproj" />
     <Project Path="tests/SyncNetPro.SimCore.Tests/SyncNetPro.SimCore.Tests.csproj" />
     <Project Path="tests/SyncNetPro.Toolkit.Tests/SyncNetPro.Toolkit.Tests.csproj" />

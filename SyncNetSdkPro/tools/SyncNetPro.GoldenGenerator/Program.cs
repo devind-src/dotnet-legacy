@@ -292,3 +292,10 @@ ToolkitGolden.Write(args.Length > 3
 HsmGolden.Write(args.Length > 4
     ? args[4]
     : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Hsm.Tests", "Golden")));
+
+// ---------------- Golden untuk SyncNetPro.Routing ----------------
+string routingOut = args.Length > 5
+    ? args[5]
+    : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Routing.Tests", "Golden"));
+RoutingGolden.Write(routingOut);
+RoutingDbGolden.Write(routingOut);

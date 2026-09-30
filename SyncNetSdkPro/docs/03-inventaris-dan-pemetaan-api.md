@@ -50,8 +50,8 @@ meng-override yang dibutuhkan.
 |------|-----------|------|
 | `new AppProcessor(AppName, Version, this)` | GANTI | `builder.Services.AddSyncNetInterface<THandler>(o => o.AppName = …)`; versi dari `AssemblyInformationalVersion` |
 | `AppStart(ct)` / `AppStop()` | GANTI | Lifecycle `IHostedService` (otomatis via Generic Host) |
-| `GetNode(NodeName, out NodeRemote)` / `GetNode(NodeName, ConnName, out …)` / `GetNodeRemote(…)` ×2 | GABUNG | `INodeRegistry.TryGet(nodeName, out NodeInfo)`, `INodeRegistry.GetConnection(nodeName, connectionName?)` — mengembalikan objek **read-only** `NodeInfo`/`ConnectionInfo` (tanpa membuat socket baru; memperbaiki B7) |
-| `IsConnected(NodeName)` / `IsConnected(NodeName, ConnName)` | GABUNG | `ConnectionInfo.IsConnected` / `ctx.Remote.IsConnected` |
+| `GetNode(NodeName, out NodeRemote)` / `GetNode(NodeName, ConnName, out …)` / `GetNodeRemote(…)` ×2 | GABUNG | `INodeRegistry.TryGetNode(nodeName, out NodeInfo)`, `INodeRegistry.GetConnections(nodeName)` — mengembalikan objek **read-only** `NodeInfo`/`RemoteConnectionInfo` (tanpa membuat socket baru; memperbaiki B7) |
+| `IsConnected(NodeName)` / `IsConnected(NodeName, ConnName)` | GABUNG | `IRemoteConnection.IsConnected` / `ctx.Remote.IsConnected` |
 | `Resync()` | GANTI NAMA | `ISyncNetRuntime.ReloadAsync(ct)` (juga dipicu command `RESYNC`) |
 | `ResetTcp(NodeName)` | GANTI NAMA | `IRemoteConnection.ResetAsync(ct)` |
 | `SendToTcp(NodeName, bytes)` / `SendToTcp(NodeName, ConnName, bytes)` | GABUNG | `IRemoteConnection.SendAsync(ReadOnlyMemory<byte>, ct)` |

@@ -181,14 +181,16 @@ public class CoreChannelTests
         await using FakeCore core = await FakeCore.StartAsync();
         var app = await TestHost<ScriptedInterface>.StartAsync([Messages.Node("BILLER", NodeCategory.BillerIssuer, core)]);
         ScriptedInterface handler = app.Handler;
+        var started = new TaskCompletionSource();
         handler.OnRequest = async ctx =>
         {
+            started.TrySetResult();
             await Task.Delay(300);
             return ctx.Request.ToResponse("00");
         };
         await Wait.UntilAsync(() => core.SinkConnected, "kanal outbound terkoneksi");
         await core.SendToInterfaceAsync(Messages.Request());
-        await Task.Delay(50);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         await app.DisposeAsync();
 

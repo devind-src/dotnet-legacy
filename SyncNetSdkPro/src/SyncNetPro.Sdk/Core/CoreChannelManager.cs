@@ -5,7 +5,6 @@ using Microsoft.Extensions.Options;
 using SyncNetPro.Contracts;
 using SyncNetPro.Sdk.Logging;
 using SyncNetPro.Sdk.Nodes;
-using SyncNetPro.Sdk.Tracing;
 using SyncNetPro.Sdk.Transport;
 
 namespace SyncNetPro.Sdk.Core;
@@ -21,9 +20,8 @@ public sealed class CoreChannelManager : ICoreClient, IAsyncDisposable
     private readonly SyncNetInterface _handler;
     private readonly INodeRegistry _registry;
     private readonly INodeStatusReporter _status;
-    private readonly ITraceWriter _trace;
     private readonly ICoreCorrelationKeyProvider _keys;
-    private readonly IServiceProvider _services;
+    private readonly SyncNetServices _services;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger _logger;
     private readonly TimeProvider _time;
@@ -41,9 +39,8 @@ public sealed class CoreChannelManager : ICoreClient, IAsyncDisposable
         SyncNetInterface handler,
         INodeRegistry registry,
         INodeStatusReporter status,
-        ITraceWriter trace,
         ICoreCorrelationKeyProvider keys,
-        IServiceProvider services,
+        SyncNetServices services,
         ILoggerFactory loggerFactory,
         TimeProvider time)
     {
@@ -52,7 +49,6 @@ public sealed class CoreChannelManager : ICoreClient, IAsyncDisposable
         _handler = handler;
         _registry = registry;
         _status = status;
-        _trace = trace;
         _keys = keys;
         _services = services;
         _loggerFactory = loggerFactory;
@@ -259,8 +255,7 @@ public sealed class CoreChannelManager : ICoreClient, IAsyncDisposable
         {
             ILogger logger = _loggerFactory.CreateLogger(_handler.GetType());
             using IDisposable? scope = logger.BeginNodeScope(node.Name);
-            var context = new CoreRequestContext(node, request, (rsp, ct) => ReplyToCoreAsync(node.Name, rsp, ct),
-                this, _trace, logger, _services);
+            var context = new CoreRequestContext(node, request, (rsp, ct) => ReplyToCoreAsync(node.Name, rsp, ct), _services, logger);
             try
             {
                 CoreResponse? response = await _handler.OnCoreRequestAsync(context, _stopping.Token).ConfigureAwait(false);
@@ -326,7 +321,7 @@ public sealed class CoreChannelManager : ICoreClient, IAsyncDisposable
             using IDisposable? scope = logger.BeginNodeScope(node.Name);
             try
             {
-                await _handler.OnUnmatchedCoreResponseAsync(new CoreResponseContext(node, response, this, _trace, logger, _services), _stopping.Token).ConfigureAwait(false);
+                await _handler.OnUnmatchedCoreResponseAsync(new CoreResponseContext(node, response, _services, logger), _stopping.Token).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

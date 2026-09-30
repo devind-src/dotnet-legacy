@@ -5,13 +5,15 @@ using Microsoft.Extensions.Options;
 using SyncNetPro.Sdk.Commands;
 using SyncNetPro.Sdk.Core;
 using SyncNetPro.Sdk.Nodes;
-using SyncNetPro.Sdk.Tracing;
+using SyncNetPro.Sdk.Remote;
 
 namespace SyncNetPro.Sdk.Hosting;
 
 /// <summary>
 /// Orkestrasi siklus hidup interface (pengganti <c>AppProcessor.AppStart/AppStop</c>):
-/// muat konfigurasi → status UP → kanal Core → command port → <see cref="SyncNetInterface.OnStartedAsync"/>.
+/// muat konfigurasi → status UP → kanal Core → koneksi eksternal → command port → <see cref="SyncNetInterface.OnStartedAsync"/>.
+/// Berhenti dengan urutan terbalik: koneksi eksternal ditutup lebih dulu (request HTTP yang sedang berjalan
+/// diselesaikan Kestrel), lalu kanal Core setelah request yang sedang diproses selesai.
 /// </summary>
 public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisposable
 {
@@ -20,6 +22,7 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
     private readonly INodeRegistry _registry;
     private readonly INodeStatusReporter _status;
     private readonly CoreChannelManager _channels;
+    private readonly RemoteConnectionManager _remote;
     private readonly StartupSignal _startup;
     private readonly ILogger<SyncNetRuntime> _logger;
     private readonly CommandServer _commands;
@@ -31,9 +34,9 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
         INodeRegistry registry,
         INodeStatusReporter status,
         CoreChannelManager channels,
-        ITraceWriter trace,
+        RemoteConnectionManager remote,
         StartupSignal startup,
-        IServiceProvider services,
+        SyncNetServices services,
         ILoggerFactory loggerFactory)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -42,10 +45,11 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
         _registry = registry;
         _status = status;
         _channels = channels;
+        _remote = remote;
         _startup = startup;
         _logger = loggerFactory.CreateLogger<SyncNetRuntime>();
         Version = options.Value.Version ?? DefaultVersion();
-        _commands = new CommandServer(options, Version, handler, registry, trace, channels, services, loggerFactory, ReloadAsync);
+        _commands = new CommandServer(options, Version, handler, registry, services, loggerFactory, ReloadAsync);
     }
 
     /// <inheritdoc />
@@ -75,6 +79,7 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
 
         await _status.ReportApplicationAsync(AppName, true, cancellationToken).ConfigureAwait(false);
         await _channels.ReconcileAsync(configuration, cancellationToken).ConfigureAwait(false);
+        await _remote.ReconcileAsync(configuration, cancellationToken).ConfigureAwait(false);
 
         if (_options.Value.Command.Enabled)
         {
@@ -102,6 +107,7 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
 
         await _commands.StopAsync().ConfigureAwait(false);
         await _status.ReportApplicationAsync(AppName, false, CancellationToken.None).ConfigureAwait(false);
+        await _remote.StopAsync().ConfigureAwait(false);
         await _channels.StopAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
     }
 
@@ -109,6 +115,7 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
     public async Task<NodeConfiguration> ReloadAsync(CancellationToken cancellationToken = default)
     {
         NodeConfiguration configuration = await _registry.ReloadAsync(cancellationToken).ConfigureAwait(false);
+        await _remote.ReconcileAsync(configuration, cancellationToken).ConfigureAwait(false);
         await _channels.ReconcileAsync(configuration, cancellationToken).ConfigureAwait(false);
         await _handler.OnConfigurationReloadedAsync(configuration, cancellationToken).ConfigureAwait(false);
         _logger.LogInformation("{AppName} resync selesai", AppName);

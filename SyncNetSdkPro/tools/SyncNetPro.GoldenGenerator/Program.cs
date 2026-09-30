@@ -248,4 +248,31 @@ File.WriteAllBytes(Path.Combine(sdkOut, "logmodel.frame.bin"), TcpHeader.AddTcpH
 File.WriteAllBytes(Path.Combine(sdkOut, "command-ok.frame.bin"), TcpHeader.AddTcpHeader(utf8.GetBytes("OK")));
 File.WriteAllBytes(Path.Combine(sdkOut, "command-unknown.frame.bin"), TcpHeader.AddTcpHeader(utf8.GetBytes("Unknown command")));
 
-Console.WriteLine($"{headers.Count} varian header TCP + LogModel + command ditulis ke {sdkOut}");
+// SetProtocol() XTcpClientSdk/XTcpListenerSdk (internal) — dibaca via reflection, tanpa mengubah SDK lama.
+var protocolCases = new List<object>();
+foreach (string className in new[] { "SyncNet.Networking.XTcpClientSdk", "SyncNet.Networking.XTcpListenerSdk" })
+{
+    Type sdkType = typeof(TcpHeader).Assembly.GetType(className, throwOnError: true)!;
+    foreach (int length in new[] { 2, 4 })
+    foreach (SdkTcpHeaderLengthMode mode in Enum.GetValues<SdkTcpHeaderLengthMode>())
+    foreach (SdkTcpHeaderFormat format in Enum.GetValues<SdkTcpHeaderFormat>())
+    foreach (bool hiLo in new[] { true, false })
+    {
+        object sdk = Activator.CreateInstance(sdkType, nonPublic: true)!;
+        sdkType.GetProperty("HeaderLength")!.SetValue(sdk, length);
+        sdkType.GetProperty("HeaderLengthMode")!.SetValue(sdk, mode);
+        sdkType.GetProperty("HeaderFormat")!.SetValue(sdk, format);
+        sdkType.GetProperty("HeaderHiLo")!.SetValue(sdk, hiLo);
+        sdkType.GetMethod("SetProtocol")!.Invoke(sdk, null);
+        protocolCases.Add(new
+        {
+            source = sdkType.Name, length, mode = mode.ToString(), format = format.ToString(), hiLo,
+            headerType = sdkType.GetProperty("DefaultHeaderType")!.GetValue(sdk)!.ToString(),
+            lengthMode = sdkType.GetProperty("DefaultLengthMode")!.GetValue(sdk)!.ToString(),
+            endian = sdkType.GetProperty("DefaultEndianMode")!.GetValue(sdk)!.ToString(),
+        });
+    }
+}
+File.WriteAllText(Path.Combine(sdkOut, "setprotocol.json"), JsonConvert.SerializeObject(protocolCases, Formatting.Indented), utf8);
+
+Console.WriteLine($"{headers.Count} varian header TCP + {protocolCases.Count} kasus SetProtocol + LogModel + command ditulis ke {sdkOut}");

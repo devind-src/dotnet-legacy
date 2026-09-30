@@ -52,7 +52,7 @@ public enum TcpHeaderFormat
 }
 
 /// <summary>Koneksi ke sistem eksternal (baris <c>sw_connections</c>). Dipakai transport remote (fase 3).</summary>
-public sealed record ConnectionInfo
+public sealed record RemoteConnectionInfo
 {
     /// <summary><c>conn_name</c>.</summary>
     public string Name { get; init; } = string.Empty;

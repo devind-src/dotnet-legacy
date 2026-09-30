@@ -10,6 +10,7 @@ using SyncNetPro.Sdk.Core;
 using SyncNetPro.Sdk.Hosting;
 using SyncNetPro.Sdk.Logging;
 using SyncNetPro.Sdk.Nodes;
+using SyncNetPro.Sdk.Remote;
 using SyncNetPro.Sdk.Tracing;
 
 namespace SyncNetPro.Sdk;
@@ -85,7 +86,10 @@ public static class SyncNetServiceCollectionExtensions
 
         services.TryAddSingleton<THandler>();
         services.TryAddSingleton<SyncNetInterface>(sp => sp.GetRequiredService<THandler>());
+        services.TryAddSingleton<SyncNetServices>();
         services.TryAddSingleton<CoreChannelManager>();
+        services.TryAddSingleton<RemoteConnectionManager>();
+        services.TryAddSingleton<IRemoteRegistry>(sp => sp.GetRequiredService<RemoteConnectionManager>());
         services.TryAddSingleton<ICoreClient>(sp => sp.GetRequiredService<CoreChannelManager>());
         services.TryAddSingleton<SyncNetRuntime>();
         services.TryAddSingleton<ISyncNetRuntime>(sp => sp.GetRequiredService<SyncNetRuntime>());

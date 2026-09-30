@@ -9,7 +9,7 @@ namespace SyncNetPro.Sdk.Nodes;
 /// <param name="LogServices">Alamat Log Services (<c>sw_app</c> baris <c>Log Services</c>).</param>
 public sealed record NodeConfiguration(
     IReadOnlyList<NodeInfo> Nodes,
-    IReadOnlyList<ConnectionInfo> Connections,
+    IReadOnlyList<RemoteConnectionInfo> Connections,
     int? CommandPort,
     DnsEndPoint? LogServices)
 {

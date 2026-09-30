@@ -80,7 +80,7 @@ public class PostgresIntegrationTests
         Assert.Equal("441", node.InstitutionId);
         Assert.Equal("p=1", node.Parameter);
 
-        ConnectionInfo connection = Assert.Single(config.Connections);
+        RemoteConnectionInfo connection = Assert.Single(config.Connections);
         Assert.Equal(node.Name, connection.NodeName);
         Assert.Equal(ConnectionProtocol.Tcp2ByteExcludeHeader, connection.Protocol);
         Assert.Equal(ConnectionRole.Client, connection.Role);

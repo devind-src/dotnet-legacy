@@ -23,7 +23,7 @@ public sealed class NodeRegistry(
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<ConnectionInfo> GetConnections(string nodeName) =>
+    public IReadOnlyList<RemoteConnectionInfo> GetConnections(string nodeName) =>
         [.. _current.Connections.Where(c => string.Equals(c.NodeName, nodeName, StringComparison.Ordinal))];
 
     /// <inheritdoc />

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using SyncNetPro.Contracts;
 using SyncNetPro.Sdk.Core;
 using SyncNetPro.Sdk.Nodes;
+using SyncNetPro.Sdk.Remote;
 using SyncNetPro.Sdk.Tracing;
 
 namespace SyncNetPro.Sdk;
@@ -9,29 +10,33 @@ namespace SyncNetPro.Sdk;
 /// <summary>Layanan bersama yang tersedia di setiap konteks handler.</summary>
 public abstract class SyncNetContext
 {
-    private protected SyncNetContext(NodeInfo? node, ICoreClient core, ITraceWriter trace, ILogger logger, IServiceProvider services)
+    private readonly SyncNetServices _services;
+
+    private protected SyncNetContext(NodeInfo? node, SyncNetServices services, ILogger logger)
     {
         Node = node;
-        Core = core;
-        Trace = trace;
+        _services = services;
         Logger = logger;
-        Services = services;
     }
 
     /// <summary>Node terkait (bisa <c>null</c> untuk command dengan nama node yang tidak dikenal).</summary>
     public NodeInfo? Node { get; }
 
     /// <summary>Klien ke Core.</summary>
-    public ICoreClient Core { get; }
+    public ICoreClient Core => _services.Core;
+
+    /// <summary>Koneksi ke sistem eksternal milik node ini.</summary>
+    /// <exception cref="InvalidOperationException">Konteks tanpa node.</exception>
+    public IRemoteNode Remote => _services.Remote.GetNode(Node?.Name ?? throw new InvalidOperationException("Konteks ini tidak terkait node."));
 
     /// <summary>Trace ke Log Services.</summary>
-    public ITraceWriter Trace { get; }
+    public ITraceWriter Trace => _services.Trace;
 
     /// <summary>Logger (sudah dalam scope node).</summary>
     public ILogger Logger { get; }
 
     /// <summary>Service provider untuk kebutuhan lanjutan.</summary>
-    public IServiceProvider Services { get; }
+    public IServiceProvider Services => _services.Provider;
 }
 
 /// <summary>Request dari Core pada kanal outbound (Core SinkNode, <c>port_out</c>).</summary>
@@ -41,8 +46,8 @@ public sealed class CoreRequestContext : SyncNetContext
     private int _replied;
 
     internal CoreRequestContext(NodeInfo node, CoreRequest request, Func<CoreResponse, CancellationToken, Task> reply,
-        ICoreClient core, ITraceWriter trace, ILogger logger, IServiceProvider services)
-        : base(node, core, trace, logger, services)
+        SyncNetServices services, ILogger logger)
+        : base(node, services, logger)
     {
         Request = request;
         _reply = reply;
@@ -77,8 +82,8 @@ public sealed class CoreRequestContext : SyncNetContext
 /// <summary>Respons Core yang tidak cocok dengan request yang sedang menunggu (terlambat/tidak dikenal).</summary>
 public sealed class CoreResponseContext : SyncNetContext
 {
-    internal CoreResponseContext(NodeInfo node, CoreResponse response, ICoreClient core, ITraceWriter trace, ILogger logger, IServiceProvider services)
-        : base(node, core, trace, logger, services)
+    internal CoreResponseContext(NodeInfo node, CoreResponse response, SyncNetServices services, ILogger logger)
+        : base(node, services, logger)
     {
         Response = response;
     }
@@ -113,8 +118,8 @@ public enum NetworkCommand
 public sealed class NetworkCommandContext : SyncNetContext
 {
     internal NetworkCommandContext(NetworkCommand command, string nodeName, string parameter, NodeInfo? node,
-        ICoreClient core, ITraceWriter trace, ILogger logger, IServiceProvider services)
-        : base(node, core, trace, logger, services)
+        SyncNetServices services, ILogger logger)
+        : base(node, services, logger)
     {
         Command = command;
         NodeName = nodeName;

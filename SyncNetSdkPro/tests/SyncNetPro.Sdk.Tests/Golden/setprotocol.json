@@ -1,0 +1,322 @@
+[
+  {
+    "source": "XTcpClientSdk",
+    "length": 2,
+    "mode": "ExcludeHeader",
+    "format": "BCD",
+    "hiLo": true,
+    "headerType": "Bcd2Byte",
+    "lengthMode": "Exclude",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 2,
+    "mode": "ExcludeHeader",
+    "format": "BCD",
+    "hiLo": false,
+    "headerType": "Bcd2Byte",
+    "lengthMode": "Exclude",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 2,
+    "mode": "ExcludeHeader",
+    "format": "ASC",
+    "hiLo": true,
+    "headerType": "Binary2Byte",
+    "lengthMode": "Exclude",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 2,
+    "mode": "ExcludeHeader",
+    "format": "ASC",
+    "hiLo": false,
+    "headerType": "Binary2Byte",
+    "lengthMode": "Exclude",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 2,
+    "mode": "IncludeHeader",
+    "format": "BCD",
+    "hiLo": true,
+    "headerType": "Bcd2Byte",
+    "lengthMode": "Include",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 2,
+    "mode": "IncludeHeader",
+    "format": "BCD",
+    "hiLo": false,
+    "headerType": "Bcd2Byte",
+    "lengthMode": "Include",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 2,
+    "mode": "IncludeHeader",
+    "format": "ASC",
+    "hiLo": true,
+    "headerType": "Binary2Byte",
+    "lengthMode": "Include",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 2,
+    "mode": "IncludeHeader",
+    "format": "ASC",
+    "hiLo": false,
+    "headerType": "Binary2Byte",
+    "lengthMode": "Include",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 4,
+    "mode": "ExcludeHeader",
+    "format": "BCD",
+    "hiLo": true,
+    "headerType": "Binary4Byte",
+    "lengthMode": "Exclude",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 4,
+    "mode": "ExcludeHeader",
+    "format": "BCD",
+    "hiLo": false,
+    "headerType": "Binary4Byte",
+    "lengthMode": "Exclude",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 4,
+    "mode": "ExcludeHeader",
+    "format": "ASC",
+    "hiLo": true,
+    "headerType": "Ascii4Digit",
+    "lengthMode": "Exclude",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 4,
+    "mode": "ExcludeHeader",
+    "format": "ASC",
+    "hiLo": false,
+    "headerType": "Ascii4Digit",
+    "lengthMode": "Exclude",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 4,
+    "mode": "IncludeHeader",
+    "format": "BCD",
+    "hiLo": true,
+    "headerType": "Binary4Byte",
+    "lengthMode": "Include",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 4,
+    "mode": "IncludeHeader",
+    "format": "BCD",
+    "hiLo": false,
+    "headerType": "Binary4Byte",
+    "lengthMode": "Include",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 4,
+    "mode": "IncludeHeader",
+    "format": "ASC",
+    "hiLo": true,
+    "headerType": "Ascii4Digit",
+    "lengthMode": "Include",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpClientSdk",
+    "length": 4,
+    "mode": "IncludeHeader",
+    "format": "ASC",
+    "hiLo": false,
+    "headerType": "Ascii4Digit",
+    "lengthMode": "Include",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 2,
+    "mode": "ExcludeHeader",
+    "format": "BCD",
+    "hiLo": true,
+    "headerType": "Bcd2Byte",
+    "lengthMode": "Exclude",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 2,
+    "mode": "ExcludeHeader",
+    "format": "BCD",
+    "hiLo": false,
+    "headerType": "Bcd2Byte",
+    "lengthMode": "Exclude",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 2,
+    "mode": "ExcludeHeader",
+    "format": "ASC",
+    "hiLo": true,
+    "headerType": "Binary2Byte",
+    "lengthMode": "Exclude",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 2,
+    "mode": "ExcludeHeader",
+    "format": "ASC",
+    "hiLo": false,
+    "headerType": "Binary2Byte",
+    "lengthMode": "Exclude",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 2,
+    "mode": "IncludeHeader",
+    "format": "BCD",
+    "hiLo": true,
+    "headerType": "Bcd2Byte",
+    "lengthMode": "Include",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 2,
+    "mode": "IncludeHeader",
+    "format": "BCD",
+    "hiLo": false,
+    "headerType": "Bcd2Byte",
+    "lengthMode": "Include",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 2,
+    "mode": "IncludeHeader",
+    "format": "ASC",
+    "hiLo": true,
+    "headerType": "Binary2Byte",
+    "lengthMode": "Include",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 2,
+    "mode": "IncludeHeader",
+    "format": "ASC",
+    "hiLo": false,
+    "headerType": "Binary2Byte",
+    "lengthMode": "Include",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 4,
+    "mode": "ExcludeHeader",
+    "format": "BCD",
+    "hiLo": true,
+    "headerType": "Binary4Byte",
+    "lengthMode": "Exclude",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 4,
+    "mode": "ExcludeHeader",
+    "format": "BCD",
+    "hiLo": false,
+    "headerType": "Binary4Byte",
+    "lengthMode": "Exclude",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 4,
+    "mode": "ExcludeHeader",
+    "format": "ASC",
+    "hiLo": true,
+    "headerType": "Ascii4Digit",
+    "lengthMode": "Exclude",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 4,
+    "mode": "ExcludeHeader",
+    "format": "ASC",
+    "hiLo": false,
+    "headerType": "Ascii4Digit",
+    "lengthMode": "Exclude",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 4,
+    "mode": "IncludeHeader",
+    "format": "BCD",
+    "hiLo": true,
+    "headerType": "Binary4Byte",
+    "lengthMode": "Include",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 4,
+    "mode": "IncludeHeader",
+    "format": "BCD",
+    "hiLo": false,
+    "headerType": "Binary4Byte",
+    "lengthMode": "Include",
+    "endian": "LittleEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 4,
+    "mode": "IncludeHeader",
+    "format": "ASC",
+    "hiLo": true,
+    "headerType": "Ascii4Digit",
+    "lengthMode": "Include",
+    "endian": "BigEndian"
+  },
+  {
+    "source": "XTcpListenerSdk",
+    "length": 4,
+    "mode": "IncludeHeader",
+    "format": "ASC",
+    "hiLo": false,
+    "headerType": "Ascii4Digit",
+    "lengthMode": "Include",
+    "endian": "LittleEndian"
+  }
+]

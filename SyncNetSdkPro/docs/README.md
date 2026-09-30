@@ -4,7 +4,7 @@ Folder ini berisi analisa untuk membangun **SyncNetSdkPro**, pengganti modern da
 `SyncNetSdk` (SDK lama) yang dipakai untuk membangun interface inbound/outbound
 antara **SyncNet Core** dan sistem eksternal (bank, biller, channel, dsb).
 
-> Status: keputusan tim final (lihat *Keputusan Tim*); **Fase 1 (Fondasi & Kontrak) dan Fase 2 (Inti SDK) selesai** — lihat [dok. 08 §1.1](08-roadmap-testing-risiko.md#11-status). SDK lama (`SyncNetSdk`)
+> Status: keputusan tim final (lihat *Keputusan Tim*); **Fase 1 (Fondasi & Kontrak), Fase 2 (Inti SDK), dan Fase 3 (Transport Remote) selesai** — lihat [dok. 08 §1.1](08-roadmap-testing-risiko.md#11-status). SDK lama (`SyncNetSdk`)
 > dan interface lama (`ApiInterfaces/*`) hanya dibaca dan **tidak diubah**.
 
 ## Daftar Dokumen

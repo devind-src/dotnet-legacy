@@ -86,7 +86,7 @@ public sealed class PostgresNodeConfigurationSource(NpgsqlDataSource dataSource)
         Parameter = Str(r["parameter"]),
     };
 
-    internal static ConnectionInfo ToConnection(IDictionary<string, object?> r) => new()
+    internal static RemoteConnectionInfo ToConnection(IDictionary<string, object?> r) => new()
     {
         Name = Str(r["conn_name"]) ?? string.Empty,
         NodeId = ToInt(r["node_id"]),

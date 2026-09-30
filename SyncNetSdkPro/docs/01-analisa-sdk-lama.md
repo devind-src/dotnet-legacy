@@ -130,12 +130,12 @@ Keputusan tim: **semua bug wajib diperbaiki di SDK baru** — tidak ada bug yang
 
 | Bug | Diperbaiki di | Fase |
 |-----|---------------|------|
-| B1 NodeClient tanpa `SetProtocol` | `RemoteTcpClientConnection` mode non-persistent memakai codec yang sama dengan persistent | 3 |
-| B2 header None/Custom tidak didukung | `NoHeaderCodec` + `ITcpFrameCodec` kustom | 3 |
+| B1 NodeClient tanpa `SetProtocol` | TCP klien non-persistent memakai codec yang sama dengan persistent — **selesai** (test `Non_persistent_client_uses_configured_header_and_new_socket_per_message`) | 3 ✅ |
+| B2 header None/Custom tidak didukung | `NoHeaderCodec` untuk protokol 5; codec kustom via `SyncNetInterface.CreateTcpCodec` untuk protokol 4 (default tetap perilaku lama) — **selesai** | 3 ✅ |
 | B3 node MERCHANT tidak di-stop | `CoreChannelManager`: semua kanal per node & arah dalam satu registry — **selesai** (test `Stop_closes_every_core_channel_including_merchant_only_nodes`) | 2 ✅ |
 | B4 encoding pesan ke Core | UTF-8 dua arah — **selesai** di `SyncNetPro.Contracts` (`NewtonsoftCoreMessageSerializer`, golden `request-non-ascii`) | 1 ✅ |
 | B5 host Log Services diabaikan | `LogServicesTcpSink` memakai host dari `sw_app` — **selesai** (test `Trace_goes_to_log_services_host_from_configuration`) | 2 ✅ |
-| B6 TLS selalu diterima | Validasi sertifikat default aktif | 3 |
+| B6 TLS selalu diterima | Validasi sertifikat default aktif; `Remote:AllowUntrustedCertificates` opt-in dengan peringatan — **selesai** (test `Untrusted_tls_certificate_is_rejected_by_default`) | 3 ✅ |
 | B7 `GetNode` membuat objek baru | `INodeRegistry.TryGetNode` read-only — **selesai** | 2 ✅ |
 | B8 exception fire-and-forget | `TcpFrameClient`: error koneksi ke `ILogger`, `SendAsync` melempar `NotConnectedException` — **selesai** di transport (fase 2), dipakai remote di fase 3 | 2 ✅ |
 | B9 case `appSettings.json` | Template memakai nama huruf kecil + pemeriksaan build | 6 |

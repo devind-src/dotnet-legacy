@@ -16,7 +16,7 @@ public interface INodeRegistry
     bool TryGetNode(string nodeName, [NotNullWhen(true)] out NodeInfo? node);
 
     /// <summary>Koneksi eksternal milik node.</summary>
-    IReadOnlyList<ConnectionInfo> GetConnections(string nodeName);
+    IReadOnlyList<RemoteConnectionInfo> GetConnections(string nodeName);
 
     /// <summary>Alamat Log Services.</summary>
     DnsEndPoint? LogServices => Current.LogServices;

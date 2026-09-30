@@ -2,7 +2,6 @@ using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using SyncNetPro.Sdk.Core;
 using SyncNetPro.Sdk.Logging;
 using SyncNetPro.Sdk.Nodes;
 using SyncNetPro.Sdk.Tracing;
@@ -27,8 +26,7 @@ public sealed class CommandServer : IAsyncDisposable
     private readonly SyncNetInterface _handler;
     private readonly INodeRegistry _registry;
     private readonly ITraceWriter _trace;
-    private readonly ICoreClient _core;
-    private readonly IServiceProvider _services;
+    private readonly SyncNetServices _services;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<CommandServer> _logger;
     private readonly Func<CancellationToken, Task> _reload;
@@ -36,14 +34,13 @@ public sealed class CommandServer : IAsyncDisposable
     private TcpFrameServer? _server;
 
     internal CommandServer(IOptions<SyncNetOptions> options, string version, SyncNetInterface handler, INodeRegistry registry,
-        ITraceWriter trace, ICoreClient core, IServiceProvider services, ILoggerFactory loggerFactory, Func<CancellationToken, Task> reload)
+        SyncNetServices services, ILoggerFactory loggerFactory, Func<CancellationToken, Task> reload)
     {
         _options = options.Value;
         _version = version;
         _handler = handler;
         _registry = registry;
-        _trace = trace;
-        _core = core;
+        _trace = services.Trace;
         _services = services;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<CommandServer>();
@@ -134,7 +131,7 @@ public sealed class CommandServer : IAsyncDisposable
         _registry.TryGetNode(nodeName, out NodeInfo? node);
         ILogger logger = _loggerFactory.CreateLogger(_handler.GetType());
         using IDisposable? scope = logger.BeginNodeScope(nodeName);
-        var context = new NetworkCommandContext(command, nodeName, parameter, node, _core, _trace, logger, _services);
+        var context = new NetworkCommandContext(command, nodeName, parameter, node, _services, logger);
         await _handler.OnNetworkCommandAsync(context, cancellationToken).ConfigureAwait(false);
         return Ok;
     }

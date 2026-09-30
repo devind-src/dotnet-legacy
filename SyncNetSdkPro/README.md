@@ -4,14 +4,14 @@ SDK modern untuk membangun interface inbound/outbound antara **SyncNet Core** da
 eksternal. Pengganti `SyncNetSdk` untuk interface **baru**; interface lama tetap memakai SDK lama.
 
 - Analisa & desain: [`docs/`](docs/README.md)
-- Status: **Fase 2 — Inti SDK selesai**, berikutnya fase 3 transport remote (lihat [dok. 08](docs/08-roadmap-testing-risiko.md))
+- Status: **Fase 3 — Transport remote selesai**, berikutnya fase 4 SimCore (lihat [dok. 08](docs/08-roadmap-testing-risiko.md))
 
 ## Isi
 
 | Path | Keterangan |
 |------|------------|
 | `src/SyncNetPro.Contracts` | Kontrak pesan ke Core: `CoreRequest`, `CoreResponse`, serializer, framing TCP (`CoreFrame`), `MessageTypes`, `TranType`, `AuthorizedBy`, helper `additional_data` |
-| `src/SyncNetPro.Sdk` | Inti SDK: host, `SyncNetInterface`, kanal Core, konfigurasi node, command port, trace & log, status, transport TCP |
+| `src/SyncNetPro.Sdk` | Inti SDK: host, `SyncNetInterface`, kanal Core, koneksi eksternal (TCP/HTTP klien & server), konfigurasi node, command port, trace & log, status |
 | `samples/Sample.Outbound` | Contoh interface outbound minimal (jalan tanpa Core/DB dengan `DOTNET_ENVIRONMENT=Development`) |
 | `tests/SyncNetPro.Contracts.Tests` | Unit test + **golden test** byte-per-byte terhadap SDK lama |
 | `tests/SyncNetPro.Sdk.Tests` | Test SDK: golden header TCP/LogModel/command, FakeCore via socket, integrasi PostgreSQL (bila `SYNCNET_TEST_PG` diisi) |
@@ -50,6 +50,20 @@ public sealed class MyBillerInterface : SyncNetInterface
 {
     public override Task<CoreResponse?> OnCoreRequestAsync(CoreRequestContext ctx, CancellationToken ct) =>
         Task.FromResult<CoreResponse?>(ctx.Request.ToResponse("00", "Approved"));
+}
+```
+
+Meneruskan ke sistem eksternal (koneksi dari `sw_connections`):
+
+```csharp
+public override async Task<CoreResponse?> OnCoreRequestAsync(CoreRequestContext ctx, CancellationToken ct)
+{
+    // TCP: korelasi otomatis lewat GetRemoteCorrelationKey
+    byte[] reply = await ctx.Remote.SendAndReceiveAsync(BuildIso(ctx.Request), key: Key(ctx.Request), cancellationToken: ct);
+
+    // HTTP: base URL = ws_url
+    RemoteHttpResponse rsp = await ctx.Remote.Http.SendAsync(RemoteHttpRequest.Json("/bill/inquiry", dto), ct);
+    ...
 }
 ```
 

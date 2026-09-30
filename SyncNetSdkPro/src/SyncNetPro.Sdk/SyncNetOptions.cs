@@ -55,13 +55,16 @@ public sealed class SyncNetOptions
     public List<NodeInfo> Nodes { get; set; } = [];
 
     /// <summary>Definisi koneksi eksternal untuk <see cref="NodeSourceKind.Json"/>.</summary>
-    public List<ConnectionInfo> Connections { get; set; } = [];
+    public List<RemoteConnectionInfo> Connections { get; set; } = [];
 
     /// <summary>Kanal ke Core.</summary>
     public CoreChannelOptions Core { get; set; } = new();
 
     /// <summary>Command port.</summary>
     public CommandOptions Command { get; set; } = new();
+
+    /// <summary>Koneksi ke sistem eksternal.</summary>
+    public RemoteOptions Remote { get; set; } = new();
 
     /// <summary>Trace ke Log Services.</summary>
     public TraceOptions Trace { get; set; } = new();
@@ -89,6 +92,25 @@ public sealed class CoreChannelOptions
 
     /// <summary>Tambahan waktu di atas <c>request_timeout</c>/<c>advice_timeout</c> node saat menunggu respons Core.</summary>
     public TimeSpan ResponseTimeoutMargin { get; set; } = TimeSpan.FromSeconds(2);
+}
+
+/// <summary>Opsi koneksi ke sistem eksternal.</summary>
+public sealed class RemoteOptions
+{
+    /// <summary>
+    /// Terima sertifikat TLS yang tidak valid (self-signed/dev). Default <c>false</c> — SDK lama selalu menerima
+    /// (bug B6). Aktifkan hanya untuk lingkungan pengembangan.
+    /// </summary>
+    public bool AllowUntrustedCertificates { get; set; }
+
+    /// <summary>Jeda sebelum <see cref="SyncNetInterface.OnAutoSignOnAsync"/> setelah terkoneksi (SDK lama: 3 detik).</summary>
+    public TimeSpan AutoSignOnDelay { get; set; } = TimeSpan.FromSeconds(3);
+
+    /// <summary>Batas waktu handshake TCP.</summary>
+    public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>Interval pembaruan status koneksi ke database (SDK lama: 1 menit).</summary>
+    public TimeSpan StatusInterval { get; set; } = TimeSpan.FromMinutes(1);
 }
 
 /// <summary>Opsi command port.</summary>

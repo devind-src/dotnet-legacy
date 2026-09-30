@@ -251,9 +251,11 @@ eksplisit dan diuji per kombinasi, termasuk mode non-persistent (perbaikan B1, B
 - Rahasia (password DB, key) tidak pernah ditulis ke log; dekripsi memakai `IConfigProtector`.
 - Command port dapat dibatasi ke alamat bind tertentu (`CommandServer:BindAddress`), default perilaku lama (`Any`).
 
-## 6. Status Implementasi (Fase 2)
+## 6. Status Implementasi (Fase 2–3)
 
-API yang **sudah tersedia** di `SyncNetPro.Sdk` (contoh §4.3–4.5 yang memakai `ctx.Remote` menunggu fase 3):
+API yang **sudah tersedia** di `SyncNetPro.Sdk`. Catatan terhadap contoh §4.3–4.5: pada fase 3 `SendAndReceiveAsync`
+bekerja dengan `byte[]` + kunci korelasi (varian bertipe `IsoMessage` menyusul bersama modul ISO di fase 5), dan
+`OnHttpRequestAsync` memakai `ctx.SendToCoreAsync(request)` yang mengisi `connection_name`/`ip_external` otomatis.
 
 | Area | API |
 |------|-----|
@@ -263,11 +265,13 @@ API yang **sudah tersedia** di `SyncNetPro.Sdk` (contoh §4.3–4.5 yang memakai
 | Core inbound | `ICoreClient.SendAsync(node, request, new CoreSendOptions { ConnectionName, RemoteAddress, Timeout })` → `CoreResponse`; exception `CoreUnavailableException`, `DuplicateCoreRequestException`, `TimeoutException`; kunci korelasi dapat diganti via `ICoreCorrelationKeyProvider` |
 | Trace | `ITraceWriter.Message(node, TraceDirection, title, content, remote)`, `Info(...)` — sinkron (hanya antre), otomatis diabaikan saat TRACE OFF; `SensitiveData.Mask` |
 | Log | `ILogger<T>` standar → file harian + diteruskan ke Log Services; `logger.BeginNodeScope(node)` |
-| Node | `INodeRegistry` (`TryGetNode`, `GetConnections`, `Current`), `NodeInfo`, `ConnectionInfo`, `ISyncNetRuntime.ReloadAsync` |
+| Node | `INodeRegistry` (`TryGetNode`, `GetConnections`, `Current`), `NodeInfo`, `RemoteConnectionInfo`, `ISyncNetRuntime.ReloadAsync` |
+| Remote (fase 3) | `ctx.Remote` (`IRemoteNode`): `SendAsync`, `SendAndReceiveAsync(payload, key, timeout)`, `Tcp`, `Http`, `GetConnection(name)`; `IRemoteHttpClient.SendAsync(RemoteHttpRequest)` → `RemoteHttpResponse` (`RemoteHttpRequest.Json(path, body)`, `ReadJson<T>()`); `IRemoteRegistry` |
+| Handler remote (fase 3) | `OnRemoteMessageAsync(RemoteMessageContext)` (+ `ReplyAsync`, `SendToCoreAsync`), `OnHttpRequestAsync(HttpRequestContext)` → `HttpReply` (+ `SendToCoreAsync`), `GetRemoteCorrelationKey`, `CreateTcpCodec`, `OnRemoteConnectedAsync`, `OnRemoteDisconnectedAsync`, `OnAutoSignOnAsync`, `OnEchoTimerAsync`, `OnKeyExchangeTimerAsync` |
 | Transport | `LengthPrefixCodec`, `TcpFrameClient`, `TcpFrameServer`, `FramedConnection` (dipakai ulang oleh transport remote fase 3) |
 
 Kunci konfigurasi (`appsettings.json`, bagian `SyncNet`): `AppName`, `Version`, `Home`, `NodeSource` (`Database`/`Json`),
-`Nodes[]`, `Connections[]`, `Core:{Host,ReconnectDelay,ResponseTimeoutMargin}`, `Command:{Enabled,BindAddress,Port}`,
+`Nodes[]`, `Connections[]`, `Core:{Host,ReconnectDelay,ResponseTimeoutMargin}`, `Command:{Enabled,BindAddress,Port}`, `Remote:{AllowUntrustedCertificates,AutoSignOnDelay,ConnectTimeout,StatusInterval}`,
 `Trace:{Enabled,Sink,LogServicesHost,LogServicesPort,QueueCapacity}`, `Logging:{Enabled,Directory,TraceDirectory,ForwardToTrace,LegacyWindowsFileNames}`,
 `Database:{ConnectionString,ReportStatus}`, `MaxConcurrentRequestsPerNode`.
 

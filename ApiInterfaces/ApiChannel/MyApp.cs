@@ -49,12 +49,14 @@ namespace ApiChannel
 
             var supplierStatus = new SyncNet.Routing.Failover.SupplierStatusRepository();
             var schedule = new SyncNet.Routing.Schedule.RoutingScheduleRepository();
+            var commitment = new SyncNet.Routing.Commitment.CommitmentRepository();
             _routingResolver = new RoutingResolver(
                 new StaticRoutingStrategy(),
-                new MarginRoutingStrategy(_priceRepository, supplierStatus, schedule),
-                new ProductRoutingStrategy(supplierStatus, schedule),
+                new MarginRoutingStrategy(_priceRepository, supplierStatus, schedule, commitment),
+                new ProductRoutingStrategy(supplierStatus, schedule, commitment),
                 supplierStatus,
-                schedule);
+                schedule,
+                commitment);
 
             _product = new Product();
 
@@ -89,6 +91,16 @@ namespace ApiChannel
 
         public async Task Stop()
         {
+            //volume Volume & Tiering yang belum tersimpan ditulis dulu
+            try
+            {
+                await _routingResolver.FlushVolumeAsync();
+            }
+            catch (Exception ex)
+            {
+                await AppProcessor.Logger($"Volume & Tiering flush: {ex.Message}");
+            }
+
             //stop app
             await _app.AppStop();
         }
@@ -123,9 +135,11 @@ namespace ApiChannel
             {
                 bool found = TryGetFromBuffer(MsgResponse, out CacheModel org);
 
-                //catat health check biller lebih dulu: respons (mis. timeout 1068 dari core) bisa
-                //datang saat request HTTP channel sudah ditutup, dan membaca ctx lalu gagal
-                if (MsgResponse.tran_type == TranType.INQUIRY || MsgResponse.tran_type == TranType.PAYMENT)
+                //catat health check biller dan volume Volume & Tiering lebih dulu: respons (mis. timeout
+                //1068 dari core) bisa datang saat request HTTP channel sudah ditutup, dan membaca ctx lalu gagal
+                //ADVICE/REVERSAL hanya untuk volume, jadi dilewati bila Volume & Tiering OFF
+                if (MsgResponse.tran_type == TranType.INQUIRY || MsgResponse.tran_type == TranType.PAYMENT ||
+                    ((MsgResponse.tran_type == TranType.ADVICE || MsgResponse.tran_type == TranType.REVERSAL) && _routingResolver.IsVolumeActive == true))
                     await RecordRoutingResult(MsgResponse, found == true ? LatencyMs(org) : null);
 
                 if (found == false || org == null)
@@ -172,7 +186,7 @@ namespace ApiChannel
             }
             catch (Exception ex)
             {
-                AppProcessor.WriteLog(ex.Message, "", NodeName);
+                await AppProcessor.WriteLog(ex.Message, "", NodeName);
             }
         }
 
@@ -390,17 +404,16 @@ namespace ApiChannel
             };
         }
 
-        // dipanggil setiap response INQUIRY/PAYMENT diterima dari supplier/sink node.
+        // dipanggil setiap response INQUIRY/PAYMENT/REVERSAL diterima dari supplier/sink node.
         // supplier hanya diketahui kalau routing memakai sink_node (margin routing, atau
         // bill payment dengan mode dynamic / static ke biller pilihan). kegagalan mencatat
         // status tidak boleh menggagalkan balasan ke channel.
+        // Volume & Tiering: PAYMENT/REVERSAL sukses dicatat sebagai volume biller; bill payment yang
+        // dirutekan statis oleh core (tanpa sink_node) dicatat ke primary, tanpa health check.
         private async Task RecordRoutingResult(Response MsgResponse, int? latencyMs)
         {
             try
             {
-                string supplierId = MsgResponse.private_data?.sink_node;
-                if (string.IsNullOrEmpty(supplierId) == true) return;
-
                 string productId = MsgResponse.receiving_inst_id;
 
                 string routingType;
@@ -415,8 +428,36 @@ namespace ApiChannel
                     routingType = SyncNet.Routing.Failover.SupplierStatusRepository.ROUTING_PRODUCT;
                 }
 
+                //kunci dan tanggal PAY (asal): PAYMENT dari datetime_tran-nya sendiri, ADVICE/REVERSAL dari
+                //original_data (tran_type + datetime + trace PAY asal)
+                bool isPayment = MsgResponse.tran_type == TranType.PAYMENT;
+                bool hasOriginal = (MsgResponse.tran_type == TranType.ADVICE || MsgResponse.tran_type == TranType.REVERSAL) &&
+                    string.IsNullOrEmpty(MsgResponse.original_data) == false;
+
+                string switchKey = isPayment
+                    ? SyncNet.Routing.Failover.StickyRouteResolver.BuildSwitchKey(MsgResponse.tran_type,
+                        MsgResponse.datetime_tran, MsgResponse.trace_number, MsgResponse.terminal_id)
+                    : null;
+                string originalSwitchKey = hasOriginal
+                    ? SyncNet.Routing.Failover.StickyRouteResolver.BuildOriginalSwitchKey(MsgResponse.original_data, MsgResponse.terminal_id)
+                    : null;
+                DateTime? tranDate = isPayment
+                    ? SyncNet.Routing.Commitment.CommitmentRepository.ParseTranDate(MsgResponse.datetime_tran)
+                    : hasOriginal ? SyncNet.Routing.Commitment.CommitmentRepository.ParseTranDate(MsgResponse.original_data, hasTranTypePrefix: true) : null;
+
+                string supplierId = MsgResponse.private_data?.sink_node;
+                if (string.IsNullOrEmpty(supplierId) == true)
+                {
+                    if (routingType != SyncNet.Routing.Failover.SupplierStatusRepository.ROUTING_PRODUCT) return;
+
+                    _routingResolver.RecordVolume(_routingResolver.GetProductPrimary(productId), routingType,
+                        MsgResponse.tran_type, MsgResponse.resp_code, productId, MsgResponse.amount_tran, switchKey, originalSwitchKey, tranDate);
+                    return;
+                }
+
                 await _routingResolver.RecordResultAsync(supplierId, routingType, MsgResponse.tran_type,
-                    MsgResponse.resp_code, productId, (long)MsgResponse.amount_tran, MsgResponse.trace_number, latencyMs);
+                    MsgResponse.resp_code, productId, (long)MsgResponse.amount_tran, MsgResponse.trace_number, latencyMs,
+                    MsgResponse.amount_tran, switchKey, originalSwitchKey, tranDate);
             }
             catch (Exception ex)
             {

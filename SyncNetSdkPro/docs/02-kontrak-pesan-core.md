@@ -159,10 +159,10 @@ Core memiliki properti tambahan (`source_node`, `ip_source`, `mode_timeout`, `au
 | Server | Interface, `IPAddress.Any : sw_app.command_port` (per `app_name`) |
 | Klien | SyncNetWebApi (`MonitoringCommandService`) |
 | Framing | Default `XTcpListener`: header 2 byte biner big-endian, exclude |
-| Payload request | Teks UTF-8: `VERSION`, `RESYNC`, `ECHO <node>`, `SIGNON <node>`, `SIGNOFF <node>`, `KEYCHANGE <node>`, `OTHER <node> <param…>`, `TRACE ON`, `TRACE OFF`, `TRACE CLEAR` |
+| Payload request | Teks UTF-8: `VERSION`, `RESYNC`, `ECHO <node>`, `SIGNON <node>`, `SIGNOFF <node>`, `KEYCHANGE <node>`, `OTHER <node> <param…>`, `TRACE ON`, `TRACE OFF` (`TRACE CLEAR` tidak didukung — lihat bawah) |
 | Payload response | Teks UTF-8: string versi (untuk `VERSION`), `OK`, atau `Unknown command` |
 
-SDK baru mempertahankan sintaks dan balasan; perbaikan B10 (case-insensitive, `TRACE CLEAR` dibalas `OK`) tidak mengubah format.
+SDK baru mempertahankan sintaks dan balasan; perbaikan B10 (case-insensitive) tidak mengubah format. `TRACE CLEAR` **dihapus** karena trace transaksi dipakai untuk audit dan tidak boleh dibuang; command ini dibalas `Unknown command` (sama dengan balasan SDK lama).
 
 ## 5. Protokol Log Services
 

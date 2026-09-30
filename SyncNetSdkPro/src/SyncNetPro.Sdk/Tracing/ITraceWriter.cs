@@ -22,9 +22,6 @@ public interface ITraceWriter
     /// <summary>Mengaktifkan/menonaktifkan trace.</summary>
     void SetEnabled(bool enabled);
 
-    /// <summary>Membuang trace yang masih antre (command <c>TRACE CLEAR</c>). Mengembalikan jumlah yang dibuang.</summary>
-    int Clear();
-
     /// <summary>
     /// Trace pesan transaksi. Judul log: <c>&lt;{title}&gt; Message from|to {nodeName} {remoteAddress}</c>
     /// (format SDK lama), <c>LogType = "transaction"</c>.

@@ -39,14 +39,6 @@ public sealed class TraceWriter : ITraceWriter
     public void SetEnabled(bool enabled) => _enabled = enabled;
 
     /// <inheritdoc />
-    public int Clear()
-    {
-        int count = 0;
-        while (_queue.Reader.TryRead(out _)) count++;
-        return count;
-    }
-
-    /// <inheritdoc />
     public void Message(string nodeName, TraceDirection direction, string title, string content, string? remoteAddress = null)
     {
         string header = direction == TraceDirection.Incoming

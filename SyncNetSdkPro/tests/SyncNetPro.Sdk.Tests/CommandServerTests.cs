@@ -54,7 +54,7 @@ public class CommandServerTests
     }
 
     [Fact]
-    public async Task Trace_commands_toggle_and_clear()
+    public async Task Trace_commands_toggle_and_clear_is_not_supported()
     {
         await using FakeCore core = await FakeCore.StartAsync();
         await using var app = await StartAsync(core);
@@ -64,7 +64,9 @@ public class CommandServerTests
         Assert.False(trace.IsEnabled);
         Assert.Equal("OK", (await SendCommandAsync(Port(app), "TRACE ON")).Text);
         Assert.True(trace.IsEnabled);
-        Assert.Equal("OK", (await SendCommandAsync(Port(app), "TRACE CLEAR")).Text);
+        // Trace transaksi = jejak audit; tidak boleh dibuang lewat command.
+        Assert.Equal("Unknown command", (await SendCommandAsync(Port(app), "TRACE CLEAR")).Text);
+        Assert.True(trace.IsEnabled);
         Assert.Equal("Unknown command", (await SendCommandAsync(Port(app), "TRACE MAYBE")).Text);
     }
 

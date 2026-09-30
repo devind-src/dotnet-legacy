@@ -139,7 +139,7 @@ Keputusan tim: **semua bug wajib diperbaiki di SDK baru** — tidak ada bug yang
 | B7 `GetNode` membuat objek baru | `INodeRegistry.TryGetNode` read-only — **selesai** | 2 ✅ |
 | B8 exception fire-and-forget | `TcpFrameClient`: error koneksi ke `ILogger`, `SendAsync` melempar `NotConnectedException` — **selesai** di transport (fase 2), dipakai remote di fase 3 | 2 ✅ |
 | B9 case `appSettings.json` | Template memakai nama huruf kecil + pemeriksaan build | 6 |
-| B10 command case-sensitive / `TRACE CLEAR` | `CommandServer` case-insensitive, `TRACE CLEAR` membuang antrean trace — **selesai** | 2 ✅ |
+| B10 command case-sensitive / `TRACE CLEAR` | `CommandServer` case-insensitive — **selesai**. `TRACE CLEAR` **dihapus** (keputusan tim: trace transaksi adalah jejak audit, tidak boleh dibuang); dibalas `Unknown command` | 2 ✅ |
 | Core: `to_acc_type = from_acc_type` pada `Response(Request)` | `CoreResponse.From` menyalin `to_acc_type` dengan benar — **selesai** (test `Does_not_replicate_core_to_acc_type_bug`) | 1 ✅ |
 | `CredenHelper.DecryptValue` diam-diam mengembalikan `""` bila dekripsi password gagal | `LegacyCoreConfiguration` melempar `InvalidDataException` yang jelas — **selesai** | 2 ✅ |
 | Aliasing sub-objek pada `Response(Request)` lama (mengubah response ikut mengubah request) | `CoreResponse.From` menyalin sub-objek — **selesai** | 1 ✅ |

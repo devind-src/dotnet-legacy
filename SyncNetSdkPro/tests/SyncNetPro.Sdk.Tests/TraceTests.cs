@@ -67,14 +67,13 @@ public class TraceTests
     }
 
     [Fact]
-    public void Clear_drops_queued_records_and_full_queue_drops_new()
+    public void Full_queue_counts_dropped_records()
     {
         TraceWriter writer = Writer(capacity: 100);
         for (int i = 0; i < 150; i++) writer.Info("N", $"t{i}");
 
         Assert.Equal(50, writer.DroppedCount);
-        Assert.Equal(100, writer.Clear());
-        Assert.False(writer.Reader.TryRead(out _));
+        Assert.Null(typeof(ITraceWriter).GetMethod("Clear"));
     }
 
     [Fact]

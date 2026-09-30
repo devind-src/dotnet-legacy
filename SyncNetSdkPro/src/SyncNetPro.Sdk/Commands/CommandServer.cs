@@ -11,8 +11,9 @@ namespace SyncNetPro.Sdk.Commands;
 
 /// <summary>
 /// Command port (dok. 02 §4): <c>VERSION</c>, <c>RESYNC</c>, <c>ECHO|SIGNON|SIGNOFF|KEYCHANGE &lt;node&gt;</c>,
-/// <c>OTHER &lt;node&gt; &lt;param&gt;</c>, <c>TRACE ON|OFF|CLEAR</c>. Pencocokan tidak peka huruf besar/kecil dan
-/// <c>TRACE CLEAR</c> benar-benar ditangani (perbaikan B10).
+/// <c>OTHER &lt;node&gt; &lt;param&gt;</c>, <c>TRACE ON|OFF</c>. Pencocokan tidak peka huruf besar/kecil (perbaikan B10).
+/// <c>TRACE CLEAR</c> sengaja tidak didukung: trace transaksi adalah jejak audit dan tidak boleh dibuang
+/// (dibalas <c>Unknown command</c>, sama dengan SDK lama).
 /// </summary>
 public sealed class CommandServer : IAsyncDisposable
 {
@@ -107,10 +108,6 @@ public sealed class CommandServer : IAsyncDisposable
                             return Ok;
                         case "OFF":
                             _trace.SetEnabled(false);
-                            return Ok;
-                        case "CLEAR":
-                            int cleared = _trace.Clear();
-                            _logger.LogInformation("{Count} trace dalam antrean dibuang", cleared);
                             return Ok;
                     }
 

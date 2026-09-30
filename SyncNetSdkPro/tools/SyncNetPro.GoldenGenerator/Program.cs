@@ -276,3 +276,9 @@ foreach (string className in new[] { "SyncNet.Networking.XTcpClientSdk", "SyncNe
 File.WriteAllText(Path.Combine(sdkOut, "setprotocol.json"), JsonConvert.SerializeObject(protocolCases, Formatting.Indented), utf8);
 
 Console.WriteLine($"{headers.Count} varian header TCP + {protocolCases.Count} kasus SetProtocol + LogModel + command ditulis ke {sdkOut}");
+
+// ---------------- Golden untuk SyncNetPro.Iso8583 ----------------
+string isoOut = args.Length > 2
+    ? args[2]
+    : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Iso8583.Tests", "Golden"));
+IsoGolden.Write(isoOut);

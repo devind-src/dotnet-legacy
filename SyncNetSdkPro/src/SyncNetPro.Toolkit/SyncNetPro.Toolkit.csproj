@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SyncNetPro.Toolkit</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>SyncNetPro.Toolkit</PackageId>
+    <Description>Utilitas interface SyncNet: BCD, EBCDIC, hex dump trace, kriptografi (3DES/AES/hash/HMAC), PIN block, Luhn, TLV EMV/QRIS.</Description>
+    <PackageTags>syncnet;bcd;ebcdic;pinblock;tlv;emv;qris</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SyncNetPro.Toolkit.Tests" />
+  </ItemGroup>
+
+</Project>

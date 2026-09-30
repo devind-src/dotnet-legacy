@@ -65,7 +65,7 @@ jobs:
       - name: Regenerate from legacy SyncNetSdk
         run: dotnet run --project tools/SyncNetPro.GoldenGenerator -c Release
       - name: Verify no diff
-        run: git diff --exit-code -- tests/SyncNetPro.Contracts.Tests/Golden tests/SyncNetPro.Sdk.Tests/Golden
+        run: git diff --exit-code -- tests/SyncNetPro.Contracts.Tests/Golden tests/SyncNetPro.Sdk.Tests/Golden tests/SyncNetPro.Iso8583.Tests/Golden
 
   publish:
     name: Publish to GitHub Packages

@@ -72,7 +72,7 @@ meng-override yang dibutuhkan.
 
 | Folder / Kelas | Keputusan | Catatan / Pengganti |
 |----------------|-----------|---------------------|
-| **Message/** `Request`, `Response`, `Fees`, `Security`, `PrivateData`, `VirtualAccount` | PERTAHANKAN (paket `SyncNetPro.Contracts`) | Nama JSON dikunci (dok. 02). Nama C# boleh `CoreRequest`/`CoreResponse` dengan properti PascalCase + `[JsonPropertyName]`. Tambah `CoreResponse.From(request)` (salin field seperti SDK lama **+ isi `msgtype` response**) dan helper `WithResponseCode(rc, message)`. Tidak ada properti baru di luar skema; data tambahan lewat `additional_data` + helper `AdditionalData.Set/TryGet<T>`. |
+| **Message/** `Request`, `Response`, `Fees`, `Security`, `PrivateData`, `VirtualAccount` | PERTAHANKAN (paket `SyncNetPro.Contracts`) | Nama JSON dikunci (dok. 02). Nama C# boleh `CoreRequest`/`CoreResponse` dengan properti PascalCase + `[JsonPropertyName]`. Tambah `CoreResponse.From(request)` (salin field seperti SDK lama **+ isi `msgtype` response + salin `pos_entry_mode`**) dan helper `WithResponseCode(rc, message)`. Tidak ada properti baru di luar skema; data tambahan lewat `additional_data` + helper `AdditionalData.Set/TryGet<T>`. |
 | **Constants/** `TranType`, `AuthTran` | PERTAHANKAN | `TranType` tetap konstanta string (nilai wire). Duplikasi `ADJUSTMENT`=`ADVICE`=`"ADV"` didokumentasikan. `AuthTran` → `AuthorizedBy.Internal/External`. |
 | `TypeProtocol`, `NodeCategory` | GANTI | `enum ConnectionProtocol`, `enum NodeCategory` (mapping dari nilai DB) |
 | `HsmPath`, `LogType`, `RoutingMode` | PERTAHANKAN (internal / modul terkait) | |

@@ -26,8 +26,8 @@ direncanakan terpisah menggunakan tabel pemetaan dok. 03.
    karakter ASCII & non-ASCII, `hsm_cmd` berbagai nilai) → simpan sebagai file `.json` + `.bin` (dengan header TCP).
 2. Test SDK baru: serialisasi objek setara → **byte-identik** dengan file `.bin`
    (pengecualian terdokumentasi: kasus non-ASCII yang di SDK lama rusak/exception, dibandingkan dengan UTF-8 yang benar).
-   Pengecualian kedua (keputusan Q2): `CoreResponse.From(request)` menghasilkan `msgtype` response; golden file untuk kasus ini
-   dibuat dari SDK lama lalu `msgtype` dibandingkan dengan output `NbMessage.GetMsgTypeResp(request.msgtype)` SDK lama.
+   Pengecualian kedua (keputusan Q2): `CoreResponse.From(request)` mengisi `msgtype` response dan menyalin `pos_entry_mode`; golden file untuk kasus ini
+   dibuat dari SDK lama lalu `msgtype` dibandingkan dengan output `NbMessage.GetMsgTypeResp(request.msgtype)` SDK lama dan `pos_entry_mode` dengan nilai request.
 5. Test skema: serialisasi `CoreRequest`/`CoreResponse` tidak boleh menghasilkan properti di luar daftar dok. 02 §2 (keputusan Q1).
 3. Deserialisasi silang: pesan yang dihasilkan Core (`SyncNetCore/Message`, termasuk properti `private_data` tambahan)
    dapat dibaca SDK baru tanpa kehilangan field yang dipakai.
@@ -50,7 +50,7 @@ direncanakan terpisah menggunakan tabel pemetaan dok. 03.
 |---|--------|--------|----------|
 | R1 | Perbedaan halus serialisasi (decimal `10000.0` vs `10000`, null, urutan, enum) | Core salah parse / nilai berubah | Fase 1 tetap Newtonsoft; STJ hanya setelah golden test 100%; test di CI setiap PR |
 | R2 | Perilaku implisit Core yang tidak terdokumentasi (mis. field `private_data` yang ternyata dibaca Core dari interface) | Transaksi gagal di produksi | Review dok. 02 bersama tim Core; uji kesetaraan & UAT; SimCore memvalidasi kunci korelasi |
-| R9 | Perubahan perilaku `msgtype` (Q2): SDK lama mengirim `msgtype` request apa adanya/`null` pada response | Core/laporan yang membaca `msgtype` response dari interface melihat nilai berbeda antara interface lama & baru | Golden test khusus; konfirmasi ke tim Core bahwa Core menerima MTI response; didokumentasikan di release notes |
+| R9 | Perubahan perilaku `Response` dari request (Q2): pada SDK lama `msgtype` dan `pos_entry_mode` bernilai `null` kecuali diisi manual oleh interface | Core/laporan yang membaca kedua field dari response interface melihat nilai berbeda antara interface lama & baru | Golden test khusus; konfirmasi ke tim Core bahwa Core menerima MTI response & `pos_entry_mode`; didokumentasikan di release notes |
 | R3 | Perbaikan bug B1/B2/B4 mengubah perilaku yang (tanpa sadar) diandalkan interface/remote tertentu | Remote menolak pesan | Perbaikan hanya berlaku di SDK baru; interface lama tetap memakai SDK lama; didokumentasikan di release notes |
 | R4 | SimCore tidak sinkron dengan Core seiring waktu | Developer lolos di SimCore, gagal di UAT | SimCore di repo yang sama; checklist rilis Core mewajibkan update SimCore; uji kesetaraan interface lama vs SimCore di CI |
 | R5 | Modul Routing/Fee di-port dengan perubahan logika | Salah pilih biller / salah fee | Port 1:1 + test parity input/output terhadap implementasi lama sebelum refactor apa pun |
@@ -80,7 +80,7 @@ dan sudah diterapkan ke dokumen 02–07.
 | # | Pertanyaan | Keputusan |
 |---|------------|-----------|
 | Q1 | Apakah Core boleh menerima properti JSON tambahan dari interface (untuk round-trip `private_data` penuh)? | **Tidak.** Skema JSON tetap. Informasi tambahan dari interface ditaruh di `additional_data` (`Dictionary<string, object>`). |
-| Q2 | `CoreResponse.From(request)` mengikuti perilaku SDK (tanpa `msgtype`) atau Core (isi `msgtype` respons)? | **Isi `msgtype` response** (MTI request → MTI response, mis. `0200` → `0210`, aturan `NbMessage.GetMsgTypeResp`). |
+| Q2 | `CoreResponse.From(request)` mengikuti perilaku SDK (tanpa `msgtype`) atau Core (isi `msgtype` respons)? | **Isi `msgtype` response** (MTI request → MTI response, mis. `0200` → `0210`, aturan `NbMessage.GetMsgTypeResp`) **dan salin `pos_entry_mode`** dari request. |
 | Q3 | Serializer target jangka panjang: Newtonsoft atau System.Text.Json? | Newtonsoft di 1.x; STJ di 2.x setelah golden test stabil. |
 | Q4 | Distribusi paket: feed NuGet internal apa (Azure Artifacts, GitHub Packages, BaGet)? | **GitHub Packages.** |
 | Q5 | Apakah SDK baru tetap perlu obfuscation? | **Tidak perlu.** SDK dirilis dengan symbol + SourceLink. |

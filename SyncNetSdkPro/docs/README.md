@@ -63,7 +63,7 @@ Detail di [08 §5](08-roadmap-testing-risiko.md#5-keputusan-sebelumnya-pertanyaa
 | # | Topik | Keputusan |
 |---|-------|-----------|
 | Q1 | Field JSON tambahan ke Core | Tidak boleh; data tambahan lewat `additional_data` (`Dictionary<string, object>`) |
-| Q2 | `msgtype` pada response yang dibuat dari request | Diisi MTI response (`0200`→`0210`, dst.) |
+| Q2 | `msgtype` pada response yang dibuat dari request | Diisi MTI response (`0200`→`0210`, dst.); `pos_entry_mode` disalin dari request |
 | Q3 | Serializer | Newtonsoft.Json di 1.x; System.Text.Json di 2.x setelah golden test stabil |
 | Q4 | Feed NuGet | GitHub Packages |
 | Q5 | Obfuscation | Tidak perlu |

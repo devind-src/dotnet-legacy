@@ -4,7 +4,7 @@ Folder ini berisi analisa untuk membangun **SyncNetSdkPro**, pengganti modern da
 `SyncNetSdk` (SDK lama) yang dipakai untuk membangun interface inbound/outbound
 antara **SyncNet Core** dan sistem eksternal (bank, biller, channel, dsb).
 
-> Status: **ANALISA / DESAIN** — belum ada kode SDK baru. SDK lama (`SyncNetSdk`)
+> Status: **ANALISA / DESAIN — keputusan tim sudah final** (lihat bagian *Keputusan Tim*) — belum ada kode SDK baru. SDK lama (`SyncNetSdk`)
 > dan interface lama (`ApiInterfaces/*`) hanya dibaca dan **tidak diubah**.
 
 ## Daftar Dokumen
@@ -55,3 +55,18 @@ di produksi dan dipakai oleh `ApiBillerIso`, `ApiBillerJson`, `ApiChannel`. Namu
    in-process untuk test) agar developer baru bisa produktif tanpa Core.
 7. SDK lama tetap dipakai interface lama; SDK baru memakai namespace dan paket
    berbeda (`SyncNetPro.*`) sehingga keduanya dapat berjalan berdampingan.
+
+## Keputusan Tim
+
+Detail di [08 §5](08-roadmap-testing-risiko.md#5-keputusan-sebelumnya-pertanyaan-terbuka).
+
+| # | Topik | Keputusan |
+|---|-------|-----------|
+| Q1 | Field JSON tambahan ke Core | Tidak boleh; data tambahan lewat `additional_data` (`Dictionary<string, object>`) |
+| Q2 | `msgtype` pada response yang dibuat dari request | Diisi MTI response (`0200`→`0210`, dst.) |
+| Q3 | Serializer | Newtonsoft.Json di 1.x; System.Text.Json di 2.x setelah golden test stabil |
+| Q4 | Feed NuGet | GitHub Packages |
+| Q5 | Obfuscation | Tidak perlu |
+| Q6 | Modul Routing/Fee | .dll/paket terpisah dengan versi independen |
+| Q7 | Target Linux | Ubuntu 22.04 LTS+ / 26.04 LTS; container opsional |
+| Q8 | Nama file log | Dinormalisasi sama di semua OS; opsi legacy tersedia |

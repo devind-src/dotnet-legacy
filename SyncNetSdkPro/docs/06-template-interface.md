@@ -8,9 +8,16 @@ yang seragam, lalu hanya menulis **mapping pesan**.
 Paket NuGet `SyncNetPro.Templates` (template engine `dotnet new`):
 
 ```bash
+# sekali per mesin: daftarkan feed GitHub Packages (PAT dengan scope read:packages)
+dotnet nuget add source https://nuget.pkg.github.com/devind-src/index.json \
+  --name github-devind --username <github-user> --password <PAT> --store-password-in-clear-text
+
 dotnet new install SyncNetPro.Templates
 dotnet new list syncnet
 ```
+
+Proyek hasil template menyertakan `nuget.config` yang menunjuk ke feed yang sama (kredensial
+dari env `GITHUB_TOKEN` di CI, bukan disimpan di repo).
 
 | Short name | Skenario | Padanan interface lama |
 |------------|----------|------------------------|

@@ -147,8 +147,8 @@ Core memiliki properti tambahan (`source_node`, `ip_source`, `mode_timeout`, `au
 6. `Response(Request)` versi **SDK**: menyalin #1–21 kecuali `msgtype` dan `pos_entry_mode`, serta
    `echo_data`, `original_data`, `additional_data`, `fee_data`, `security`, `private_data`,
    `virtual_account`; `authorized_by = "1"`. (Versi Core berbeda: mengisi `msgtype` respons dan
-   menyalin `pos_entry_mode`.) SDK baru **mempertahankan perilaku SDK lama** sebagai default,
-   lihat §6 untuk keputusan.
+   menyalin `pos_entry_mode`.) **Keputusan (Q2): SDK baru mengisi `msgtype` response** —
+   lihat §7.
 7. `authorized_by = "0"` dipakai interface saat interface sendiri yang memutuskan respons
    (mis. `A1 Transaction is not supported`, `89 Link down`) — konvensi interface yang ada.
 
@@ -190,11 +190,13 @@ Dibaca: `sw_app` (`command_port`, host Log Services), `sw_nodes`, `sw_connection
 
 ## 7. Keputusan Kompatibilitas untuk SDK Baru
 
+Keputusan tim atas pertanyaan terbuka tercatat di [dok. 08 §5](08-roadmap-testing-risiko.md#5-keputusan-sebelumnya-pertanyaan-terbuka).
+
 | Topik | Keputusan |
 |-------|-----------|
-| Serializer | Wire serializer dikunci oleh golden test. **Opsi A (direkomendasikan untuk fase 1):** tetap Newtonsoft.Json di balik abstraksi `ICoreMessageSerializer` — risiko nol. **Opsi B:** `System.Text.Json` + source generator + converter `decimal` gaya Newtonsoft + `JsonIgnoreCondition.Never` + urutan properti eksplisit — hanya diaktifkan setelah lulus 100% golden test. |
-| Properti tak dikenal | Model kontrak baru memakai `[JsonExtensionData]` agar properti tambahan dari Core tidak hilang saat round-trip, **tetapi** secara default tidak ikut diserialisasi balik (perilaku lama). Bisa diaktifkan per interface bila disetujui tim Core. |
-| `Response.From(request)` | Replikasi persis perilaku SDK lama (§3.6). |
+| Serializer | Wire serializer dikunci oleh golden test. **Keputusan (Q3): versi 1.x memakai** Newtonsoft.Json di balik abstraksi `ICoreMessageSerializer` — risiko nol. **Versi 2.x (rencana):** `System.Text.Json` + source generator + converter `decimal` gaya Newtonsoft + `JsonIgnoreCondition.Never` + urutan properti eksplisit — hanya diaktifkan setelah lulus 100% golden test. |
+| Properti tambahan (keputusan Q1) | **Skema JSON tidak boleh bertambah.** Model kontrak tidak memiliki `[JsonExtensionData]`; properti tak dikenal dari Core diabaikan saat deserialisasi (perilaku lama). Setiap informasi tambahan dari interface **wajib** ditaruh di `additional_data` (`Dictionary<string, object>`). SDK menyediakan helper typed `request.AdditionalData.Set("key", value)` / `TryGet<T>("key", out value)`, dan analyzer/SimCore memperingatkan bila ada properti di luar skema §2. |
+| `CoreResponse.From(request)` | Menyalin field seperti SDK lama (§3.6) **dan mengisi `msgtype` response** dari MTI request (keputusan Q2) dengan aturan `NbMessage.GetMsgTypeResp` (SDK lama, sama dengan Core): digit ke-3 `0`→`1` (request) atau `2`→`3` (advice), lalu digit terakhir `1` (repeat) → `0`; mis. `0200`→`0210`, `0201`→`0210`, `0220`→`0230`, `0221`→`0230`, `0400`→`0410`, `0800`→`0810`; digit ke-3 lain atau panjang ≠ 4 → dikembalikan apa adanya; `null`/kosong → `""`. `pos_entry_mode` tetap tidak disalin (perilaku SDK lama). Developer masih boleh menimpa `msgtype`. |
 | Encoding | UTF-8 dua arah (§1.2). |
 | Nama properti C# baru | Boleh PascalCase di model developer (mis. `TraceNumber`) **selama** nama JSON dikunci via atribut ke nama lama (`trace_number`). |
 | Namespace kontrak | `SyncNetPro.Contracts` (paket terpisah, versi mayor dibekukan). |

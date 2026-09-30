@@ -10,6 +10,7 @@
 6. **Dapat berjalan tanpa Core** — sumber konfigurasi & kanal Core bisa diganti SimCore/JSON.
 7. **Cross-platform by default** — tidak ada percabangan `if (Windows)` di kode SDK (dok. 05).
 8. **Inti kecil, modul opsional** — ISO 8583, HSM, routing/fee, toolkit pembayaran dipisah paket.
+9. **Skema pesan tetap** — tidak ada properti JSON baru ke Core; data tambahan melalui `additional_data` (Q1).
 
 ## 2. Teknologi
 
@@ -24,11 +25,11 @@
 | TCP | `System.IO.Pipelines` + `Socket` | Framing efisien tanpa alokasi berulang, backpressure |
 | HTTP server | ASP.NET Core Minimal API / Kestrel di host yang sama | Menggantikan `XKestrel` |
 | HTTP client | `IHttpClientFactory` + `Microsoft.Extensions.Http.Resilience` | Pooling, proxy, timeout, retry terkontrol |
-| Serializer kontrak Core | Newtonsoft.Json di balik `ICoreMessageSerializer` (fase 1), opsi `System.Text.Json` source-gen setelah lulus golden test | Kompatibilitas wire (dok. 02 §7) |
+| Serializer kontrak Core | Newtonsoft.Json di balik `ICoreMessageSerializer` (1.x), `System.Text.Json` source-gen direncanakan di 2.x setelah golden test stabil (Q3) | Kompatibilitas wire (dok. 02 §7) |
 | DB | Npgsql `NpgsqlDataSource` + Dapper, async-only | Konfigurasi node/koneksi & status |
 | Antrean internal | `System.Threading.Channels` | Dispatch pesan per node dengan batas konkurensi |
 | Test | xUnit v3, `Microsoft.Extensions.TimeProvider.Testing`, Verify (snapshot/golden), Testcontainers (PostgreSQL, opsional) | Unit, golden, integrasi |
-| Build & paket | SDK-style, Central Package Management (`Directory.Packages.props`), `global.json`, SourceLink, NuGet + `.snupkg`, versi SemVer via MinVer/GitVersion | Reproducible, dapat di-debug |
+| Build & paket | SDK-style, Central Package Management (`Directory.Packages.props`), `global.json`, SourceLink, NuGet + `.snupkg` dipublikasikan ke **GitHub Packages** (Q4) oleh GitHub Actions, versi SemVer via MinVer; **tanpa obfuscation** (Q5) | Reproducible, dapat di-debug |
 | CI | GitHub Actions matriks `ubuntu-latest` + `windows-latest` | Bukti cross-platform di setiap PR |
 
 ## 3. Struktur Solusi
@@ -46,7 +47,7 @@ SyncNetSdkPro/
 │   ├── SyncNetPro.Sdk.Testing/         ← SimCore in-process + fake remote untuk unit test interface
 │   ├── SyncNetPro.Iso8583/             ← packer/unpacker ISO 8583 (port dari IsoMessage/*)
 │   ├── SyncNetPro.Hsm/                 ← klien SyncNetHsm
-│   ├── SyncNetPro.Routing/             ← port Routing/* & Fees/* (khusus interface channel)
+│   ├── SyncNetPro.Routing/             ← port Routing/* & Fees/* — .dll terpisah, versi independen (Q6)
 │   └── SyncNetPro.Toolkit/             ← masking, hex/BCD, TLV EMV/QRIS, crypto DES/AES/hash
 ├── tools/
 │   └── SyncNetPro.SimCore/             ← simulator core (CLI + Web UI) — dok. 07
@@ -254,7 +255,7 @@ eksplisit dan diuji per kombinasi, termasuk mode non-persistent (perbaikan B1, B
 
 | Aspek | SDK lama | SDK baru |
 |-------|----------|----------|
-| Paket / assembly | `SyncNetSdk.dll` | `SyncNetPro.*` (NuGet) |
+| Paket / assembly | `SyncNetSdk.dll` | `SyncNetPro.*` (NuGet, GitHub Packages) |
 | Namespace | `SyncNet.*` | `SyncNetPro.*` |
 | Wire ke Core, command, log, DB status | — | **identik** |
 | Interface pemakai | `ApiInterfaces/*` (tidak diubah) | Interface baru dari template |

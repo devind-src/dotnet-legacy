@@ -72,7 +72,7 @@ meng-override yang dibutuhkan.
 
 | Folder / Kelas | Keputusan | Catatan / Pengganti |
 |----------------|-----------|---------------------|
-| **Message/** `Request`, `Response`, `Fees`, `Security`, `PrivateData`, `VirtualAccount` | PERTAHANKAN (paket `SyncNetPro.Contracts`) | Nama JSON dikunci (dok. 02). Nama C# boleh `CoreRequest`/`CoreResponse` dengan properti PascalCase + `[JsonPropertyName]`. Tambah `CoreResponse.From(request)` (perilaku lama) dan helper `WithResponseCode(rc, message)`. |
+| **Message/** `Request`, `Response`, `Fees`, `Security`, `PrivateData`, `VirtualAccount` | PERTAHANKAN (paket `SyncNetPro.Contracts`) | Nama JSON dikunci (dok. 02). Nama C# boleh `CoreRequest`/`CoreResponse` dengan properti PascalCase + `[JsonPropertyName]`. Tambah `CoreResponse.From(request)` (salin field seperti SDK lama **+ isi `msgtype` response**) dan helper `WithResponseCode(rc, message)`. Tidak ada properti baru di luar skema; data tambahan lewat `additional_data` + helper `AdditionalData.Set/TryGet<T>`. |
 | **Constants/** `TranType`, `AuthTran` | PERTAHANKAN | `TranType` tetap konstanta string (nilai wire). Duplikasi `ADJUSTMENT`=`ADVICE`=`"ADV"` didokumentasikan. `AuthTran` → `AuthorizedBy.Internal/External`. |
 | `TypeProtocol`, `NodeCategory` | GANTI | `enum ConnectionProtocol`, `enum NodeCategory` (mapping dari nilai DB) |
 | `HsmPath`, `LogType`, `RoutingMode` | PERTAHANKAN (internal / modul terkait) | |
@@ -93,7 +93,7 @@ meng-override yang dibutuhkan.
 | **Services/** `LogService`, `TcpLogWorker`, `RabbitLogWorker` | GANTI | `ILoggerProvider`/`ITraceSink` di host yang sama; implementasi `LogServicesTcpSink`, `RabbitMqTraceSink`, `FileTraceSink` (fallback) — perbaikan B5, D8 |
 | **Library/** `NbLogger` | GANTI | `ILogger` + file sink |
 | `NbCache` / `INbCache`, `Common/CacheData` | GANTI | Korelasi dibangun ke SDK (`PendingRequestStore`); bila perlu cache umum: `IMemoryCache`/`HybridCache` |
-| `NbConvert`, `NbFormat`, `NbString`, `NbMath`, `NbRandom`, `NbMessage` | PERTAHANKAN sebagian (paket `SyncNetPro.Toolkit`) | Hanya fungsi yang dipakai interface: hex/bytes, format biner untuk trace, padding, MTI response. Hapus duplikasi dengan BCL (`Convert.ToHexString`, `RandomNumberGenerator`). |
+| `NbConvert`, `NbFormat`, `NbString`, `NbMath`, `NbRandom`, `NbMessage` (`GetMsgTypeResp` dipindah ke `SyncNetPro.Contracts` untuk `CoreResponse.From`) | PERTAHANKAN sebagian (paket `SyncNetPro.Toolkit`) | Hanya fungsi yang dipakai interface: hex/bytes, format biner untuk trace, padding, MTI response. Hapus duplikasi dengan BCL (`Convert.ToHexString`, `RandomNumberGenerator`). |
 | `NbTlvEmv`, `NbTlvQris`, `NbCard` | MODUL | `SyncNetPro.Toolkit.Payments` (opsional) |
 | `NbTrace`, `NbTranMgr`, `NbStrUtil`, `NbXml`, `NbApp`, `NbDateTime`, `NbSystem` | HAPUS | Tidak dipakai / digantikan BCL |
 | **Helpers/** `NetHelper`, `ConvertHelper`, `DataHelper`, `TcpHelper` | GABUNG ke Toolkit | `DataHelper.GetMasking` → `Masking.Pan(...)` |
@@ -106,10 +106,10 @@ meng-override yang dibutuhkan.
 | `DbMgr` (query umum `Execute/GetRecords/GetRow/...` sync+async) | GANTI | Tidak diekspos; interface yang butuh DB memakai `NpgsqlDataSource` + Dapper sendiri (didaftarkan via `AddSyncNetDatabase()`) |
 | `DbMgr` (routing, fee, produk, volume, commitment) | MODUL | `SyncNetPro.Routing` (lihat bawah) |
 | `DbService`, `DbPgSql`, `DbResult`, `QueryModel` | GANTI | `NpgsqlDataSource` + Dapper, async-only |
-| **Routing/**, **Fees/**, `Models/*` terkait | MODUL (`SyncNetPro.Routing`) | Dipindah utuh (port) karena dipakai `ApiChannel`; logika bisnis tidak diubah di fase awal |
+| **Routing/**, **Fees/**, `Models/*` terkait | MODUL (`SyncNetPro.Routing`) | Keputusan Q6: .dll/paket terpisah dengan **versi independen** dari SDK inti, agar perubahan kebutuhan bisnis cukup merilis `SyncNetPro.Routing` tanpa rilis SDK. Dipindah utuh (port) karena dipakai `ApiChannel`; logika bisnis tidak diubah di fase awal |
 | **Common/** `SdkConfig`, `Resources`, `ConfigModel` | GANTI | `IOptions<SyncNetOptions>` + provider konfigurasi Core (`AddSyncNetCoreConfiguration()`) — dok. 05 |
 | `Signature` | HAPUS | Tidak dikompilasi |
-| `obfuscar.xml`, Obfuscar | HAPUS (SDK) | SDK dirilis sebagai NuGet dengan symbol (`.snupkg`) + Source Link agar mudah di-debug developer; proteksi dilakukan di level aplikasi Core bila perlu |
+| `obfuscar.xml`, Obfuscar | HAPUS | Keputusan Q5: tidak ada obfuscation. SDK dirilis sebagai NuGet di GitHub Packages dengan symbol (`.snupkg`) + SourceLink agar mudah di-debug developer |
 | `Properties/launchSettings.json`, `*.user`, `PublishProfiles` | HAPUS | Artefak IDE |
 
 ## 5. Ringkasan Jumlah

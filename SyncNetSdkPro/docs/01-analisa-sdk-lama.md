@@ -138,7 +138,7 @@ helper `Logger(...)`, pengecekan `IsTraceOn()` sebelum `WriteTrace`.
 | D9 | Akses DB sinkron + asinkron duplikat (`Execute`/`ExecuteAsync`, dst.), `DataTable`/`DataRow` sebagai tipe publik. | API lebar, tidak type-safe, blocking I/O. |
 | D10 | Newtonsoft.Json + `DataTable` + refleksi → tidak kompatibel AOT/trimming; Obfuscar mengaburkan SDK. | Debugging developer interface sulit (stack trace/nama private tersamarkan). |
 | D11 | Tidak ada versioning paket/NuGet; referensi DLL via path relatif di luar repo. | Build tidak reproducible; “works on my machine”. |
-| D12 | `Response(Request)` di SDK tidak mengisi `msgtype` dan tidak menyalin `pos_entry_mode` (berbeda dengan versi Core). | Perilaku berbeda antara SDK dan Core; developer harus tahu detail ini. (Harus dipertahankan/diputuskan — lihat dok. 02 §6.) |
+| D12 | `Response(Request)` di SDK tidak mengisi `msgtype` dan tidak menyalin `pos_entry_mode` (berbeda dengan versi Core). | Perilaku berbeda antara SDK dan Core; developer harus tahu detail ini. (Diputuskan: SDK baru mengisi `msgtype` response — dok. 02 §7.) |
 
 ### 5.3 Kode usang / tidak terpakai
 

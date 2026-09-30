@@ -38,7 +38,7 @@ konfigurasi interface** dan tanpa rebuild.
    ada tooling yang bergantung.
 5. **Case-sensitive safe**: semua referensi file memakai huruf kecil (`appsettings.json`);
    template dan analyzer build memeriksa `None Update`/`Content Include` yang tidak cocok case.
-6. **Referensi SDK via NuGet** (feed internal / GitHub Packages), bukan `HintPath`.
+6. **Referensi SDK via NuGet dari GitHub Packages** (`nuget.config` di template menambahkan source `https://nuget.pkg.github.com/devind-src/index.json`), bukan `HintPath`.
    Pengembangan lokal: `ProjectReference` relatif di dalam repo.
 7. **Waktu**: `TimeProvider` di seluruh SDK; timestamp log memakai offset lokal eksplisit
    (`DateTimeOffset`), nilai ke DB tetap “local time” seperti perilaku lama (kolom tanpa TZ) —
@@ -65,7 +65,7 @@ Tidak ada nilai konfigurasi yang harus diubah karena perbedaan OS.
 
 ## 4. Verifikasi Otomatis
 
-- CI menjalankan seluruh test pada **`ubuntu-latest` dan `windows-latest`**.
+- CI menjalankan seluruh test pada **`ubuntu-latest` dan `windows-latest`**. Target Linux resmi: **Ubuntu 22.04 LTS+ / 26.04 LTS** (Q7); container opsional.
 - Test khusus: resolusi `Home`, pembentukan path Core, normalisasi nama log, framing TCP
   (endian), dan golden test kontrak pesan harus menghasilkan output identik di kedua OS.
 - SimCore dijalankan sebagai container Linux di pipeline integrasi (dok. 07).

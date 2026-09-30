@@ -97,6 +97,12 @@ internal sealed class HttpClientConnection : RemoteConnectionBase, IRemoteHttpCl
                 .ToDictionary(h => h.Key, h => string.Join(",", h.Value), StringComparer.OrdinalIgnoreCase);
             return new RemoteHttpResponse(response.StatusCode, body, headers);
         }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested && !cts.IsCancellationRequested)
+        {
+            // Dibatalkan oleh handler (ConnectTimeout), bukan batas waktu request: koneksi gagal dibentuk,
+            // request belum terkirim → tidak tersedia (bukan timeout balasan yang perlu reversal).
+            throw new RemoteUnavailableException($"Tidak dapat terhubung ke {Info.Name} ({url}): {ex.Message}", ex);
+        }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             throw new TimeoutException($"Tidak ada balasan dari {Info.Name} ({url}) dalam {timeout.TotalSeconds:0.#} detik.");

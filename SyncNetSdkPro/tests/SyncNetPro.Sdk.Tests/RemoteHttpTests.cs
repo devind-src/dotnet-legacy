@@ -218,6 +218,30 @@ public class RemoteHttpTests
     }
 
     [Fact]
+    public async Task Connect_timeout_is_unavailable_not_response_timeout()
+    {
+        // Gagal connect = request belum terkirim (bukan kandidat reversal) → RemoteUnavailableException,
+        // bukan TimeoutException "tidak ada balasan". Alamat non-routable memaksa connect timeout (seperti port tertutup di Windows).
+        var info = HttpClient("BILLER", "http://10.255.255.1:81/api");
+        await using var connection = new HttpClientConnection(info, new NodeInfo { Name = "BILLER" }, false, TimeSpan.FromMilliseconds(300), NullLogger.Instance);
+
+        await Assert.ThrowsAsync<RemoteUnavailableException>(() => connection.SendAsync(new RemoteHttpRequest { Path = "/x", Body = "{}" }));
+    }
+
+    [Fact]
+    public async Task Silent_biller_is_a_response_timeout()
+    {
+        // Koneksi terbentuk tetapi tidak ada balasan → TimeoutException (request mungkin sudah diproses biller).
+        using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var info = HttpClient("BILLER", $"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}/api");
+        await using var connection = new HttpClientConnection(info, new NodeInfo { Name = "BILLER" }, false, TimeSpan.FromSeconds(5), NullLogger.Instance);
+
+        await Assert.ThrowsAsync<TimeoutException>(() =>
+            connection.SendAsync(new RemoteHttpRequest { Path = "/x", Body = "{}", Timeout = TimeSpan.FromMilliseconds(300) }));
+    }
+
+    [Fact]
     public async Task Http_client_reports_unreachable_biller()
     {
         var info = HttpClient("BILLER", "http://127.0.0.1:1/api");

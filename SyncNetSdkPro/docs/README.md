@@ -48,7 +48,7 @@ di produksi dan dipakai oleh `ApiBillerIso`, `ApiBillerJson`, `ApiChannel`. Namu
 3. **Request/response ter-korelasi otomatis** (`await SendAndReceiveAsync(...)`)
    untuk TCP persistent, TCP non-persistent, dan HTTP.
 4. **Kontrak pesan ke Core dibekukan** dalam paket terpisah
-   `SyncNet.Contracts` + *golden test* byte-per-byte terhadap SDK lama.
+   `SyncNetPro.Contracts` + *golden test* byte-per-byte terhadap SDK lama.
 5. **Cross-platform by default**: satu set konfigurasi, path relatif terhadap
    `SYNCNET_HOME`, penamaan file konsisten, tanpa percabangan `if Windows`.
 6. **Template `dotnet new syncnet-*`** dan **SimCore** (CLI + Web UI + library

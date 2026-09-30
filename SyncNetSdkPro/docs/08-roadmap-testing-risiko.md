@@ -13,6 +13,14 @@
 | **6. Template & Dokumentasi** | `dotnet new` template, sample (3 padanan interface lama), getting started, cookbook, API reference | `SyncNetPro.Templates` | Developer baru (tanpa pengalaman SyncNet) membuat interface jalan di SimCore < 1 hari |
 | **7. Pilot** | 1 interface baru di produksi (disarankan outbound HTTP) berdampingan dengan interface lama | Rilis 1.0.0 | 2 minggu produksi tanpa insiden terkait SDK |
 
+### 1.1 Status
+
+| Fase | Status | Catatan |
+|------|--------|---------|
+| 0 | ✅ Selesai | Dokumen analisa + keputusan tim |
+| 1 | ✅ Selesai | `SyncNetSdkPro.slnx`, `global.json`, Central Package Management, `SyncNetPro.Contracts` (1.0.0-preview), generator golden dari SDK lama (22 kasus), 49 test lulus di Linux (golden byte-per-byte, skema Q1, `CoreResponse.From` Q2, framing, `additional_data`), workflow CI Ubuntu+Windows + publish GitHub Packages |
+| 2 | ⏳ Berikutnya | Inti SDK |
+
 Interface lama **tidak** dimigrasi dalam roadmap ini (sesuai kebutuhan); migrasi opsional dapat
 direncanakan terpisah menggunakan tabel pemetaan dok. 03.
 
@@ -20,7 +28,7 @@ direncanakan terpisah menggunakan tabel pemetaan dok. 03.
 
 ### 2.1 Golden test kontrak (paling kritis)
 
-1. Buat proyek generator kecil yang mereferensikan **`SyncNetSdk` lama** (read-only, via `ProjectReference`
+1. Proyek generator (`tools/SyncNetPro.GoldenGenerator`) mereferensikan **`SyncNetSdk` lama** (read-only, via `ProjectReference`
    ke folder `SyncNetSdk/` tanpa mengubahnya) dan menserialisasi ±50 kasus `Request`/`Response`
    (kosong, penuh, decimal bulat/pecahan/negatif/besar, `additional_data` bersarang, `echo_data` objek/array/string,
    karakter ASCII & non-ASCII, `hsm_cmd` berbagai nilai) → simpan sebagai file `.json` + `.bin` (dengan header TCP).

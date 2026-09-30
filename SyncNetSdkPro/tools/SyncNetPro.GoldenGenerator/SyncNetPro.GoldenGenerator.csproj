@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Generator golden file kontrak pesan. Mereferensikan SDK LAMA (read-only, tidak diubah)
+    agar output yang disimpan benar-benar dihasilkan oleh serializer lama.
+    Jalankan: dotnet run -project tools/SyncNetPro.GoldenGenerator
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <!-- SDK lama tidak nullable-annotated -->
+    <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);CA1303;CA1305;CA1307;CA1310;CA1311;CA1822;CA1852;CA1860;CA2000;CA5394;IDE0005;IDE0161</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\SyncNetSdk\SyncNetSdk.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,26 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{json,props,targets,csproj,slnx,yml,yaml}]
+indent_size = 2
+
+[Golden/**]
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+dotnet_style_qualification_for_field = false:suggestion
+csharp_prefer_braces = when_multiline:suggestion
+# nama properti kontrak dikunci via atribut, bukan konvensi
+dotnet_diagnostic.CA1707.severity = none
+# kontrak pesan membutuhkan setter koleksi agar kompatibel dengan Newtonsoft
+dotnet_diagnostic.CA2227.severity = none
+dotnet_diagnostic.CA1002.severity = none

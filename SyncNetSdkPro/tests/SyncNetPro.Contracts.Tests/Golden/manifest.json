@@ -1,0 +1,138 @@
+{
+  "generator": "tools/SyncNetPro.GoldenGenerator",
+  "source": "SyncNetSdk (SDK lama) — JsonConvert.SerializeObject + TcpHeader.AddTcpHeader default",
+  "cases": [
+    {
+      "name": "request-empty",
+      "kind": "request",
+      "ascii": true,
+      "note": "Request kosong (default konstruktor)"
+    },
+    {
+      "name": "request-full-inquiry",
+      "kind": "request",
+      "ascii": true,
+      "note": "Semua field terisi, ASCII"
+    },
+    {
+      "name": "request-decimals",
+      "kind": "request",
+      "ascii": true,
+      "note": "Variasi decimal: pecahan, negatif, besar, skala, decimal.MaxValue"
+    },
+    {
+      "name": "request-additional-data-types",
+      "kind": "request",
+      "ascii": true,
+      "note": "Tipe nilai additional_data & echo_data array"
+    },
+    {
+      "name": "request-echo-string",
+      "kind": "request",
+      "ascii": true,
+      "note": "echo_data string, temp_data null"
+    },
+    {
+      "name": "request-special-chars",
+      "kind": "request",
+      "ascii": true,
+      "note": "Escape karakter khusus JSON"
+    },
+    {
+      "name": "request-non-ascii",
+      "kind": "request",
+      "ascii": false,
+      "note": "Non-ASCII: SDK lama rusak/exception di SourceNode; SDK baru UTF-8 (bug B4 diperbaiki)"
+    },
+    {
+      "name": "request-inbound-private-data",
+      "kind": "request",
+      "ascii": true,
+      "note": "private_data inbound, security & virtual_account terisi"
+    },
+    {
+      "name": "request-null-objects",
+      "kind": "request",
+      "ascii": true,
+      "note": "Sub-objek null"
+    },
+    {
+      "name": "response-empty",
+      "kind": "response",
+      "ascii": true,
+      "note": "Response kosong (authorized_by default \"1\")"
+    },
+    {
+      "name": "response-success",
+      "kind": "response",
+      "ascii": true,
+      "note": "Response sukses dari biller"
+    },
+    {
+      "name": "response-internal",
+      "kind": "response",
+      "ascii": true,
+      "note": "Response yang diputuskan interface (authorized_by internal)"
+    },
+    {
+      "name": "from-0200",
+      "kind": "response-from",
+      "ascii": true,
+      "note": "CoreResponse.From dengan msgtype 0200"
+    },
+    {
+      "name": "from-0201",
+      "kind": "response-from",
+      "ascii": true,
+      "note": "CoreResponse.From dengan msgtype 0201"
+    },
+    {
+      "name": "from-0220",
+      "kind": "response-from",
+      "ascii": true,
+      "note": "CoreResponse.From dengan msgtype 0220"
+    },
+    {
+      "name": "from-0221",
+      "kind": "response-from",
+      "ascii": true,
+      "note": "CoreResponse.From dengan msgtype 0221"
+    },
+    {
+      "name": "from-0400",
+      "kind": "response-from",
+      "ascii": true,
+      "note": "CoreResponse.From dengan msgtype 0400"
+    },
+    {
+      "name": "from-0401",
+      "kind": "response-from",
+      "ascii": true,
+      "note": "CoreResponse.From dengan msgtype 0401"
+    },
+    {
+      "name": "from-0800",
+      "kind": "response-from",
+      "ascii": true,
+      "note": "CoreResponse.From dengan msgtype 0800"
+    },
+    {
+      "name": "from-0210",
+      "kind": "response-from",
+      "ascii": true,
+      "note": "CoreResponse.From dengan msgtype 0210"
+    },
+    {
+      "name": "from-null-mti",
+      "kind": "response-from",
+      "ascii": true,
+      "note": "CoreResponse.From dengan msgtype null"
+    },
+    {
+      "name": "from-short-mti",
+      "kind": "response-from",
+      "ascii": true,
+      "note": "CoreResponse.From dengan msgtype 02"
+    }
+  ]
+}

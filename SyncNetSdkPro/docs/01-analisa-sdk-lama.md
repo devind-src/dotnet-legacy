@@ -123,6 +123,26 @@ helper `Logger(...)`, pengecekan `IsTraceOn()` sebelum `WriteTrace`.
 | B9 | `ApiBillerIso.csproj` (pemakai) | `None Update="appSettings.json"` sedangkan file bernama `appsettings.json`. | Di Linux (case-sensitive) file konfigurasi **tidak tersalin** ke output. |
 | B10 | `AppProcessor.RequestCommand` | `TRACE CLEAR` ada di daftar command tetapi `switch` tidak punya case-nya → dibalas “Unknown command”. Pencocokan daftar bersifat case-insensitive tetapi `switch` case-sensitive → `version` (huruf kecil) juga dibalas “Unknown command”. | Perilaku tidak konsisten bagi operator/WebApi. |
 
+### 5.1.1 Kebijakan perbaikan bug
+
+Keputusan tim: **semua bug wajib diperbaiki di SDK baru** — tidak ada bug yang ditiru demi
+“kompatibilitas”. SDK lama dan Core tetap tidak diubah.
+
+| Bug | Diperbaiki di | Fase |
+|-----|---------------|------|
+| B1 NodeClient tanpa `SetProtocol` | `RemoteTcpClientConnection` mode non-persistent memakai codec yang sama dengan persistent | 3 |
+| B2 header None/Custom tidak didukung | `NoHeaderCodec` + `ITcpFrameCodec` kustom | 3 |
+| B3 node MERCHANT tidak di-stop | `CoreChannel` lifecycle per node & per arah | 2 |
+| B4 encoding pesan ke Core | UTF-8 dua arah — **selesai** di `SyncNetPro.Contracts` (`NewtonsoftCoreMessageSerializer`, golden `request-non-ascii`) | 1 ✅ |
+| B5 host Log Services diabaikan | `LogServicesTcpSink` memakai host dari `sw_app` | 2 |
+| B6 TLS selalu diterima | Validasi sertifikat default aktif | 3 |
+| B7 `GetNode` membuat objek baru | `INodeRegistry.TryGet` read-only | 2 |
+| B8 exception fire-and-forget | Error koneksi dilaporkan ke pemanggil/`ILogger` | 3 |
+| B9 case `appSettings.json` | Template memakai nama huruf kecil + pemeriksaan build | 6 |
+| B10 command case-sensitive / `TRACE CLEAR` | `CommandServer` case-insensitive, `TRACE CLEAR` ditangani | 2 |
+| Core: `to_acc_type = from_acc_type` pada `Response(Request)` | `CoreResponse.From` menyalin `to_acc_type` dengan benar — **selesai** (test `Does_not_replicate_core_to_acc_type_bug`) | 1 ✅ |
+| Aliasing sub-objek pada `Response(Request)` lama (mengubah response ikut mengubah request) | `CoreResponse.From` menyalin sub-objek — **selesai** | 1 ✅ |
+
 ### 5.2 Masalah desain
 
 | # | Temuan | Dampak |

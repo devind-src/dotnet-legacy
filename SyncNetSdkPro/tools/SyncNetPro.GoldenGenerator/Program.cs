@@ -287,3 +287,8 @@ IsoGolden.Write(isoOut);
 ToolkitGolden.Write(args.Length > 3
     ? args[3]
     : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Toolkit.Tests", "Golden")));
+
+// ---------------- Golden untuk SyncNetPro.Hsm ----------------
+HsmGolden.Write(args.Length > 4
+    ? args[4]
+    : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Hsm.Tests", "Golden")));

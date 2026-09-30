@@ -26,6 +26,9 @@ public sealed class SimCoreOptions
     /// <summary>Stub sistem eksternal (biller/bank) untuk uji end-to-end di satu mesin.</summary>
     public List<RemoteStubOptions> RemoteStubs { get; set; } = [];
 
+    /// <summary>SyncNetHsm tiruan (null = tidak aktif).</summary>
+    public SimHsmOptions? Hsm { get; set; }
+
     /// <summary>Jumlah pesan terakhir yang disimpan di memori untuk UI/API.</summary>
     public int HistoryLimit { get; set; } = 2000;
 

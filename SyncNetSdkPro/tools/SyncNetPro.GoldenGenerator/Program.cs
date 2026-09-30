@@ -196,3 +196,56 @@ File.WriteAllText(Path.Combine(outDir, "manifest.json"), JsonConvert.SerializeOb
 }, Formatting.Indented), utf8);
 
 Console.WriteLine($"{manifest.Count} kasus golden ditulis ke {outDir}");
+
+// ---------------- Golden untuk SyncNetPro.Sdk ----------------
+string sdkOut = args.Length > 1
+    ? args[1]
+    : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Sdk.Tests", "Golden"));
+Directory.CreateDirectory(sdkOut);
+foreach (string f in Directory.GetFiles(sdkOut)) File.Delete(f);
+
+// Semua varian TcpHeader SDK lama (dipakai koneksi remote & kanal Core).
+var headers = new List<object>();
+foreach (TcpHeaderType type in Enum.GetValues<TcpHeaderType>())
+foreach (TcpLengthMode mode in Enum.GetValues<TcpLengthMode>())
+foreach (TcpEndianMode endian in Enum.GetValues<TcpEndianMode>())
+foreach (int length in new[] { 1, 9, 50, 255, 256, 999, 1000, 4095, 9995, 9999, 65533, 65535 })
+{
+    byte[] payload = Enumerable.Repeat((byte)0x41, length).ToArray();
+    try
+    {
+        byte[] frame = TcpHeader.AddTcpHeader(payload, type, mode, endian);
+        int headerLength = TcpHeader.GetLengthHeader(type);
+        headers.Add(new
+        {
+            type = type.ToString(), mode = mode.ToString(), endian = endian.ToString(), length,
+            header = Convert.ToHexString(frame, 0, headerLength),
+            decoded = TcpHeader.GetLengthMessage(frame, type, mode, endian),
+            error = false,
+        });
+    }
+    catch (ArgumentOutOfRangeException)
+    {
+        headers.Add(new { type = type.ToString(), mode = mode.ToString(), endian = endian.ToString(), length, header = "", decoded = 0, error = true });
+    }
+}
+File.WriteAllText(Path.Combine(sdkOut, "tcpheader.json"), JsonConvert.SerializeObject(headers, Formatting.Indented), utf8);
+
+// LogModel ke Log Services (waktu Unspecified agar deterministik lintas mesin).
+var log = new SyncNet.Models.LogModel
+{
+    Datetime = new DateTime(2026, 9, 30, 10, 15, 30, 123, DateTimeKind.Unspecified),
+    AppName = "API Biller",
+    FileName = "BILLER_ABC",
+    LogType = SyncNet.Constants.LogType.Transaction,
+    Title = "<0200> Message to BILLER_ABC 10.0.0.1:5000",
+    Detail = "MTI 0200\nDE 11 000123",
+};
+File.WriteAllText(Path.Combine(sdkOut, "logmodel.json"), JsonConvert.SerializeObject(log), utf8);
+File.WriteAllBytes(Path.Combine(sdkOut, "logmodel.frame.bin"), TcpHeader.AddTcpHeader(utf8.GetBytes(JsonConvert.SerializeObject(log))));
+
+// Balasan command port (XTcpListener.SendToAsync(string) → UTF-8 + header default).
+File.WriteAllBytes(Path.Combine(sdkOut, "command-ok.frame.bin"), TcpHeader.AddTcpHeader(utf8.GetBytes("OK")));
+File.WriteAllBytes(Path.Combine(sdkOut, "command-unknown.frame.bin"), TcpHeader.AddTcpHeader(utf8.GetBytes("Unknown command")));
+
+Console.WriteLine($"{headers.Count} varian header TCP + LogModel + command ditulis ke {sdkOut}");

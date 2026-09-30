@@ -132,15 +132,16 @@ Keputusan tim: **semua bug wajib diperbaiki di SDK baru** — tidak ada bug yang
 |-----|---------------|------|
 | B1 NodeClient tanpa `SetProtocol` | `RemoteTcpClientConnection` mode non-persistent memakai codec yang sama dengan persistent | 3 |
 | B2 header None/Custom tidak didukung | `NoHeaderCodec` + `ITcpFrameCodec` kustom | 3 |
-| B3 node MERCHANT tidak di-stop | `CoreChannel` lifecycle per node & per arah | 2 |
+| B3 node MERCHANT tidak di-stop | `CoreChannelManager`: semua kanal per node & arah dalam satu registry — **selesai** (test `Stop_closes_every_core_channel_including_merchant_only_nodes`) | 2 ✅ |
 | B4 encoding pesan ke Core | UTF-8 dua arah — **selesai** di `SyncNetPro.Contracts` (`NewtonsoftCoreMessageSerializer`, golden `request-non-ascii`) | 1 ✅ |
-| B5 host Log Services diabaikan | `LogServicesTcpSink` memakai host dari `sw_app` | 2 |
+| B5 host Log Services diabaikan | `LogServicesTcpSink` memakai host dari `sw_app` — **selesai** (test `Trace_goes_to_log_services_host_from_configuration`) | 2 ✅ |
 | B6 TLS selalu diterima | Validasi sertifikat default aktif | 3 |
-| B7 `GetNode` membuat objek baru | `INodeRegistry.TryGet` read-only | 2 |
-| B8 exception fire-and-forget | Error koneksi dilaporkan ke pemanggil/`ILogger` | 3 |
+| B7 `GetNode` membuat objek baru | `INodeRegistry.TryGetNode` read-only — **selesai** | 2 ✅ |
+| B8 exception fire-and-forget | `TcpFrameClient`: error koneksi ke `ILogger`, `SendAsync` melempar `NotConnectedException` — **selesai** di transport (fase 2), dipakai remote di fase 3 | 2 ✅ |
 | B9 case `appSettings.json` | Template memakai nama huruf kecil + pemeriksaan build | 6 |
-| B10 command case-sensitive / `TRACE CLEAR` | `CommandServer` case-insensitive, `TRACE CLEAR` ditangani | 2 |
+| B10 command case-sensitive / `TRACE CLEAR` | `CommandServer` case-insensitive, `TRACE CLEAR` membuang antrean trace — **selesai** | 2 ✅ |
 | Core: `to_acc_type = from_acc_type` pada `Response(Request)` | `CoreResponse.From` menyalin `to_acc_type` dengan benar — **selesai** (test `Does_not_replicate_core_to_acc_type_bug`) | 1 ✅ |
+| `CredenHelper.DecryptValue` diam-diam mengembalikan `""` bila dekripsi password gagal | `LegacyCoreConfiguration` melempar `InvalidDataException` yang jelas — **selesai** | 2 ✅ |
 | Aliasing sub-objek pada `Response(Request)` lama (mengubah response ikut mengubah request) | `CoreResponse.From` menyalin sub-objek — **selesai** | 1 ✅ |
 
 ### 5.2 Masalah desain

@@ -1,8 +1,13 @@
 <Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/Sample.Outbound/Sample.Outbound.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/SyncNetPro.Contracts/SyncNetPro.Contracts.csproj" />
+    <Project Path="src/SyncNetPro.Sdk/SyncNetPro.Sdk.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SyncNetPro.Contracts.Tests/SyncNetPro.Contracts.Tests.csproj" />
+    <Project Path="tests/SyncNetPro.Sdk.Tests/SyncNetPro.Sdk.Tests.csproj" />
   </Folder>
 </Solution>

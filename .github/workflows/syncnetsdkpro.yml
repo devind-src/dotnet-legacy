@@ -42,6 +42,14 @@ jobs:
       - name: Build
         run: dotnet build SyncNetSdkPro.slnx -c Release
 
+      - name: Start PostgreSQL (Linux)
+        if: runner.os == 'Linux'
+        working-directory: .
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -c "CREATE USER sdkpro WITH PASSWORD 'sdkpro' SUPERUSER;" -c "CREATE DATABASE sdkpro_test OWNER sdkpro;"
+          echo "SYNCNET_TEST_PG=Host=127.0.0.1;Database=sdkpro_test;Username=sdkpro;Password=sdkpro" >> "$GITHUB_ENV"
+
       - name: Test
         run: dotnet test --solution SyncNetSdkPro.slnx -c Release --no-build
 
@@ -57,7 +65,7 @@ jobs:
       - name: Regenerate from legacy SyncNetSdk
         run: dotnet run --project tools/SyncNetPro.GoldenGenerator -c Release
       - name: Verify no diff
-        run: git diff --exit-code -- tests/SyncNetPro.Contracts.Tests/Golden
+        run: git diff --exit-code -- tests/SyncNetPro.Contracts.Tests/Golden tests/SyncNetPro.Sdk.Tests/Golden
 
   publish:
     name: Publish to GitHub Packages

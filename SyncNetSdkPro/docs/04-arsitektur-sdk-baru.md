@@ -251,7 +251,27 @@ eksplisit dan diuji per kombinasi, termasuk mode non-persistent (perbaikan B1, B
 - Rahasia (password DB, key) tidak pernah ditulis ke log; dekripsi memakai `IConfigProtector`.
 - Command port dapat dibatasi ke alamat bind tertentu (`CommandServer:BindAddress`), default perilaku lama (`Any`).
 
-## 6. Koeksistensi dengan SDK Lama
+## 6. Status Implementasi (Fase 2)
+
+API yang **sudah tersedia** di `SyncNetPro.Sdk` (contoh §4.3–4.5 yang memakai `ctx.Remote` menunggu fase 3):
+
+| Area | API |
+|------|-----|
+| Host | `SyncNetApplication.CreateBuilder(args)` (systemd/Windows Service otomatis), `builder.AddSyncNetInterface<THandler>(o => ...)` |
+| Handler | `SyncNetInterface`: `OnCoreRequestAsync` → `Task<CoreResponse?>` (`null` = tidak membalas), `OnUnmatchedCoreResponseAsync`, `OnNetworkCommandAsync`, `OnConfigurationReloadedAsync`, `OnStartedAsync`, `OnStoppingAsync` |
+| Konteks | `CoreRequestContext` (`Node`, `Request`, `ReplyAsync`, `Core`, `Trace`, `Logger`, `Services`), `CoreResponseContext`, `NetworkCommandContext` |
+| Core inbound | `ICoreClient.SendAsync(node, request, new CoreSendOptions { ConnectionName, RemoteAddress, Timeout })` → `CoreResponse`; exception `CoreUnavailableException`, `DuplicateCoreRequestException`, `TimeoutException`; kunci korelasi dapat diganti via `ICoreCorrelationKeyProvider` |
+| Trace | `ITraceWriter.Message(node, TraceDirection, title, content, remote)`, `Info(...)` — sinkron (hanya antre), otomatis diabaikan saat TRACE OFF; `SensitiveData.Mask` |
+| Log | `ILogger<T>` standar → file harian + diteruskan ke Log Services; `logger.BeginNodeScope(node)` |
+| Node | `INodeRegistry` (`TryGetNode`, `GetConnections`, `Current`), `NodeInfo`, `ConnectionInfo`, `ISyncNetRuntime.ReloadAsync` |
+| Transport | `LengthPrefixCodec`, `TcpFrameClient`, `TcpFrameServer`, `FramedConnection` (dipakai ulang oleh transport remote fase 3) |
+
+Kunci konfigurasi (`appsettings.json`, bagian `SyncNet`): `AppName`, `Version`, `Home`, `NodeSource` (`Database`/`Json`),
+`Nodes[]`, `Connections[]`, `Core:{Host,ReconnectDelay,ResponseTimeoutMargin}`, `Command:{Enabled,BindAddress,Port}`,
+`Trace:{Enabled,Sink,LogServicesHost,LogServicesPort,QueueCapacity}`, `Logging:{Enabled,Directory,TraceDirectory,ForwardToTrace,LegacyWindowsFileNames}`,
+`Database:{ConnectionString,ReportStatus}`, `MaxConcurrentRequestsPerNode`.
+
+## 7. Koeksistensi dengan SDK Lama
 
 | Aspek | SDK lama | SDK baru |
 |-------|----------|----------|

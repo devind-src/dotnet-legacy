@@ -19,7 +19,8 @@
 |------|--------|---------|
 | 0 | ✅ Selesai | Dokumen analisa + keputusan tim |
 | 1 | ✅ Selesai | `SyncNetSdkPro.slnx`, `global.json`, Central Package Management, `SyncNetPro.Contracts` (1.0.0-preview), generator golden dari SDK lama (22 kasus), 49 test lulus di Linux (golden byte-per-byte, skema Q1, `CoreResponse.From` Q2, framing, `additional_data`), workflow CI Ubuntu+Windows + publish GitHub Packages |
-| 2 | ⏳ Berikutnya | Inti SDK |
+| 2 | ✅ Selesai | `SyncNetPro.Sdk`: host builder (`SyncNetApplication`, `AddSyncNetInterface<T>`), `SyncNetInterface` + konteks, kanal Core inbound/outbound dengan korelasi, konkurensi per node & graceful shutdown, konfigurasi node PostgreSQL/JSON, pembaca config Core lama (Resources.bin + dekripsi password), command server, trace (Log Services TCP / RabbitMQ / file fallback), file logger, status reporter DB, health check, transport TCP (`LengthPrefixCodec` semua varian, `TcpFrameClient/Server`). Bug B3, B5, B7, B8, B10 diperbaiki. 246 test SDK (golden 192 varian header TCP + LogModel + command, FakeCore via socket, 3 integrasi PostgreSQL 16) + 49 test kontrak; sample `Sample.Outbound` diuji end-to-end |
+| 3 | ⏳ Berikutnya | Transport remote (TCP/HTTP), timer echo/key-exchange/sign-on |
 
 Interface lama **tidak** dimigrasi dalam roadmap ini (sesuai kebutuhan); migrasi opsional dapat
 direncanakan terpisah menggunakan tabel pemetaan dok. 03.

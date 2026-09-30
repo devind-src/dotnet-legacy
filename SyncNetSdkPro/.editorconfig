@@ -24,3 +24,8 @@ dotnet_diagnostic.CA1707.severity = none
 # kontrak pesan membutuhkan setter koleksi agar kompatibel dengan Newtonsoft
 dotnet_diagnostic.CA2227.severity = none
 dotnet_diagnostic.CA1002.severity = none
+# Logging di jalur SDK frekuensinya rendah; keterbacaan untuk developer baru lebih penting
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
+# Handler/callback sengaja menangkap semua exception agar koneksi & host tidak mati
+dotnet_diagnostic.CA1031.severity = none

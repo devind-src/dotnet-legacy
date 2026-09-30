@@ -4,14 +4,17 @@ SDK modern untuk membangun interface inbound/outbound antara **SyncNet Core** da
 eksternal. Pengganti `SyncNetSdk` untuk interface **baru**; interface lama tetap memakai SDK lama.
 
 - Analisa & desain: [`docs/`](docs/README.md)
-- Status: **Fase 1 — Fondasi & Kontrak** (lihat [dok. 08](docs/08-roadmap-testing-risiko.md))
+- Status: **Fase 2 — Inti SDK selesai**, berikutnya fase 3 transport remote (lihat [dok. 08](docs/08-roadmap-testing-risiko.md))
 
 ## Isi
 
 | Path | Keterangan |
 |------|------------|
 | `src/SyncNetPro.Contracts` | Kontrak pesan ke Core: `CoreRequest`, `CoreResponse`, serializer, framing TCP (`CoreFrame`), `MessageTypes`, `TranType`, `AuthorizedBy`, helper `additional_data` |
+| `src/SyncNetPro.Sdk` | Inti SDK: host, `SyncNetInterface`, kanal Core, konfigurasi node, command port, trace & log, status, transport TCP |
+| `samples/Sample.Outbound` | Contoh interface outbound minimal (jalan tanpa Core/DB dengan `DOTNET_ENVIRONMENT=Development`) |
 | `tests/SyncNetPro.Contracts.Tests` | Unit test + **golden test** byte-per-byte terhadap SDK lama |
+| `tests/SyncNetPro.Sdk.Tests` | Test SDK: golden header TCP/LogModel/command, FakeCore via socket, integrasi PostgreSQL (bila `SYNCNET_TEST_PG` diisi) |
 | `tools/SyncNetPro.GoldenGenerator` | Generator golden file; mereferensikan `../SyncNetSdk` (read-only) |
 | `.github/workflows/syncnetsdkpro.yml` (root repo) | CI Ubuntu + Windows, cek golden file, publish ke GitHub Packages |
 
@@ -27,9 +30,36 @@ dotnet build SyncNetSdkPro.slnx
 dotnet test --solution SyncNetSdkPro.slnx
 ```
 
+Test integrasi PostgreSQL (opsional):
+
+```bash
+export SYNCNET_TEST_PG="Host=127.0.0.1;Database=sdkpro_test;Username=sdkpro;Password=sdkpro"
+dotnet test --solution SyncNetSdkPro.slnx
+```
+
+## Membuat interface (ringkas)
+
+```csharp
+// Program.cs
+var builder = SyncNetApplication.CreateBuilder(args);
+builder.AddSyncNetInterface<MyBillerInterface>();
+await builder.Build().RunAsync();
+
+// MyBillerInterface.cs — override hanya yang dibutuhkan
+public sealed class MyBillerInterface : SyncNetInterface
+{
+    public override Task<CoreResponse?> OnCoreRequestAsync(CoreRequestContext ctx, CancellationToken ct) =>
+        Task.FromResult<CoreResponse?>(ctx.Request.ToResponse("00", "Approved"));
+}
+```
+
+Mode pengembangan tanpa Core/DB: `SyncNet:NodeSource=Json` + `SyncNet:Nodes` (lihat `samples/Sample.Outbound/appsettings.Development.json`).
+Produksi: cukup `SyncNet:AppName`; konfigurasi DB, path log/trace, RabbitMQ dibaca dari instalasi Core
+(`SYNCNET_HOME` atau default `C:\SyncNet` / `/opt/SyncNet`).
+
 ## Golden file
 
-Golden file di `tests/SyncNetPro.Contracts.Tests/Golden` **dihasilkan oleh SDK lama**, tidak diedit manual.
+Golden file di `tests/*/Golden` **dihasilkan oleh SDK lama**, tidak diedit manual.
 Regenerasi (mis. setelah menambah kasus di generator):
 
 ```bash

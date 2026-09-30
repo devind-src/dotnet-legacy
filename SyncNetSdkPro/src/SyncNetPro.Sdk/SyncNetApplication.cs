@@ -96,7 +96,8 @@ public static class SyncNetServiceCollectionExtensions
         services.TryAddSingleton<ISyncNetRuntime>(sp => sp.GetRequiredService<SyncNetRuntime>());
 
         services.AddHostedService(sp => sp.GetRequiredService<SyncNetRuntime>());
-        services.AddHostedService<TraceDispatcher>();
+        services.AddSingleton<TraceDispatcher>();
+        services.AddHostedService(sp => sp.GetRequiredService<TraceDispatcher>());
 
         services.AddSingleton<ILoggerProvider>(sp =>
         {

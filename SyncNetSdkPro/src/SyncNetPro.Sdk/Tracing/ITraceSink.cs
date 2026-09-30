@@ -11,4 +11,7 @@ public interface ITraceSink : IAsyncDisposable
 
     /// <summary>Mengirim satu trace; <c>false</c> bila gagal (akan dialihkan ke file).</summary>
     Task<bool> TrySendAsync(TraceRecord record, string json, CancellationToken cancellationToken);
+
+    /// <summary>Sink siap menerima trace (mis. sudah terkoneksi ke Log Services). Bila belum, trace ditulis ke file.</summary>
+    bool IsReady => true;
 }

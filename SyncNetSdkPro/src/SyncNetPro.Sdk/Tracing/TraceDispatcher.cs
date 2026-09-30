@@ -12,6 +12,10 @@ public sealed class TraceDispatcher(
     ILogger<TraceDispatcher> logger) : BackgroundService
 {
     private static readonly JsonSerializerSettings Settings = new() { Formatting = Formatting.None };
+    private volatile ITraceSink? _primary;
+
+    /// <summary>Sink utama sudah dibuat dan siap (Log Services terkoneksi / RabbitMQ / file).</summary>
+    public bool IsPrimaryReady => _primary?.IsReady ?? false;
 
     /// <summary>Serialisasi <see cref="TraceRecord"/> (Newtonsoft default, sama dengan SDK lama).</summary>
     public static string Serialize(TraceRecord record) => JsonConvert.SerializeObject(record, Settings);
@@ -38,6 +42,7 @@ public sealed class TraceDispatcher(
         await using (fallback.ConfigureAwait(false))
         {
             await primary.StartAsync(stoppingToken).ConfigureAwait(false);
+            _primary = primary;
             logger.LogInformation("Trace dikirim ke {Sink}", primary.Name);
 
             try
@@ -59,6 +64,10 @@ public sealed class TraceDispatcher(
                 {
                     await fallback.TrySendAsync(record, Serialize(record), CancellationToken.None).ConfigureAwait(false);
                 }
+            }
+            finally
+            {
+                _primary = null;
             }
         }
     }

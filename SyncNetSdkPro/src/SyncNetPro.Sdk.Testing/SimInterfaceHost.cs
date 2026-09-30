@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using SyncNetPro.Sdk.Core;
 using SyncNetPro.Sdk.Hosting;
 using SyncNetPro.Sdk.Nodes;
+using SyncNetPro.Sdk.Tracing;
 
 namespace SyncNetPro.Sdk.Testing;
 
@@ -140,6 +141,18 @@ public static class SimInterfaceHost
                     || (node.Source is not null && !client.IsConnected(node.Name, CoreChannelDirection.Inbound)))
                 {
                     if (DateTime.UtcNow > deadline) throw new TimeoutException($"Interface belum menandai kanal {node.Name} terkoneksi.");
+                    await Task.Delay(10).ConfigureAwait(false);
+                }
+            }
+
+            // Trace sebelum Log Services terkoneksi masuk ke file fallback; tunggu agar test dapat memeriksa core.Traces.
+            if (core.LogServicesPort is not null)
+            {
+                var traces = app.Services.GetRequiredService<TraceDispatcher>();
+                DateTime deadline = DateTime.UtcNow.AddSeconds(10);
+                while (!traces.IsPrimaryReady)
+                {
+                    if (DateTime.UtcNow > deadline) throw new TimeoutException("Interface belum terkoneksi ke Log Services SimCore.");
                     await Task.Delay(10).ConfigureAwait(false);
                 }
             }

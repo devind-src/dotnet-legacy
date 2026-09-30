@@ -23,6 +23,9 @@ public sealed class LogServicesTcpSink : ITraceSink
     public string Name => $"Log Services ({_client.Target})";
 
     /// <inheritdoc />
+    public bool IsReady => _client.IsConnected;
+
+    /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken) => _client.StartAsync(cancellationToken);
 
     /// <inheritdoc />

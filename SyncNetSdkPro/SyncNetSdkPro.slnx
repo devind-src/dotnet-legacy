@@ -14,6 +14,7 @@
     <Project Path="tests/SyncNetPro.Iso8583.Tests/SyncNetPro.Iso8583.Tests.csproj" />
     <Project Path="tests/SyncNetPro.Sdk.Tests/SyncNetPro.Sdk.Tests.csproj" />
     <Project Path="tests/SyncNetPro.SimCore.Tests/SyncNetPro.SimCore.Tests.csproj" />
+    <Project Path="tests/SyncNetPro.Toolkit.Tests/SyncNetPro.Toolkit.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/SyncNetPro.SimCore/SyncNetPro.SimCore.csproj" />

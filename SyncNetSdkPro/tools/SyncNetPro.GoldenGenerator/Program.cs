@@ -282,3 +282,8 @@ string isoOut = args.Length > 2
     ? args[2]
     : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Iso8583.Tests", "Golden"));
 IsoGolden.Write(isoOut);
+
+// ---------------- Golden untuk SyncNetPro.Toolkit ----------------
+ToolkitGolden.Write(args.Length > 3
+    ? args[3]
+    : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Toolkit.Tests", "Golden")));

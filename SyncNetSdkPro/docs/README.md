@@ -4,7 +4,7 @@ Folder ini berisi analisa untuk membangun **SyncNetSdkPro**, pengganti modern da
 `SyncNetSdk` (SDK lama) yang dipakai untuk membangun interface inbound/outbound
 antara **SyncNet Core** dan sistem eksternal (bank, biller, channel, dsb).
 
-> Status: keputusan tim final (lihat *Keputusan Tim*); **Fase 1 (Fondasi & Kontrak), Fase 2 (Inti SDK), Fase 3 (Transport Remote), Fase 4 (SimCore), Fase 5 (Modul), dan Fase 6 (Template & Dokumentasi) selesai** — lihat [dok. 08 §1.1](08-roadmap-testing-risiko.md#11-status). SDK lama (`SyncNetSdk`)
+> Status: keputusan tim final (lihat *Keputusan Tim*); **Fase 1 (Fondasi & Kontrak), Fase 2 (Inti SDK), Fase 3 (Transport Remote), Fase 4 (SimCore), Fase 5 (Modul), dan Fase 6 (Template & Dokumentasi) selesai**; berikutnya Fase 7 (pilot) — lihat [dok. 12](12-status-dan-kelanjutan.md) — lihat [dok. 08 §1.1](08-roadmap-testing-risiko.md#11-status). SDK lama (`SyncNetSdk`)
 > dan interface lama (`ApiInterfaces/*`) hanya dibaca dan **tidak diubah**.
 
 ## Daftar Dokumen
@@ -22,6 +22,7 @@ antara **SyncNet Core** dan sistem eksternal (bank, biller, channel, dsb).
 | 09 | [Getting Started](09-getting-started.md) | 15 menit pertama: pasang template & SimCore, buat proyek, jalankan tanpa Core, ke produksi. |
 | 10 | [Cookbook](10-cookbook.md) | Resep: sign-on/echo, korelasi TCP, non-persistent, header BCD/kustom, ISO spec, HTTP signature, inbound auth, timeout, `additional_data`, trace, HSM, routing, test. |
 | 11 | [Migrasi dari SDK Lama](11-migrasi-dari-sdk-lama.md) | Langkah & pemetaan `IAppProcessor` → `SyncNetInterface`, cut-over/rollback, perbedaan perilaku. |
+| 12 | [Status & Panduan Melanjutkan](12-status-dan-kelanjutan.md) | Serah-terima: aturan, status per fase, cara kerja teknis, jebakan, rencana fase 7 & pertanyaan terbuka. **Baca pertama saat melanjutkan di sesi baru.** |
 
 ## Ringkasan Eksekutif
 

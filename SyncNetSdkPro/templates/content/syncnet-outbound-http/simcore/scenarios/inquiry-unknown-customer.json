@@ -1,0 +1,16 @@
+{
+  "name": "inquiry-unknown-customer",
+  "node": "TEMPLATE_NODE",
+  "request": {
+    "msgtype": "0200",
+    "tran_type": "INQ",
+    "amount_tran": 0,
+    "trace_number": "{{stan}}",
+    "datetime_tran": "{{now:MMddHHmmss}}",
+    "terminal_id": "TERM0001",
+    "merchant_id": "MERCHANT01",
+    "refnum": "{{rrn}}",
+    "to_acc_number": "999900000000"
+  },
+  "expect": { "resp_code": "14", "within_ms": 5000 }
+}

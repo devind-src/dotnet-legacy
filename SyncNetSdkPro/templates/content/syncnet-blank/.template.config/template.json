@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "SyncNet",
+  "classifications": ["SyncNet", "Interface", "Blank"],
+  "identity": "SyncNetPro.Templates.Blank",
+  "groupIdentity": "SyncNetPro.Templates.Blank",
+  "name": "SyncNet interface kosong",
+  "description": "Interface SyncNet minimal: host, konfigurasi Development + SimCore, handler kosong dengan semua event sebagai komentar, test skenario.",
+  "shortName": "syncnet-blank",
+  "sourceName": "SyncNet.Template",
+  "preferNameDirectory": true,
+  "tags": { "language": "C#", "type": "solution" },
+  "symbols": {
+    "app-name": {
+      "type": "parameter", "datatype": "string", "defaultValue": "API Template", "replaces": "API Template",
+      "description": "Nama aplikasi (= sw_app.app_name)."
+    },
+    "node-name": {
+      "type": "parameter", "datatype": "string", "defaultValue": "TEMPLATE_NODE", "replaces": "TEMPLATE_NODE",
+      "description": "Nama node (= sw_nodes.node_name)."
+    },
+    "sdk-version": {
+      "type": "parameter", "datatype": "string", "defaultValue": "SYNCNETPRO_DEFAULT_VERSION", "replaces": "SYNCNETPRO_VERSION",
+      "description": "Versi paket SyncNetPro.*."
+    },
+    "serviceName": {
+      "type": "derived", "valueSource": "name", "valueTransform": "kebabLower",
+      "replaces": "syncnet-template-service", "fileRename": "syncnet-template-service"
+    }
+  },
+  "forms": {
+    "lower": { "identifier": "lowerCaseInvariant" },
+    "dotToDash": { "identifier": "replace", "pattern": "[.]", "replacement": "-" },
+    "kebabLower": { "identifier": "chain", "steps": ["lower", "dotToDash"] }
+  },
+  "primaryOutputs": [{ "path": "SyncNet.Template.slnx" }],
+  "postActions": []
+}

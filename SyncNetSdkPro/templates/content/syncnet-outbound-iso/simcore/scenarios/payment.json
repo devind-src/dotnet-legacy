@@ -1,0 +1,18 @@
+{
+  "name": "payment",
+  "node": "TEMPLATE_NODE",
+  "request": {
+    "msgtype": "0200",
+    "tran_type": "PAY",
+    "tran_type_ext": "PLNPOST",
+    "amount_tran": 125000,
+    "trace_number": "{{stan}}",
+    "datetime_tran": "{{now:MMddHHmmss}}",
+    "terminal_id": "TERM0001",
+    "merchant_id": "MERCHANT01",
+    "refnum": "{{rrn}}",
+    "currency": "360",
+    "to_acc_number": "532110000001"
+  },
+  "expect": { "resp_code": "00", "within_ms": 5000 }
+}

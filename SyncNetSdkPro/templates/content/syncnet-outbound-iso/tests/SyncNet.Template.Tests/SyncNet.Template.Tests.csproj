@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+    <PackageReference Include="SyncNetPro.Sdk.Testing" Version="$(SyncNetProVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SyncNet.Template\SyncNet.Template.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Test memakai konfigurasi & skenario SimCore yang sama dengan pengembangan manual. -->
+    <None Include="..\..\simcore\**" LinkBase="simcore" CopyToOutputDirectory="PreserveNewest" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

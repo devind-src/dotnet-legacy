@@ -95,6 +95,9 @@ syncnet-simcore cmd -p 17000 VERSION
 
 # jalankan seluruh skenario sebagai regression test (exit code 1 bila gagal)
 syncnet-simcore run -c simcore/simcore.json -s simcore/scenarios --report junit.xml
+
+# bertindak sebagai pengirim ke interface peran server (inbound TCP): kirim satu pesan, tampilkan balasan (hex dump)
+syncnet-simcore tcp -p 19000 --hex 30323030...          # atau --text '...', --header Binary2Byte|Bcd2Byte|Binary4Byte|Ascii4Digit
 ```
 
 Unit test interface (in-process, paket `SyncNetPro.Sdk.Testing`):
@@ -145,7 +148,7 @@ Log Services SimCore) dengan port dari `SimCore` dan baru kembali setelah kedua 
 - Kolom `private_data` milik Core (mis. `mode_timeout`) diisi nilai default yang dapat diatur di skenario.
 - Uji performa/ketahanan final tetap harus dilakukan terhadap Core sebenarnya di UAT.
 
-## 7. Status Implementasi (Fase 4)
+## 7. Status Implementasi (Fase 4–6)
 
 | Fitur desain | Status |
 |--------------|--------|
@@ -155,7 +158,9 @@ Log Services SimCore) dengan port dari `SimCore` dan baru kembali setelah kedua 
 | Mode respons Source | ✅ `Fixed` (termasuk delay), `Rules` (per `tran_type`/`tran_type_ext`/nominal), `None` (uji timeout). Mode `echo` tercakup oleh `Fixed` (response dibuat dari request via `CoreResponse.From`) |
 | Command client, Log Services receiver | ✅ |
 | Konfigurasi node | ✅ file `Json` (`NodeSource=Json`, lihat `samples/Sample.Outbound/appsettings.Development.json`). NodeSource via HTTP SimCore: backlog |
-| Remote stub TCP / HTTP | ✅ `RemoteStub` (balasan tetap/per pola) |
+| Remote stub TCP / HTTP | ✅ `RemoteStub` (balasan tetap/per pola; `Contains`, `HexPrefix`, `Path`, `Status`, `DelayMs`). Fase 6: placeholder `{{json:nama}}` dari body request HTTP, `RemoteStub.Received` |
+| Stub ISO 8583 | ✅ fase 6: `RemoteStubs[].Iso` (spesifikasi = `IsoSpec.Legacy` + field yang ditimpa); aturan `Mti` + `IsoMatch` (prefix per field), balasan `CreateResponse` + `IsoSet` (placeholder `{{field:n}}`, nilai kosong menghapus field) |
+| Pengirim TCP ke interface (inbound) | ✅ fase 6: `SimTcpClient.SendAsync` (library) dan perintah `syncnet-simcore tcp` |
 | Skenario JSON, placeholder `{{stan}}`, `{{now:…}}`, `{{rrn}}`, `{{random:n}}`, `{{env:…}}`, `expect`, JUnit | ✅ `ScenarioRunner` |
 | Web UI | ✅ Minimal API + halaman statis + Server-Sent Events (lebih ringan daripada Blazor/SignalR; tanpa dependensi tambahan) |
 | Container | ✅ `tools/SyncNetPro.SimCore/Dockerfile` (publikasi image di CI: backlog) |

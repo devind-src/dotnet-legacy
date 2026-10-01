@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "SyncNet",
+  "classifications": ["SyncNet", "Interface", "HTTP", "JSON", "Inbound"],
+  "identity": "SyncNetPro.Templates.InboundHttp",
+  "groupIdentity": "SyncNetPro.Templates.InboundHttp",
+  "name": "SyncNet interface inbound REST API (channel)",
+  "description": "Channel -> Core via REST/JSON (padanan ApiChannel): endpoint /inquiry /payment /advice /reversal /echo, API key, opsional routing & fee (SyncNetPro.Routing), SimCore + test end-to-end.",
+  "shortName": "syncnet-inbound-http",
+  "sourceName": "SyncNet.Template",
+  "preferNameDirectory": true,
+  "tags": { "language": "C#", "type": "solution" },
+  "symbols": {
+    "app-name": {
+      "type": "parameter", "datatype": "string", "defaultValue": "API Template", "replaces": "API Template",
+      "description": "Nama aplikasi (= sw_app.app_name)."
+    },
+    "node-name": {
+      "type": "parameter", "datatype": "string", "defaultValue": "TEMPLATE_NODE", "replaces": "TEMPLATE_NODE",
+      "description": "Nama node channel (= sw_nodes.node_name)."
+    },
+    "sdk-version": {
+      "type": "parameter", "datatype": "string", "defaultValue": "SYNCNETPRO_DEFAULT_VERSION", "replaces": "SYNCNETPRO_VERSION",
+      "description": "Versi paket SyncNetPro.*."
+    },
+    "WithRouting": {
+      "type": "parameter", "datatype": "bool", "defaultValue": "false",
+      "description": "Sertakan routing biller & fee (paket SyncNetPro.Routing, butuh database Core)."
+    },
+    "routing-version": {
+      "type": "parameter", "datatype": "string", "defaultValue": "SYNCNETPRO_ROUTING_DEFAULT_VERSION", "replaces": "SYNCNETPRO_ROUTING_VERSION",
+      "description": "Versi paket SyncNetPro.Routing (versi independen, rilis routing-v*)."
+    },
+    "serviceName": {
+      "type": "derived", "valueSource": "name", "valueTransform": "kebabLower",
+      "replaces": "syncnet-template-service", "fileRename": "syncnet-template-service"
+    }
+  },
+  "forms": {
+    "lower": { "identifier": "lowerCaseInvariant" },
+    "dotToDash": { "identifier": "replace", "pattern": "[.]", "replacement": "-" },
+    "kebabLower": { "identifier": "chain", "steps": ["lower", "dotToDash"] }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        { "condition": "(!WithRouting)", "exclude": ["src/SyncNet.Template/Routing/**"] }
+      ]
+    }
+  ],
+  "primaryOutputs": [{ "path": "SyncNet.Template.slnx" }],
+  "postActions": []
+}

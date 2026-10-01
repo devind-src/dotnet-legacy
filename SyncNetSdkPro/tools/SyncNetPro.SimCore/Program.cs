@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using SyncNetPro.Sdk.Nodes;
 using SyncNetPro.Sdk.Testing;
+using SyncNetPro.Sdk.Transport;
+using SyncNetPro.Toolkit;
 using SyncNetPro.SimCore;
 
 using ILoggerFactory loggerFactory = LoggerFactory.Create(b => b.AddSimpleConsole(o => { o.SingleLine = true; o.TimestampFormat = "HH:mm:ss "; }).SetMinimumLevel(LogLevel.Information));
@@ -90,6 +92,29 @@ cmd.SetAction(async (parse, ct) =>
     return 0;
 });
 
+// tcp: kirim satu pesan ke koneksi server interface (mis. inbound ISO) dan tampilkan balasan
+var tcpHost = new Option<string>("--host") { Description = "Host interface", DefaultValueFactory = _ => "127.0.0.1" };
+var tcpPort = new Option<int>("--port", "-p") { Description = "Port koneksi server interface", Required = true };
+var tcpHex = new Option<string?>("--hex") { Description = "Pesan dalam hex (mis. ISO 8583)" };
+var tcpText = new Option<string?>("--text") { Description = "Pesan teks (UTF-8)" };
+var tcpHeader = new Option<TcpHeaderType>("--header") { Description = "Header TCP", DefaultValueFactory = _ => TcpHeaderType.Binary2Byte };
+var tcp = new Command("tcp", "Mengirim satu pesan ber-header ke interface (peran server) dan menampilkan balasan") { tcpHost, tcpPort, tcpHex, tcpText, tcpHeader };
+tcp.SetAction(async (parse, ct) =>
+{
+    string? hex = parse.GetValue(tcpHex), txt = parse.GetValue(tcpText);
+    if (hex is null == txt is null)
+    {
+        Console.Error.WriteLine("Isi salah satu: --hex atau --text");
+        return 2;
+    }
+
+    byte[] payload = hex is not null ? Convert.FromHexString(hex) : System.Text.Encoding.UTF8.GetBytes(txt!);
+    byte[] reply = await SimTcpClient.SendAsync(parse.GetValue(tcpHost)!, parse.GetValue(tcpPort), payload,
+        new TcpHeaderOptions(parse.GetValue(tcpHeader)), cancellationToken: ct);
+    Console.WriteLine(HexDump.Format(reply));
+    return 0;
+});
+
 // init: contoh konfigurasi
 var dir = new Option<string>("--dir") { Description = "Folder tujuan", DefaultValueFactory = _ => "simcore" };
 var node = new Option<string>("--node") { Description = "Nama node", DefaultValueFactory = _ => "SAMPLE_BILLER" };
@@ -115,5 +140,5 @@ init.SetAction(parse =>
     return 0;
 });
 
-var root = new RootCommand("SyncNet SimCore — simulator Core untuk pengembangan interface") { up, run, send, cmd, init };
+var root = new RootCommand("SyncNet SimCore — simulator Core untuk pengembangan interface") { up, run, send, cmd, init, tcp };
 return await root.Parse(args).InvokeAsync();

@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "SyncNet",
+  "classifications": ["SyncNet", "Interface", "HTTP", "JSON", "Outbound"],
+  "identity": "SyncNetPro.Templates.OutboundHttp",
+  "groupIdentity": "SyncNetPro.Templates.OutboundHttp",
+  "name": "SyncNet interface outbound HTTP/JSON",
+  "description": "Core -> biller via HTTP/JSON (padanan ApiBillerJson): mapping INQ/PAY/ADV/REV ke endpoint REST, API key, SimCore + stub HTTP, test end-to-end.",
+  "shortName": "syncnet-outbound-http",
+  "sourceName": "SyncNet.Template",
+  "preferNameDirectory": true,
+  "tags": { "language": "C#", "type": "solution" },
+  "symbols": {
+    "app-name": {
+      "type": "parameter", "datatype": "string", "defaultValue": "API Template", "replaces": "API Template",
+      "description": "Nama aplikasi (= sw_app.app_name)."
+    },
+    "node-name": {
+      "type": "parameter", "datatype": "string", "defaultValue": "TEMPLATE_NODE", "replaces": "TEMPLATE_NODE",
+      "description": "Nama node biller (= sw_nodes.node_name)."
+    },
+    "sdk-version": {
+      "type": "parameter", "datatype": "string", "defaultValue": "SYNCNETPRO_DEFAULT_VERSION", "replaces": "SYNCNETPRO_VERSION",
+      "description": "Versi paket SyncNetPro.*."
+    },
+    "serviceName": {
+      "type": "derived", "valueSource": "name", "valueTransform": "kebabLower",
+      "replaces": "syncnet-template-service", "fileRename": "syncnet-template-service"
+    }
+  },
+  "forms": {
+    "lower": { "identifier": "lowerCaseInvariant" },
+    "dotToDash": { "identifier": "replace", "pattern": "[.]", "replacement": "-" },
+    "kebabLower": { "identifier": "chain", "steps": ["lower", "dotToDash"] }
+  },
+  "primaryOutputs": [{ "path": "SyncNet.Template.slnx" }],
+  "postActions": []
+}

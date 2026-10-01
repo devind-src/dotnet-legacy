@@ -5,6 +5,7 @@ eksternal. Pengganti `SyncNetSdk` untuk interface **baru**; interface lama tetap
 
 - Analisa & desain: [`docs/`](docs/README.md)
 - Status: **Fase 6 — Template & dokumentasi developer selesai**, berikutnya fase 7 pilot produksi (lihat [dok. 08](docs/08-roadmap-testing-risiko.md))
+- Melanjutkan pengembangan SDK (sesi baru): [Status & panduan melanjutkan](docs/12-status-dan-kelanjutan.md)
 - Mulai membuat interface: [Getting Started](docs/09-getting-started.md) · [Cookbook](docs/10-cookbook.md) · [Migrasi dari SDK lama](docs/11-migrasi-dari-sdk-lama.md)
 
 ## Isi

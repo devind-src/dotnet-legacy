@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SyncNetPro.Sdk\SyncNetPro.Sdk.csproj" />
+    <ProjectReference Include="..\SyncNetPro.Iso8583\SyncNetPro.Iso8583.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Paket template `dotnet new` (SyncNetPro.Templates). Setiap template = content/<nama> + content/_shared,
+    dirakit ke obj/templates/<nama> saat build; default parameter sdk-version diisi versi paket ini (rilis sdkpro-v*),
+    routing-version diisi versi SyncNetPro.Routing (rilis routing-v*).
+    Coba lokal: dotnet build templates && dotnet new install templates/obj/templates/<nama>
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PackageType>Template</PackageType>
+    <IsPackable>true</IsPackable>
+    <PackageId>SyncNetPro.Templates</PackageId>
+    <Description>Template dotnet new untuk interface SyncNet: syncnet-outbound-iso, syncnet-outbound-http, syncnet-inbound-http, syncnet-inbound-iso, syncnet-blank.</Description>
+    <PackageTags>syncnet;dotnet-new;templates</PackageTags>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>false</IncludeSymbols>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <!-- NU5110/NU5111: skrip .ps1 di template adalah file proyek hasil template, bukan skrip instalasi NuGet. -->
+    <NoWarn>$(NoWarn);NU5128;NU5110;NU5111</NoWarn>
+    <AssembledDir>$(MSBuildProjectDirectory)/obj/templates/</AssembledDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+    <TemplateName Include="$([System.IO.Directory]::GetDirectories('$(MSBuildProjectDirectory)/content', 'syncnet-*'))" />
+  </ItemGroup>
+
+  <Target Name="AssembleTemplates" AfterTargets="Build" DependsOnTargets="MinVer">
+    <!--
+      Routing punya versi independen (tag routing-v*). Default routing-version: RoutingTemplateVersion (diisi rilis CI dari
+      tag routing-v* terakhir) atau versi MinVer proyek routing saat ini.
+    -->
+    <PropertyGroup Condition="'$(RoutingTemplateVersion)' != ''">
+      <RoutingPackVersion>$(RoutingTemplateVersion)</RoutingPackVersion>
+    </PropertyGroup>
+    <MSBuild Condition="'$(RoutingTemplateVersion)' == ''" Projects="$(MSBuildProjectDirectory)/../src/SyncNetPro.Routing/SyncNetPro.Routing.csproj" Targets="GetSyncNetPackageVersion">
+      <Output TaskParameter="TargetOutputs" PropertyName="RoutingPackVersion" />
+    </MSBuild>
+    <RemoveDir Directories="$(AssembledDir)" />
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="AssembleOneTemplate"
+             Properties="TemplateDir=%(TemplateName.Identity);TemplateId=%(TemplateName.Filename);PackVersion=$(PackageVersion);RoutingPackVersion=$(RoutingPackVersion)" />
+  </Target>
+
+  <Target Name="AssembleOneTemplate">
+    <ItemGroup>
+      <_Shared Include="$(MSBuildProjectDirectory)/content/_shared/**/*" />
+      <_Own Include="$(TemplateDir)/**/*" Exclude="$(TemplateDir)/.template.config/template.json" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_Shared)" DestinationFiles="@(_Shared->'$(AssembledDir)$(TemplateId)/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(_Own)" DestinationFiles="@(_Own->'$(AssembledDir)$(TemplateId)/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <WriteLinesToFile File="$(AssembledDir)$(TemplateId)/.template.config/template.json" Overwrite="true"
+                      Lines="$([MSBuild]::Escape($([System.IO.File]::ReadAllText('$(TemplateDir)/.template.config/template.json').Replace('SYNCNETPRO_DEFAULT_VERSION', '$(PackVersion)').Replace('SYNCNETPRO_ROUTING_DEFAULT_VERSION', '$(RoutingPackVersion)'))))" />
+  </Target>
+
+  <Target Name="IncludeAssembledTemplates" BeforeTargets="_GetPackageFiles" DependsOnTargets="AssembleTemplates">
+    <ItemGroup>
+      <None Include="$(AssembledDir)**/*" Pack="true" PackagePath="content/%(RecursiveDir)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

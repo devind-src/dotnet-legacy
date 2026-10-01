@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SyncNet.Template/SyncNet.Template.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SyncNet.Template.Tests/SyncNet.Template.Tests.csproj" />
+  </Folder>
+</Solution>

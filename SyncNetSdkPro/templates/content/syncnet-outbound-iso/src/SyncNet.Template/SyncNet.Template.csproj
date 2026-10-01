@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SyncNetPro.Sdk" Version="$(SyncNetProVersion)" />
+    <PackageReference Include="SyncNetPro.Iso8583" Version="$(SyncNetProVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings*.json" CopyToOutputDirectory="PreserveNewest" />
+    <InternalsVisibleTo Include="SyncNet.Template.Tests" />
+  </ItemGroup>
+
+</Project>

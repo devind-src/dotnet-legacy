@@ -76,13 +76,32 @@ jobs:
           tests/SyncNetPro.Contracts.Tests/Golden tests/SyncNetPro.Sdk.Tests/Golden tests/SyncNetPro.Iso8583.Tests/Golden
           tests/SyncNetPro.Toolkit.Tests/Golden tests/SyncNetPro.Hsm.Tests/Golden tests/SyncNetPro.Routing.Tests/Golden
 
+  templates:
+    # Proyek hasil setiap template dotnet new harus build dan lulus test (SimCore end-to-end) dengan paket yang baru di-pack.
+    name: Templates smoke test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: SyncNetSdkPro/global.json
+      - name: Pack, generate, build & test templates
+        shell: bash
+        run: scripts/test-templates.sh "$RUNNER_TEMP/templates"
+
   publish:
     # sdkpro-v*  : semua paket SDK kecuali SyncNetPro.Routing
     # routing-v* : hanya SyncNetPro.Routing (versi independen, keputusan Q6); dependensi SyncNetPro.Sdk/Contracts
     #              dipatok ke tag sdkpro-v* terakhir agar selalu menunjuk versi yang sudah dipublikasikan.
     name: Publish to GitHub Packages
     if: startsWith(github.ref, 'refs/tags/sdkpro-v') || startsWith(github.ref, 'refs/tags/routing-v')
-    needs: [build-test, golden-check]
+    needs: [build-test, golden-check, templates]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -96,8 +115,10 @@ jobs:
           global-json-file: SyncNetSdkPro/global.json
       - name: Pack SDK
         if: startsWith(github.ref, 'refs/tags/sdkpro-v')
+        # Default routing-version template syncnet-inbound-http = rilis routing-v* terakhir.
         run: |
-          dotnet pack SyncNetSdkPro.slnx -c Release -o artifacts
+          ROUTING_TAG=$(git describe --tags --match 'routing-v*' --abbrev=0 2>/dev/null || true)
+          dotnet pack SyncNetSdkPro.slnx -c Release -o artifacts ${ROUTING_TAG:+-p:RoutingTemplateVersion=${ROUTING_TAG#routing-v}}
           rm -f artifacts/SyncNetPro.Routing.*
       - name: Pack Routing
         if: startsWith(github.ref, 'refs/tags/routing-v')

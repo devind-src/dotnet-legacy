@@ -3,9 +3,13 @@
 Tujuan: developer baru membuat interface siap jalan dalam hitungan menit, dengan pola
 yang seragam, lalu hanya menulis **mapping pesan**.
 
+> Status: **selesai (fase 6)** — paket `SyncNetPro.Templates` (`SyncNetSdkPro/templates`), diuji di CI
+> (`scripts/test-templates.sh`: setiap template dibuat, di-build, dan test end-to-end-nya dijalankan terhadap paket
+> yang baru di-pack, di Ubuntu dan Windows). Panduan pemakaian: [dok. 09](09-getting-started.md).
+
 ## 1. Distribusi
 
-Paket NuGet `SyncNetPro.Templates` (template engine `dotnet new`):
+Paket NuGet `SyncNetPro.Templates` (template engine `dotnet new`), dirilis bersama SDK (tag `sdkpro-v*`):
 
 ```bash
 # sekali per mesin: daftarkan feed GitHub Packages (PAT dengan scope read:packages)
@@ -16,105 +20,110 @@ dotnet new install SyncNetPro.Templates
 dotnet new list syncnet
 ```
 
-Proyek hasil template menyertakan `nuget.config` yang menunjuk ke feed yang sama (kredensial
-dari env `GITHUB_TOKEN` di CI, bukan disimpan di repo).
+Proyek hasil template menyertakan `nuget.config` (nuget.org + feed `github-devind` dengan *package source mapping*
+`SyncNetPro.*`); kredensial dibaca dari env `GITHUB_USER`/`GITHUB_TOKEN`, tidak disimpan di repo.
 
-| Short name | Skenario | Padanan interface lama |
-|------------|----------|------------------------|
-| `syncnet-outbound-iso` | Core → eksternal via **TCP ISO 8583** (persistent / non-persistent), sign-on & echo | `ApiBillerIso` |
-| `syncnet-outbound-http` | Core → eksternal via **HTTP/JSON** (REST biller) | `ApiBillerJson` |
-| `syncnet-inbound-http` | Eksternal (channel) → Core via **HTTP server** | `ApiChannel` (tanpa modul routing) |
-| `syncnet-inbound-iso` | Eksternal (bank/EDC) → Core via **TCP ISO 8583 server** | (baru) |
-| `syncnet-blank` | Handler kosong + semua override terkomentar | — |
+| Short name | Skenario | Padanan interface lama | Test bawaan |
+|------------|----------|------------------------|-------------|
+| `syncnet-outbound-iso` | Core → biller via **TCP ISO 8583** (klien persistent), sign-on & echo | `ApiBillerIso` | mapping + skenario SimCore dengan stub ISO |
+| `syncnet-outbound-http` | Core → biller via **HTTP/JSON** | `ApiBillerJson` | mapping + skenario SimCore dengan stub HTTP |
+| `syncnet-inbound-http` | Channel → Core via **REST API** (server), API key; `--with-routing` menambah routing & fee | `ApiChannel` | mapping + HTTP ke interface, SimCore sebagai Core |
+| `syncnet-inbound-iso` | Bank/EDC/switch → Core via **TCP ISO 8583 server**, 0800/0810 | (baru) | mapping + `SimTcpClient` ke interface |
+| `syncnet-blank` | Handler kosong, semua override sebagai komentar | — | skenario SimCore (`A1` default) |
 
-Parameter umum:
+Parameter:
+
+| Parameter | Default | Keterangan |
+|-----------|---------|------------|
+| `-n` / `--name` | nama folder | Nama solusi, proyek, dan namespace (mis. `Api.BillerAbc`); nama service systemd = huruf kecil dengan `-` |
+| `--app-name` | `API Template` | `sw_app.app_name` |
+| `--node-name` | `TEMPLATE_NODE` | `sw_nodes.node_name` |
+| `--sdk-version` | versi paket template | Versi paket `SyncNetPro.*` (`Directory.Build.props` → `SyncNetProVersion`) |
+| `--with-routing` | `false` | Hanya `syncnet-inbound-http`: paket `SyncNetPro.Routing` + `Routing/RoutingStep.cs` |
+| `--routing-version` | rilis `routing-v*` terakhir | Hanya `syncnet-inbound-http` |
+
+Header TCP, peran klien/server, persistent/non-persistent, dan timeout **bukan** parameter template: semuanya
+konfigurasi koneksi (`sw_connections` / `appsettings.Development.json`) sehingga tidak perlu kode berbeda.
 
 ```bash
-dotnet new syncnet-outbound-iso -n Api.BillerAbc \
-  --app-name "API Biller ABC" \
-  --node-name BILLER_ABC \
-  --tcp-header Binary2Byte \
-  --with-routing false \
-  --with-tests true
+dotnet new syncnet-outbound-iso -n Api.BillerAbc --app-name "API Biller ABC" --node-name BILLER_ABC
+dotnet new syncnet-inbound-http -n Api.ChannelXyz --app-name "API Channel XYZ" --node-name CHANNEL_XYZ --with-routing
 ```
 
 ## 2. Struktur Proyek yang Dihasilkan
 
 ```
 Api.BillerAbc/
-├── Api.BillerAbc.sln(x)
+├── Api.BillerAbc.slnx
+├── Directory.Build.props             ← net10.0, nullable, warning = error, versi SyncNetPro.*, cek nama appsettings
+├── global.json  nuget.config  .editorconfig  .gitignore
+├── README.md                         ← tabel TODO(n), cara run dengan SimCore, test, deploy
 ├── src/Api.BillerAbc/
-│   ├── Api.BillerAbc.csproj          ← PackageReference SyncNetPro.Sdk (+ Iso8583)
-│   ├── Program.cs                    ← ±10 baris (dok. 04 §4.2)
-│   ├── BillerAbcInterface.cs         ← handler: override On…Async, TODO jelas
-│   ├── Mapping/
-│   │   ├── ToRemote.cs               ← CoreRequest → pesan eksternal
-│   │   └── ToCore.cs                 ← pesan eksternal → CoreResponse
-│   ├── Iso/BillerAbcIsoSpec.cs       ← definisi field ISO (template ISO saja)
-│   ├── Models/                       ← DTO eksternal (template HTTP)
-│   ├── appsettings.json              ← konfigurasi produksi (NodeSource=Database)
-│   ├── appsettings.Development.json  ← NodeSource=Json + koneksi ke SimCore
-│   └── VERSION.txt / Directory.Build.props (versi)
+│   ├── Api.BillerAbc.csproj          ← PackageReference SyncNetPro.Sdk (+ Iso8583 / Routing)
+│   ├── Program.cs                    ← ±5 baris: CreateBuilder → AddSyncNetInterface<T>() → Add…Services()
+│   ├── ServiceRegistration.cs        ← DI mapping + options (dipakai Program.cs dan test)
+│   ├── BillerInterface.cs            ← handler (ChannelInterface / AcquirerInterface / MyInterface)
+│   ├── Mapping/                      ← ToRemote/ToCore (outbound), ToCore/ToChannel/ToIso (inbound)
+│   ├── Iso/                          ← spesifikasi ISO + pesan network (template ISO)
+│   ├── Models/                       ← DTO JSON (template HTTP)
+│   ├── Routing/RoutingStep.cs        ← hanya --with-routing
+│   ├── appsettings.json              ← produksi: NodeSource=Database
+│   └── appsettings.Development.json  ← NodeSource=Json, node & koneksi ke SimCore
 ├── tests/Api.BillerAbc.Tests/
 │   ├── MappingTests.cs               ← unit test mapping murni
-│   └── InterfaceFlowTests.cs         ← flow end-to-end memakai SyncNetPro.Sdk.Testing (SimCore in-process + fake remote)
+│   └── InterfaceFlowTests.cs         ← SimCore in-process + SimInterfaceHost, port acak
 ├── simcore/
-│   └── scenarios/*.json              ← skenario siap pakai untuk SimCore (inquiry, payment, advice, reversal)
-├── deploy/
-│   ├── syncnet-api-billerabc.service
-│   └── install-windows-service.ps1
-├── .editorconfig  .gitignore
-└── README.md                         ← langkah run, debug, test, deploy
+│   ├── simcore.json                  ← node, Responder Core, stub eksternal (ISO/HTTP)
+│   └── scenarios/*.json              ← inquiry, payment, reversal, … (dipakai CLI dan test)
+└── deploy/
+    ├── api-billerabc.service         ← systemd (Type=notify, SYNCNET_HOME=/opt/syncnet)
+    └── install-windows-service.ps1
 ```
 
 ## 3. Isi Handler Template (contoh `syncnet-outbound-iso`)
 
 ```csharp
-/// <summary>
-/// Interface outbound: menerima request dari Core (kanal Sink / port_out),
-/// meneruskan ke BILLER_ABC via ISO 8583, dan mengembalikan respons ke Core.
-/// </summary>
-public sealed class BillerAbcInterface(ToRemote toRemote, ToCore toCore) : SyncNetInterface
+public sealed class BillerInterface(ToRemote toRemote, ToCore toCore, IOptions<BillerOptions> options) : SyncNetInterface
 {
-    public override async Task<CoreResponse> OnCoreRequestAsync(CoreRequestContext ctx, CancellationToken ct)
+    public override async Task<CoreResponse?> OnCoreRequestAsync(CoreRequestContext context, CancellationToken cancellationToken)
     {
-        // TODO(1): tambahkan/hapus tran_type yang didukung biller ini
-        IsoMessage? request = ctx.Request.TranType switch
+        CoreRequest request = context.Request;
+
+        // TODO(4): tambahkan/hapus tran_type yang didukung biller ini.
+        IsoMessage? iso = request.TranType switch
         {
-            TranType.Inquiry  => toRemote.Inquiry(ctx.Request),
-            TranType.Payment  => toRemote.Payment(ctx.Request),
-            TranType.Advice   => toRemote.Advice(ctx.Request),
-            TranType.Reversal => toRemote.Reversal(ctx.Request),
-            _ => null
+            TranType.Inquiry => toRemote.Inquiry(request),
+            TranType.Payment => toRemote.Payment(request),
+            TranType.Advice => toRemote.Advice(request),
+            TranType.Reversal => toRemote.Reversal(request),
+            _ => null,
         };
 
-        if (request is null)
-            return ctx.Request.ToResponse(ResponseCodes.NotSupported, "Transaction is not supported", AuthorizedBy.Internal);
+        if (iso is null) return request.ToResponse(ResponseCodes.NotSupported, "Transaction is not supported", AuthorizedBy.Internal);
+        if (!context.Remote.IsConnected) return request.ToResponse(ResponseCodes.LinkDown, "Link down", AuthorizedBy.Internal);
 
-        if (!ctx.Remote.IsConnected)
-            return ctx.Request.ToResponse(ResponseCodes.LinkDown, "Link down", AuthorizedBy.Internal);
-
-        IsoMessage response = await ctx.Remote.SendAndReceiveAsync(request, ct);
-
-        // TODO(2): lengkapi mapping respons di Mapping/ToCore.cs
-        return toCore.From(response, ctx.Request);
+        context.Trace.Message(context.Node.Name, TraceDirection.Outgoing, iso.Mti, iso.FormatTrace());
+        try
+        {
+            byte[] reply = await context.Remote.SendAndReceiveAsync(iso.Pack(), BillerIsoSpec.CorrelationKey(iso), cancellationToken: cancellationToken);
+            return toCore.From(IsoMessage.Parse(BillerIsoSpec.Instance, reply), request);
+        }
+        catch (RemoteUnavailableException) { return request.ToResponse(ResponseCodes.LinkDown, "Link down", AuthorizedBy.Internal); }
+        catch (TimeoutException) { return null; }   // Core menandai timeout (dan auto reversal bila aktif)
     }
 
-    // TODO(3): hapus bila biller tidak memerlukan sign-on
-    public override Task OnRemoteConnectedAsync(ConnectionContext ctx, CancellationToken ct)
-        => ctx.Remote.SendAsync(IsoNetwork.SignOn(), ct);
-
-    public override Task OnEchoTimerAsync(NodeContext ctx, CancellationToken ct)
-        => ctx.Remote.SendAsync(IsoNetwork.Echo(), ct);
+    // + GetRemoteCorrelationKey, OnRemoteMessageAsync (0800 → 0810), OnRemoteConnectedAsync (sign-on), OnEchoTimerAsync
 }
 ```
 
 Prinsip isi template:
 
-- Semua titik yang wajib diisi developer ditandai `TODO(n)` bernomor dan dijelaskan di README.
-- Tidak ada kode infrastruktur (cache, korelasi, trace manual, service wrapper) di proyek hasil template.
+- Semua titik yang wajib diisi developer ditandai `TODO(n)` bernomor dan dijelaskan di README proyek.
+- Tidak ada kode infrastruktur (cache, korelasi, trace koneksi, service wrapper) di proyek hasil template.
 - Contoh mapping lengkap untuk 4 transaksi dasar (INQ, PAY, ADV, REV) + network management.
+- Kode respons buatan interface sendiri eksplisit (`A1`, `89`, `96`; channel: `X2`, `X6`, `X8`, `X15`, `30`, `68`).
 - `appsettings.Development.json` langsung terhubung ke SimCore sehingga `dotnet run` bekerja tanpa Core.
+- `dotnet test` hijau sejak proyek dibuat, termasuk test end-to-end.
 
 ## 4. Alur Kerja Developer Baru
 
@@ -122,25 +131,24 @@ Prinsip isi template:
 dotnet new syncnet-outbound-iso -n Api.BillerAbc --app-name "API Biller ABC" --node-name BILLER_ABC
 cd Api.BillerAbc
 
-# 1. jalankan simulator core + simulator biller (dok. 07)
-dotnet tool run syncnet-simcore -- up --scenario simcore/scenarios
-
-# 2. jalankan interface (mode Development)
-dotnet run --project src/Api.BillerAbc
-
-# 3. kirim transaksi dari SimCore (CLI atau Web UI http://localhost:5080)
-dotnet tool run syncnet-simcore -- send inquiry --node BILLER_ABC
-
-# 4. test otomatis
-dotnet test
+syncnet-simcore up -c simcore/simcore.json -s simcore/scenarios        # 1. Core + biller tiruan, Web UI :5080
+DOTNET_ENVIRONMENT=Development dotnet run --project src/Api.BillerAbc  # 2. interface
+syncnet-simcore send --scenario inquiry                                # 3. transaksi
+dotnet test                                                            # 4. test otomatis
 ```
 
-## 5. Dokumentasi Pendamping
+## 5. Pemeliharaan Template
 
-Di `SyncNetSdkPro/docs/` (fase implementasi) ditambahkan:
+- Sumber: `templates/content/<template>` + `templates/content/_shared` (file bersama), dirakit saat build ke
+  `templates/obj/templates/<template>`; default `--sdk-version`/`--routing-version` diisi versi paket saat pack.
+- Coba lokal tanpa pack: `dotnet build templates && dotnet new install templates/obj/templates/<template>`.
+- Smoke test lengkap: `scripts/test-templates.sh [folder]` (opsional `TEMPLATES="syncnet-blank syncnet-inbound-http:--with-routing"`).
 
-- *Getting Started* (15 menit pertama).
-- *Cookbook*: sign-on/echo, non-persistent TCP, header BCD, HTTP dengan signature/header khusus,
-  inbound HTTP dengan autentikasi, penanganan timeout & late response, masking.
-- *Referensi API* hasil XML doc (DocFX).
-- *Migrasi* dari pola `IAppProcessor` ke `SyncNetInterface` (tabel dok. 03 §2–3).
+## 6. Dokumentasi Pendamping
+
+- [09 — Getting Started](09-getting-started.md)
+- [10 — Cookbook](10-cookbook.md): sign-on/echo, TCP non-persistent, header BCD/kustom, ISO spec, HTTP dengan
+  signature, inbound HTTP dengan otentikasi, timeout & respons terlambat, `additional_data`, trace & masking, HSM,
+  routing, modul RESYNC, test.
+- [11 — Migrasi dari SDK lama](11-migrasi-dari-sdk-lama.md)
+- Referensi API: XML doc di setiap paket (IntelliSense).

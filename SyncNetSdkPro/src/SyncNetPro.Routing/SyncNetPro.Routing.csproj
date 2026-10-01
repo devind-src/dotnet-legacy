@@ -19,6 +19,9 @@
     <PackageReference Include="MinVer" PrivateAssets="all" />
   </ItemGroup>
 
+  <!-- Dipakai SyncNetPro.Templates untuk default parameter routing-version template syncnet-inbound-http. -->
+  <Target Name="GetSyncNetPackageVersion" DependsOnTargets="MinVer" Returns="$(PackageVersion)" />
+
   <ItemGroup>
     <InternalsVisibleTo Include="SyncNetPro.Routing.Tests" />
   </ItemGroup>

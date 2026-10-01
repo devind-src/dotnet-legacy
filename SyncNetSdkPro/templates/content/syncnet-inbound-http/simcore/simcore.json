@@ -1,0 +1,28 @@
+{
+  "AppName": "API Template",
+  "BindAddress": "127.0.0.1",
+  "LogServicesPort": 17009,
+  "Interface": { "Host": "127.0.0.1", "Port": 17000 },
+  "Nodes": [
+    {
+      "Name": "TEMPLATE_NODE",
+      "Category": "Merchant",
+      "PortIn": 17001,
+      "PortOut": 17002,
+      "RequestTimeoutSeconds": 30,
+      "AdviceTimeoutSeconds": 30,
+      "AutoReversal": false,
+      "Responder": {
+        "Mode": "Rules",
+        "ResponseCode": "00",
+        "ResponseMessage": "Approved",
+        "Rules": [
+          { "TranType": "INQ", "TranTypeExt": "UNKNOWN", "ResponseCode": "14", "ResponseMessage": "Customer not found" },
+          { "TranType": "INQ", "ResponseCode": "00", "ResponseMessage": "Approved", "AdditionalData": { "customer_name": "BUDI SANTOSO", "bill_amount": 125000 } },
+          { "TranType": "PAY", "MinAmount": 10000001, "ResponseCode": "61", "ResponseMessage": "Exceeds amount limit" },
+          { "TranType": "PAY", "ResponseCode": "00", "ResponseMessage": "Approved", "AdditionalData": { "receipt": "PLN-0001" } }
+        ]
+      }
+    }
+  ]
+}

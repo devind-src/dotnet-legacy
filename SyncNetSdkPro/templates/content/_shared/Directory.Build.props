@@ -1,0 +1,27 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Versi paket SyncNetPro.*; naikkan di sini saja. -->
+    <SyncNetProVersion>SYNCNETPRO_VERSION</SyncNetProVersion>
+  </PropertyGroup>
+
+  <!--
+    Linux membedakan huruf besar/kecil: appSettings.json tidak dimuat host (.NET mencari appsettings.json) dan tidak
+    tersalin oleh pola appsettings*.json. Build gagal lebih awal daripada interface jalan tanpa konfigurasi.
+  -->
+  <!--/-:cnd:noEmit -->
+  <Target Name="SyncNetCheckAppSettingsName" BeforeTargets="Build">
+    <ItemGroup>
+      <_SyncNetSettingsFile Include="$(MSBuildProjectDirectory)/*.json" />
+      <_SyncNetBadSettingsFile Include="@(_SyncNetSettingsFile)"
+          Condition="$([System.String]::Copy('%(Filename)').StartsWith('appsettings', System.StringComparison.OrdinalIgnoreCase)) And !$([System.String]::Copy('%(Filename)').StartsWith('appsettings', System.StringComparison.Ordinal))" />
+    </ItemGroup>
+    <Error Condition="'@(_SyncNetBadSettingsFile)' != ''" Text="Ganti nama %(_SyncNetBadSettingsFile.Filename)%(_SyncNetBadSettingsFile.Extension) menjadi huruf kecil (appsettings*.json)." />
+  </Target>
+  <!--/+:cnd:noEmit -->
+
+</Project>

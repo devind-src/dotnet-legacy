@@ -4,7 +4,8 @@ SDK modern untuk membangun interface inbound/outbound antara **SyncNet Core** da
 eksternal. Pengganti `SyncNetSdk` untuk interface **baru**; interface lama tetap memakai SDK lama.
 
 - Analisa & desain: [`docs/`](docs/README.md)
-- Status: **Fase 5 — Modul (ISO 8583, Toolkit, HSM, Routing) selesai**, berikutnya fase 6 template & dokumentasi developer (lihat [dok. 08](docs/08-roadmap-testing-risiko.md))
+- Status: **Fase 6 — Template & dokumentasi developer selesai**, berikutnya fase 7 pilot produksi (lihat [dok. 08](docs/08-roadmap-testing-risiko.md))
+- Mulai membuat interface: [Getting Started](docs/09-getting-started.md) · [Cookbook](docs/10-cookbook.md) · [Migrasi dari SDK lama](docs/11-migrasi-dari-sdk-lama.md)
 
 ## Isi
 
@@ -18,13 +19,15 @@ eksternal. Pengganti `SyncNetSdk` untuk interface **baru**; interface lama tetap
 | `src/SyncNetPro.Routing` | Routing & fee interface channel — **versi independen** (tag `routing-v*`) |
 | `src/SyncNetPro.Sdk.Testing` | SimCore in-process untuk unit/integration test interface (`SimCore`, `SimInterfaceHost`, skenario, remote stub) |
 | `tools/SyncNetPro.SimCore` | .NET tool `syncnet-simcore` (CLI + Web UI) dan `Dockerfile` |
+| `templates/` | Paket `SyncNetPro.Templates` (`dotnet new syncnet-outbound-iso`, `-outbound-http`, `-inbound-http`, `-inbound-iso`, `-blank`), lihat [dok. 06](docs/06-template-interface.md) |
+| `scripts/test-templates.sh` | Smoke test template: pack → `dotnet new` → build → test setiap template (dipakai CI) |
 | `samples/Sample.Outbound` | Contoh interface outbound minimal (jalan tanpa Core/DB dengan `DOTNET_ENVIRONMENT=Development`) |
 | `tests/SyncNetPro.Contracts.Tests` | Unit test + **golden test** byte-per-byte terhadap SDK lama |
 | `tests/SyncNetPro.Sdk.Tests` | Test SDK: golden header TCP/LogModel/command, FakeCore via socket, integrasi PostgreSQL (bila `SYNCNET_TEST_PG` diisi) |
 | `tests/SyncNetPro.Iso8583.Tests`, `...Toolkit.Tests`, `...Hsm.Tests`, `...Routing.Tests` | Test modul + golden parity dengan SDK lama (resolver routing butuh `SYNCNET_TEST_PG`) |
 | `tests/SyncNetPro.SimCore.Tests` | Test SimCore: perilaku Core, skenario, Web API, CLI |
 | `tools/SyncNetPro.GoldenGenerator` | Generator golden file; mereferensikan `../SyncNetSdk` (read-only) |
-| `.github/workflows/syncnetsdkpro.yml` (root repo) | CI Ubuntu + Windows, cek golden file, publish ke GitHub Packages |
+| `.github/workflows/syncnetsdkpro.yml` (root repo) | CI Ubuntu + Windows, cek golden file, smoke test template, publish ke GitHub Packages |
 
 ## Prasyarat
 
@@ -43,6 +46,17 @@ Test integrasi PostgreSQL (opsional):
 ```bash
 export SYNCNET_TEST_PG="Host=127.0.0.1;Database=sdkpro_test;Username=sdkpro;Password=sdkpro"
 dotnet test --solution SyncNetSdkPro.slnx
+```
+
+## Template interface
+
+```bash
+dotnet new install SyncNetPro.Templates              # dari GitHub Packages
+dotnet new syncnet-outbound-iso -n Api.BillerAbc --app-name "API Biller ABC" --node-name BILLER_ABC
+
+# dari source repo ini (tanpa publish)
+dotnet build templates && dotnet new install templates/obj/templates/syncnet-outbound-iso
+scripts/test-templates.sh                            # semua template: build + test proyek hasil
 ```
 
 ## SimCore — jalan tanpa Core

@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using SyncNetPro.Iso8583;
 using Newtonsoft.Json.Converters;
 using SyncNetPro.Sdk.Nodes;
 using SyncNetPro.Sdk.Transport;
@@ -194,6 +195,65 @@ public sealed class RemoteStubOptions
 
     /// <summary>Balasan; aturan pertama yang cocok dipakai.</summary>
     public List<StubReply> Replies { get; set; } = [];
+
+    /// <summary>
+    /// Stub ISO 8583 (TCP): request di-parse dengan spesifikasi ini lalu dibalas dengan <c>CreateResponse</c> +
+    /// <see cref="StubReply.IsoSet"/> sehingga field korelasi (STAN, terminal) otomatis kembali.
+    /// </summary>
+    public IsoStubSpec? Iso { get; set; }
+}
+
+/// <summary>Spesifikasi ISO stub: <c>IsoSpec.Legacy</c> + field yang ditimpa (sama dengan spesifikasi interface).</summary>
+public sealed class IsoStubSpec
+{
+    /// <summary>Encoding MTI (<c>Ascii</c>/<c>Bcd</c>).</summary>
+    public IsoEncoding MtiEncoding { get; set; }
+
+    /// <summary>Encoding bitmap.</summary>
+    public IsoEncoding BitmapEncoding { get; set; }
+
+    /// <summary>Encoding indikator panjang.</summary>
+    public IsoEncoding LengthEncoding { get; set; }
+
+    /// <summary>Panjang TPDU (byte).</summary>
+    public int TpduLength { get; set; }
+
+    /// <summary>Field yang ditimpa dari tabel default.</summary>
+    public List<IsoStubField> Fields { get; set; } = [];
+
+    /// <summary>Membangun <see cref="IsoSpec"/>.</summary>
+    public IsoSpec Build()
+    {
+        IsoSpecBuilder builder = IsoSpec.Legacy.ToBuilder();
+        builder.MtiEncoding = MtiEncoding;
+        builder.BitmapEncoding = BitmapEncoding;
+        builder.LengthEncoding = LengthEncoding;
+        builder.TpduLength = TpduLength;
+        foreach (IsoStubField f in Fields) builder.Field(f.Number, f.LengthType, f.Content, f.Length, f.Name ?? $"Field {f.Number}", f.Encoding);
+        return builder.Build();
+    }
+}
+
+/// <summary>Definisi field ISO stub.</summary>
+public sealed class IsoStubField
+{
+    /// <summary>Nomor field.</summary>
+    public int Number { get; set; }
+
+    /// <summary>Tipe panjang.</summary>
+    public IsoLengthType LengthType { get; set; }
+
+    /// <summary>Isi.</summary>
+    public IsoFieldContent Content { get; set; } = IsoFieldContent.Ans;
+
+    /// <summary>Panjang tetap/maksimum.</summary>
+    public int Length { get; set; }
+
+    /// <summary>Nama.</summary>
+    public string? Name { get; set; }
+
+    /// <summary>Encoding data.</summary>
+    public IsoFieldEncoding Encoding { get; set; }
 }
 
 /// <summary>Aturan balasan stub.</summary>
@@ -208,7 +268,22 @@ public sealed class StubReply
     /// <summary>HTTP: path yang cocok (mis. <c>/bill/inquiry</c>).</summary>
     public string? Path { get; set; }
 
-    /// <summary>Balasan teks.</summary>
+    /// <summary>ISO: cocok bila MTI request sama (mis. <c>0200</c>).</summary>
+    public string? Mti { get; set; }
+
+    /// <summary>ISO: cocok bila field request diawali nilai ini (mis. <c>{"3": "38"}</c>).</summary>
+    public Dictionary<int, string>? IsoMatch { get; set; }
+
+    /// <summary>
+    /// ISO: field yang diisi pada response (<c>CreateResponse</c> dari request). Nilai kosong menghapus field.
+    /// Placeholder <c>{{field:n}}</c> = nilai field n request.
+    /// </summary>
+    public Dictionary<int, string>? IsoSet { get; set; }
+
+    /// <summary>
+    /// Balasan teks. Placeholder <c>{{json:nama}}</c> diganti nilai properti JSON tingkat atas request
+    /// (mis. <c>"ref": "{{json:trace_number}}"</c>).
+    /// </summary>
     public string? Reply { get; set; }
 
     /// <summary>Balasan hex (TCP biner).</summary>

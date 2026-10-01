@@ -1,0 +1,50 @@
+{
+  "AppName": "API Template",
+  "BindAddress": "127.0.0.1",
+  "LogServicesPort": 17009,
+  "Interface": {
+    "Host": "127.0.0.1",
+    "Port": 17000
+  },
+  "Nodes": [
+    {
+      "Name": "TEMPLATE_NODE",
+      "Category": "BillerIssuer",
+      "PortIn": 17001,
+      "PortOut": 17002,
+      "RequestTimeoutSeconds": 30,
+      "AdviceTimeoutSeconds": 30,
+      "AutoReversal": false
+    }
+  ],
+  "RemoteStubs": [
+    {
+      "Name": "BILLER_SIM",
+      "Type": "Http",
+      "Port": 18080,
+      "Replies": [
+        {
+          "Path": "/bill/inquiry",
+          "Contains": "\"customer_id\":\"9999",
+          "Reply": "{\"rc\":\"14\",\"message\":\"Customer not found\"}"
+        },
+        {
+          "Path": "/bill/inquiry",
+          "Reply": "{\"rc\":\"00\",\"message\":\"Success\",\"customer_name\":\"BUDI SANTOSO\",\"amount\":125000,\"bill_info\":\"{{json:customer_id}} R1 900VA\"}"
+        },
+        {
+          "Path": "/bill/payment",
+          "Reply": "{\"rc\":\"00\",\"message\":\"Success\",\"bill_info\":\"REF {{json:reference}}\"}"
+        },
+        {
+          "Path": "/bill/advice",
+          "Reply": "{\"rc\":\"00\",\"message\":\"Success\"}"
+        },
+        {
+          "Path": "/bill/reversal",
+          "Reply": "{\"rc\":\"00\",\"message\":\"Reversed\"}"
+        }
+      ]
+    }
+  ]
+}

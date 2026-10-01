@@ -1,0 +1,43 @@
+{
+  "AppName": "API Template",
+  "BindAddress": "127.0.0.1",
+  "LogServicesPort": 17009,
+  "Interface": { "Host": "127.0.0.1", "Port": 17000 },
+  "Nodes": [
+    {
+      "Name": "TEMPLATE_NODE",
+      "Category": "BillerIssuer",
+      "PortIn": 17001,
+      "PortOut": 17002,
+      "RequestTimeoutSeconds": 30,
+      "AdviceTimeoutSeconds": 30,
+      "AutoReversal": false
+    }
+  ],
+  "RemoteStubs": [
+    {
+      "Name": "BILLER_SIM",
+      "Type": "Tcp",
+      "Port": 18000,
+      "Iso": {
+        "Fields": [
+          { "Number": 7, "LengthType": "Fixed", "Content": "N", "Length": 10 },
+          { "Number": 11, "LengthType": "Fixed", "Content": "N", "Length": 6 },
+          { "Number": 37, "LengthType": "Fixed", "Content": "Ans", "Length": 12 },
+          { "Number": 39, "LengthType": "Fixed", "Content": "Ans", "Length": 2 },
+          { "Number": 41, "LengthType": "Fixed", "Content": "Ans", "Length": 8 },
+          { "Number": 42, "LengthType": "Fixed", "Content": "Ans", "Length": 15 },
+          { "Number": 49, "LengthType": "Fixed", "Content": "Ans", "Length": 3 }
+        ]
+      },
+      "Replies": [
+        { "Mti": "0800", "IsoSet": { "39": "00" } },
+        { "Mti": "0200", "IsoMatch": { "48": "9999" }, "IsoSet": { "39": "14", "48": "" } },
+        { "Mti": "0200", "IsoMatch": { "3": "38" }, "IsoSet": { "39": "00", "48": "BUDI SANTOSO        R1  900VA  TAGIHAN 125000" } },
+        { "Mti": "0200", "IsoSet": { "39": "00", "38": "{{field:11}}" } },
+        { "Mti": "0220", "IsoSet": { "39": "00" } },
+        { "Mti": "0400", "IsoSet": { "39": "00" } }
+      ]
+    }
+  ]
+}

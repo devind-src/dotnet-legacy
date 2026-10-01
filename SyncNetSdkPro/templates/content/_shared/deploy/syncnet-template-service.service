@@ -1,0 +1,23 @@
+# systemd unit untuk API Template.
+# Pasang: sudo cp syncnet-template-service.service /etc/systemd/system/ && sudo systemctl enable --now syncnet-template-service
+[Unit]
+Description=API Template (SyncNet interface)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+# Hasil `dotnet publish -c Release -o /opt/syncnet/syncnet-template-service`
+WorkingDirectory=/opt/syncnet/syncnet-template-service
+ExecStart=/opt/syncnet/syncnet-template-service/SyncNet.Template
+# Home SyncNet (config Core, log, trace) — sama untuk semua interface di server ini
+Environment=SYNCNET_HOME=/opt/syncnet
+Environment=DOTNET_ENVIRONMENT=Production
+User=syncnet
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

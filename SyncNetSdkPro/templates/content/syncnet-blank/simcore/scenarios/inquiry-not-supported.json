@@ -1,0 +1,21 @@
+{
+  "name": "inquiry-not-supported",
+  "node": "TEMPLATE_NODE",
+  "request": {
+    "msgtype": "0200",
+    "tran_type": "INQ",
+    "tran_type_ext": "PLNPOST",
+    "amount_tran": 125000,
+    "trace_number": "{{stan}}",
+    "datetime_tran": "{{now:MMddHHmmss}}",
+    "terminal_id": "TERM0001",
+    "merchant_id": "MERCHANT01",
+    "refnum": "{{rrn}}",
+    "currency": "360",
+    "to_acc_number": "532110000001"
+  },
+  "expect": {
+    "resp_code": "A1",
+    "within_ms": 5000
+  }
+}

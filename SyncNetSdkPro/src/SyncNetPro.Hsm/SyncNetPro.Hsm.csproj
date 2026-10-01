@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SyncNetPro.Hsm</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>SyncNetPro.Hsm</PackageId>
+    <Description>Klien SyncNetHsm untuk interface SyncNet: generate/translate key dan translate PIN block (format request/response sama dengan HsmService SDK lama).</Description>
+    <PackageTags>syncnet;hsm;pinblock</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SyncNetPro.Sdk\SyncNetPro.Sdk.csproj" />
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SyncNetPro.Hsm.Tests" />
+  </ItemGroup>
+
+</Project>

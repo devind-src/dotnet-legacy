@@ -30,6 +30,7 @@ public sealed class SimCore : IAsyncDisposable
     private readonly ConcurrentQueue<SimMessage> _messages = new();
     private readonly ConcurrentQueue<SimTrace> _traces = new();
     private readonly List<IAsyncDisposable> _stubs = [];
+    private HsmStub? _hsm;
     private TcpFrameServer? _logServices;
     private long _sequence;
 
@@ -65,6 +66,12 @@ public sealed class SimCore : IAsyncDisposable
 
     /// <summary>Stub sistem eksternal yang berjalan.</summary>
     public IReadOnlyList<RemoteStub> RemoteStubs => [.. _stubs.OfType<RemoteStub>()];
+
+    /// <summary>URL HSM tiruan (null bila <see cref="SimCoreOptions.Hsm"/> tidak aktif).</summary>
+    public string? HsmUrl => _hsm is null ? null : $"http://{_options.BindAddress}:{_hsm.Port}";
+
+    /// <summary>Request yang diterima HSM tiruan.</summary>
+    public IReadOnlyList<SimHsmRequest> HsmRequests => _hsm is null ? [] : [.. _hsm.Requests];
 
     /// <summary>Menjalankan SimCore.</summary>
     public static async Task<SimCore> StartAsync(SimCoreOptions options, ILogger? logger = null, CancellationToken cancellationToken = default)
@@ -216,6 +223,12 @@ public sealed class SimCore : IAsyncDisposable
         foreach (RemoteStubOptions stub in _options.RemoteStubs)
         {
             _stubs.Add(await RemoteStub.StartAsync(stub, bind, _logger, cancellationToken).ConfigureAwait(false));
+        }
+
+        if (_options.Hsm is not null)
+        {
+            _hsm = await HsmStub.StartAsync(_options.Hsm, bind, _logger, cancellationToken).ConfigureAwait(false);
+            _stubs.Add(_hsm);
         }
     }
 

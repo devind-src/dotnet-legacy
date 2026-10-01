@@ -276,3 +276,26 @@ foreach (string className in new[] { "SyncNet.Networking.XTcpClientSdk", "SyncNe
 File.WriteAllText(Path.Combine(sdkOut, "setprotocol.json"), JsonConvert.SerializeObject(protocolCases, Formatting.Indented), utf8);
 
 Console.WriteLine($"{headers.Count} varian header TCP + {protocolCases.Count} kasus SetProtocol + LogModel + command ditulis ke {sdkOut}");
+
+// ---------------- Golden untuk SyncNetPro.Iso8583 ----------------
+string isoOut = args.Length > 2
+    ? args[2]
+    : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Iso8583.Tests", "Golden"));
+IsoGolden.Write(isoOut);
+
+// ---------------- Golden untuk SyncNetPro.Toolkit ----------------
+ToolkitGolden.Write(args.Length > 3
+    ? args[3]
+    : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Toolkit.Tests", "Golden")));
+
+// ---------------- Golden untuk SyncNetPro.Hsm ----------------
+HsmGolden.Write(args.Length > 4
+    ? args[4]
+    : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Hsm.Tests", "Golden")));
+
+// ---------------- Golden untuk SyncNetPro.Routing ----------------
+string routingOut = args.Length > 5
+    ? args[5]
+    : Path.GetFullPath(Path.Combine(outDir, "..", "..", "SyncNetPro.Routing.Tests", "Golden"));
+RoutingGolden.Write(routingOut);
+RoutingDbGolden.Write(routingOut);

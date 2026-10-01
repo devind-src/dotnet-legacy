@@ -10,7 +10,7 @@
     <IsPackable>false</IsPackable>
     <!-- SDK lama tidak nullable-annotated -->
     <Nullable>disable</Nullable>
-    <NoWarn>$(NoWarn);CA1303;CA1305;CA1307;CA1310;CA1311;CA1822;CA1852;CA1860;CA2000;CA5394;IDE0005;IDE0161</NoWarn>
+    <NoWarn>$(NoWarn);CA1859;CA1861;CA1303;CA1305;CA1307;CA1310;CA1311;CA1822;CA1852;CA1860;CA2000;CA5394;IDE0005;IDE0161</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

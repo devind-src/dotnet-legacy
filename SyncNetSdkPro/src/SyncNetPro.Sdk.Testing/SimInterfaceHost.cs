@@ -94,6 +94,7 @@ public static class SimInterfaceHost
         Directory.CreateDirectory(home);
 
         HostApplicationBuilder builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+        if (core.HsmUrl is not null) builder.Configuration["SyncNet:Hsm:Url"] = core.HsmUrl;
         services?.Invoke(builder.Services);
         builder.AddSyncNetInterface<THandler>(o =>
         {

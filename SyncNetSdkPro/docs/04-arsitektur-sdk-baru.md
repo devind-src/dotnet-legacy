@@ -93,7 +93,8 @@ builder.AddSyncNetInterface<BillerIsoInterface>(options =>
     options.AppName = "API Biller";                      // = sw_app.app_name
 });
 
-builder.Services.AddIso8583<BillerIsoSpec>();           // modul opsional
+builder.AddSyncNetHsm();                                 // modul opsional: klien SyncNetHsm
+// builder.AddSyncNetRouting();                          // modul opsional: routing & fee (interface channel)
 
 await builder.Build().RunAsync();
 ```
@@ -254,7 +255,7 @@ eksplisit dan diuji per kombinasi, termasuk mode non-persistent (perbaikan B1, B
 ## 6. Status Implementasi (Fase 2–3)
 
 API yang **sudah tersedia** di `SyncNetPro.Sdk`. Catatan terhadap contoh §4.3–4.5: pada fase 3 `SendAndReceiveAsync`
-bekerja dengan `byte[]` + kunci korelasi (varian bertipe `IsoMessage` menyusul bersama modul ISO di fase 5), dan
+bekerja dengan `byte[]` + kunci korelasi (pesan ISO: `IsoMessage.Pack()` / `IsoMessage.Parse(spec, payload)` di sekitar panggilan tersebut), dan
 `OnHttpRequestAsync` memakai `ctx.SendToCoreAsync(request)` yang mengisi `connection_name`/`ip_external` otomatis.
 
 | Area | API |
@@ -270,11 +271,16 @@ bekerja dengan `byte[]` + kunci korelasi (varian bertipe `IsoMessage` menyusul b
 | Remote (fase 3) | `ctx.Remote` (`IRemoteNode`): `SendAsync`, `SendAndReceiveAsync(payload, key, timeout)`, `Tcp`, `Http`, `GetConnection(name)`; `IRemoteHttpClient.SendAsync(RemoteHttpRequest)` → `RemoteHttpResponse` (`RemoteHttpRequest.Json(path, body)`, `ReadJson<T>()`); `IRemoteRegistry` |
 | Handler remote (fase 3) | `OnRemoteMessageAsync(RemoteMessageContext)` (+ `ReplyAsync`, `SendToCoreAsync`), `OnHttpRequestAsync(HttpRequestContext)` → `HttpReply` (+ `SendToCoreAsync`), `GetRemoteCorrelationKey`, `CreateTcpCodec`, `OnRemoteConnectedAsync`, `OnRemoteDisconnectedAsync`, `OnAutoSignOnAsync`, `OnEchoTimerAsync`, `OnKeyExchangeTimerAsync` |
 | Transport | `LengthPrefixCodec`, `TcpFrameClient`, `TcpFrameServer`, `FramedConnection` (dipakai ulang oleh transport remote fase 3) |
+| Modul (fase 5) | `ISyncNetModule` (`StartAsync` sebelum kanal Core dibuka, `ReloadAsync` saat RESYNC, `StopAsync` setelah kanal ditutup) |
+| ISO 8583 (fase 5) | `SyncNetPro.Iso8583`: `IsoSpec.Legacy.ToBuilder().Field(n, IsoLengthType, IsoFieldContent, length, name, IsoFieldEncoding)` → `IsoSpec`; `new IsoMessage(spec, "0200").Set(11, stan)`, `msg[39]`, `Pack()`, `IsoMessage.Parse/TryParse(spec, bytes)`, `CreateResponse(rc)`, `Format/FormatSimple/FormatTrace(IsoFormatOptions)` (PAN/PIN/track/ICC disamarkan default), `IsoFormatException` (`Field`, `Offset`); `ProcessingCode.ToTranType/FromTranType` |
+| Toolkit (fase 5) | `SyncNetPro.Toolkit`: `Bcd`, `Ebcdic`, `HexDump`, `DesEcb`, `KeyCheckValue`, `PinBlock` (`Iso0`, `Docutel`, `Ibm3624`, `Plus`), `Luhn`, `EmvTlv`, `NumericTlv` |
+| HSM (fase 5) | `SyncNetPro.Hsm`: `builder.AddSyncNetHsm()`, `IHsmClient` (`GenerateNodeKeyAsync`, `GenerateTerminalKeyAsync`, `TranslateKeyAsync`, `TranslatePinBlockAsync`, `TranslateTerminalPinBlockAsync`) → `HsmResult` (`IsSuccess`, `96` bila HSM tidak tersedia) |
+| Routing (fase 5, versi independen) | `SyncNetPro.Routing`: `builder.AddSyncNetRouting()`; `RoutingResolver` (`ResolveProductAsync`, `ResolveMarginAsync`, `RecordResultAsync`, `RecordVolume`), `ProductFeeCalculator` (`GetRoutingMode`, `Calculate`), `MarginCalculator`, `PriceBook`, `RoutingContext.From(request)`, `SwitchKeys`; store dapat diganti (`IRoutingDataStore`, `ISupplierHealthStore`, `IRoutingScheduleStore`, `ICommitmentStore`, `IRoutingCycleStore`) |
 
 Kunci konfigurasi (`appsettings.json`, bagian `SyncNet`): `AppName`, `Version`, `Home`, `NodeSource` (`Database`/`Json`),
 `Nodes[]`, `Connections[]`, `Core:{Host,ReconnectDelay,ResponseTimeoutMargin}`, `Command:{Enabled,BindAddress,Port}`, `Remote:{AllowUntrustedCertificates,AutoSignOnDelay,ConnectTimeout,StatusInterval}`,
 `Trace:{Enabled,Sink,LogServicesHost,LogServicesPort,QueueCapacity}`, `Logging:{Enabled,Directory,TraceDirectory,ForwardToTrace,LegacyWindowsFileNames}`,
-`Database:{ConnectionString,ReportStatus}`, `MaxConcurrentRequestsPerNode`.
+`Database:{ConnectionString,ReportStatus}`, `MaxConcurrentRequestsPerNode`, `Hsm:{Url,Timeout}`, `Routing:{ConnectionString,VolumeFlushInterval}`.
 
 ## 7. Koeksistensi dengan SDK Lama
 

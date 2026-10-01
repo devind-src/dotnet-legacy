@@ -1,0 +1,9 @@
+{
+  "generate-key": "{\"node_name\":\"BILLER_ABC\",\"terminal_id\":null}",
+  "generate-key-terminal": "{\"node_name\":null,\"terminal_id\":\"TERM0001\"}",
+  "translate-key": "{\"node_name\":\"BILLER_ABC\",\"zpk_under_zmk\":\"U0123456789ABCDEF0123456789ABCDEF\"}",
+  "translate-pinblock": "{\"node_source\":\"CHANNEL\",\"node_dest\":\"BANK\",\"source_pinblock\":\"1A2B3C4D5E6F7A8B\",\"account_number\":\"111111111111\"}",
+  "translate-pinblock-long-pan": "{\"node_source\":\"CHANNEL\",\"node_dest\":\"BANK\",\"source_pinblock\":\"1A2B3C4D5E6F7A8B\",\"account_number\":\"345678901234\"}",
+  "translate-pinblock-short-pan": "{\"node_source\":\"CHANNEL\",\"node_dest\":\"BANK\",\"source_pinblock\":\"1A2B3C4D5E6F7A8B\",\"account_number\":\"\"}",
+  "translate-pinblock-terminal": "{\"terminal_id\":\"TERM0001\",\"node_dest\":\"BANK\",\"source_pinblock\":\"1A2B3C4D5E6F7A8B\",\"account_number\":\"111111111111\"}"
+}

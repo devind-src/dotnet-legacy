@@ -26,6 +26,7 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
     private readonly StartupSignal _startup;
     private readonly ILogger<SyncNetRuntime> _logger;
     private readonly CommandServer _commands;
+    private readonly ISyncNetModule[] _modules;
 
     /// <summary>Membuat runtime.</summary>
     public SyncNetRuntime(
@@ -37,7 +38,8 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
         RemoteConnectionManager remote,
         StartupSignal startup,
         SyncNetServices services,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        IEnumerable<ISyncNetModule>? modules = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = options;
@@ -48,6 +50,7 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
         _remote = remote;
         _startup = startup;
         _logger = loggerFactory.CreateLogger<SyncNetRuntime>();
+        _modules = [.. modules ?? []];
         Version = options.Value.Version ?? DefaultVersion();
         _commands = new CommandServer(options, Version, handler, registry, services, loggerFactory, ReloadAsync);
     }
@@ -76,6 +79,8 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
             _logger.LogCritical(ex, "{AppName} gagal memuat konfigurasi", AppName);
             throw;
         }
+
+        foreach (ISyncNetModule module in _modules) await module.StartAsync(cancellationToken).ConfigureAwait(false);
 
         await _status.ReportApplicationAsync(AppName, true, cancellationToken).ConfigureAwait(false);
         await _channels.ReconcileAsync(configuration, cancellationToken).ConfigureAwait(false);
@@ -109,6 +114,18 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
         await _status.ReportApplicationAsync(AppName, false, CancellationToken.None).ConfigureAwait(false);
         await _remote.StopAsync().ConfigureAwait(false);
         await _channels.StopAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+
+        foreach (ISyncNetModule module in _modules)
+        {
+            try
+            {
+                await module.StopAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Modul {Module} gagal berhenti", module.GetType().Name);
+            }
+        }
     }
 
     /// <inheritdoc />
@@ -117,6 +134,7 @@ public sealed class SyncNetRuntime : IHostedService, ISyncNetRuntime, IAsyncDisp
         NodeConfiguration configuration = await _registry.ReloadAsync(cancellationToken).ConfigureAwait(false);
         await _remote.ReconcileAsync(configuration, cancellationToken).ConfigureAwait(false);
         await _channels.ReconcileAsync(configuration, cancellationToken).ConfigureAwait(false);
+        foreach (ISyncNetModule module in _modules) await module.ReloadAsync(cancellationToken).ConfigureAwait(false);
         await _handler.OnConfigurationReloadedAsync(configuration, cancellationToken).ConfigureAwait(false);
         _logger.LogInformation("{AppName} resync selesai", AppName);
         return configuration;

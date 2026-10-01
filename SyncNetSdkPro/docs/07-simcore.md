@@ -159,5 +159,6 @@ Log Services SimCore) dengan port dari `SimCore` dan baru kembali setelah kedua 
 | Skenario JSON, placeholder `{{stan}}`, `{{now:…}}`, `{{rrn}}`, `{{random:n}}`, `{{env:…}}`, `expect`, JUnit | ✅ `ScenarioRunner` |
 | Web UI | ✅ Minimal API + halaman statis + Server-Sent Events (lebih ringan daripada Blazor/SignalR; tanpa dependensi tambahan) |
 | Container | ✅ `tools/SyncNetPro.SimCore/Dockerfile` (publikasi image di CI: backlog) |
-| Skenario YAML, record & replay, HSM stub, status node dari interface | ⏳ backlog (HSM stub bersama modul `Hsm` fase 5) |
+| HSM stub | ✅ fase 5: `SimCoreOptions.Hsm` (balasan deterministik, `ResponseCode`, `TranslatedPinBlock`, `DelayMs`), `SimCore.HsmRequests`; `SimInterfaceHost` mengisi `SyncNet:Hsm:Url` otomatis |
+| Skenario YAML, record & replay, status node dari interface | ⏳ backlog |
 | Uji kesetaraan `ApiBillerJson` lama terhadap SimCore | ⏳ butuh direktori `Core/Bin` lama (SDK lama membaca config Core sejak konstruktor); dijalankan di lingkungan UAT |

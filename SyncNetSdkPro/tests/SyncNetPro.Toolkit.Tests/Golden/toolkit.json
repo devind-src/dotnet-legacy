@@ -1,0 +1,654 @@
+{
+  "des": [
+    {
+      "key": "0123456789ABCDEF",
+      "block": "0000000000000000",
+      "encrypted": "D5D44FF720683D0D",
+      "decrypted": "0000000000000000",
+      "kcv": "D5D44FF720683D0D"
+    },
+    {
+      "key": "0123456789ABCDEF",
+      "block": "041234FFFFFFFFFF",
+      "encrypted": "286344C32894AFB6",
+      "decrypted": "041234FFFFFFFFFF",
+      "kcv": "D5D44FF720683D0D"
+    },
+    {
+      "key": "0123456789ABCDEF",
+      "block": "0123456789ABCDEF0123456789ABCDEF",
+      "encrypted": "56CC09E7CFDC4CEF56CC09E7CFDC4CEF",
+      "decrypted": "0123456789ABCDEF0123456789ABCDEF",
+      "kcv": "D5D44FF720683D0D"
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "block": "0000000000000000",
+      "encrypted": "08D7B4FB629D0885",
+      "decrypted": "0000000000000000",
+      "kcv": "08D7B4FB629D0885"
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "block": "041234FFFFFFFFFF",
+      "encrypted": "F005B8AE32436B80",
+      "decrypted": "041234FFFFFFFFFF",
+      "kcv": "08D7B4FB629D0885"
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "block": "0123456789ABCDEF0123456789ABCDEF",
+      "encrypted": "1A4D672DCA6CB3351A4D672DCA6CB335",
+      "decrypted": "0123456789ABCDEF0123456789ABCDEF",
+      "kcv": "08D7B4FB629D0885"
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "block": "0000000000000000",
+      "encrypted": "3FD539E3ABEB8B5B",
+      "decrypted": "0000000000000000",
+      "kcv": "3FD539E3ABEB8B5B"
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "block": "041234FFFFFFFFFF",
+      "encrypted": "E964F29C32BBCA94",
+      "decrypted": "041234FFFFFFFFFF",
+      "kcv": "3FD539E3ABEB8B5B"
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "block": "0123456789ABCDEF0123456789ABCDEF",
+      "encrypted": "691747FD88B6D228691747FD88B6D228",
+      "decrypted": "0123456789ABCDEF0123456789ABCDEF",
+      "kcv": "3FD539E3ABEB8B5B"
+    }
+  ],
+  "pins": [
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "4111111111111111",
+      "pin": "1234",
+      "format": 1,
+      "block": "2A3D408A1977DDE9",
+      "clear": "041225EEEEEEEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "4111111111111111",
+      "pin": "1234",
+      "format": 2,
+      "block": "FF7B708778E80E1A",
+      "clear": "4123400987654321",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "4111111111111111",
+      "pin": "1234",
+      "format": 3,
+      "block": "4F9ABD367CCED1A7",
+      "clear": "1234FFFFFFFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "4111111111111111",
+      "pin": "1234",
+      "format": 4,
+      "block": "7A4899FEC0B19F36",
+      "clear": "041275EEEEEEEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "4111111111111111",
+      "pin": "123456",
+      "format": 1,
+      "block": "AE5F5FAADA187925",
+      "clear": "06122547EEEEEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "4111111111111111",
+      "pin": "123456",
+      "format": 2,
+      "block": "CF4083207223D8FB",
+      "clear": "6123456987654321",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "4111111111111111",
+      "pin": "123456",
+      "format": 3,
+      "block": "C3797B6D14CB99EE",
+      "clear": "123456FFFFFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "4111111111111111",
+      "pin": "123456",
+      "format": 4,
+      "block": "BAED89B43E5A761E",
+      "clear": "06127547EEEEEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "4111111111111111",
+      "pin": "987654321",
+      "format": 1,
+      "block": "1512D5C2B982AC09",
+      "clear": "09986745230EEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "4111111111111111",
+      "pin": "987654321",
+      "format": 3,
+      "block": "CEDA676171CF3E73",
+      "clear": "987654321FFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "4111111111111111",
+      "pin": "987654321",
+      "format": 4,
+      "block": "61167AD90080AF94",
+      "clear": "09983745230EEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "5264220012345678",
+      "pin": "1234",
+      "format": 1,
+      "block": "250E43AC47015CBB",
+      "clear": "041276DFFEDCBA98",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "5264220012345678",
+      "pin": "1234",
+      "format": 2,
+      "block": "FF7B708778E80E1A",
+      "clear": "4123400987654321",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "5264220012345678",
+      "pin": "1234",
+      "format": 3,
+      "block": "4F9ABD367CCED1A7",
+      "clear": "1234FFFFFFFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "5264220012345678",
+      "pin": "1234",
+      "format": 4,
+      "block": "ED26FB56E12AA9F5",
+      "clear": "0412669BDDFFEDCB",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "5264220012345678",
+      "pin": "123456",
+      "format": 1,
+      "block": "794D3CE91A24112B",
+      "clear": "06127676FEDCBA98",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "5264220012345678",
+      "pin": "123456",
+      "format": 2,
+      "block": "CF4083207223D8FB",
+      "clear": "6123456987654321",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "5264220012345678",
+      "pin": "123456",
+      "format": 3,
+      "block": "C3797B6D14CB99EE",
+      "clear": "123456FFFFFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "5264220012345678",
+      "pin": "123456",
+      "format": 4,
+      "block": "C5EE1C200BDA79E9",
+      "clear": "06126632DDFFEDCB",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "5264220012345678",
+      "pin": "987654321",
+      "format": 1,
+      "block": "1E0C66ADC01D51A1",
+      "clear": "09983474333CBA98",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "5264220012345678",
+      "pin": "987654321",
+      "format": 3,
+      "block": "CEDA676171CF3E73",
+      "clear": "987654321FFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA9876543210",
+      "pan": "5264220012345678",
+      "pin": "987654321",
+      "format": 4,
+      "block": "DD964189D6C2EFE2",
+      "clear": "09982430101FEDCB",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "4111111111111111",
+      "pin": "1234",
+      "format": 1,
+      "block": "6A953D63752E5E1B",
+      "clear": "041225EEEEEEEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "4111111111111111",
+      "pin": "1234",
+      "format": 2,
+      "block": "4E11D88A3D48C510",
+      "clear": "4123400987654321",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "4111111111111111",
+      "pin": "1234",
+      "format": 3,
+      "block": "F0BCAE4A041180F8",
+      "clear": "1234FFFFFFFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "4111111111111111",
+      "pin": "1234",
+      "format": 4,
+      "block": "3D9BBAE818718FEC",
+      "clear": "041275EEEEEEEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "4111111111111111",
+      "pin": "123456",
+      "format": 1,
+      "block": "0BD4A9261C76B57E",
+      "clear": "06122547EEEEEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "4111111111111111",
+      "pin": "123456",
+      "format": 2,
+      "block": "3DDAF9DDD2B09BD4",
+      "clear": "6123456987654321",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "4111111111111111",
+      "pin": "123456",
+      "format": 3,
+      "block": "3184D8628938B51E",
+      "clear": "123456FFFFFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "4111111111111111",
+      "pin": "123456",
+      "format": 4,
+      "block": "FB6EBBC7F73F1855",
+      "clear": "06127547EEEEEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "4111111111111111",
+      "pin": "987654321",
+      "format": 1,
+      "block": "DF0E5B373B3EC227",
+      "clear": "09986745230EEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "4111111111111111",
+      "pin": "987654321",
+      "format": 3,
+      "block": "C95C1F33C321C71B",
+      "clear": "987654321FFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "4111111111111111",
+      "pin": "987654321",
+      "format": 4,
+      "block": "E2B94F34B52C88DB",
+      "clear": "09983745230EEEEE",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "5264220012345678",
+      "pin": "1234",
+      "format": 1,
+      "block": "9B8035B495D94A85",
+      "clear": "041276DFFEDCBA98",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "5264220012345678",
+      "pin": "1234",
+      "format": 2,
+      "block": "4E11D88A3D48C510",
+      "clear": "4123400987654321",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "5264220012345678",
+      "pin": "1234",
+      "format": 3,
+      "block": "F0BCAE4A041180F8",
+      "clear": "1234FFFFFFFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "5264220012345678",
+      "pin": "1234",
+      "format": 4,
+      "block": "58DC19185833981B",
+      "clear": "0412669BDDFFEDCB",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "5264220012345678",
+      "pin": "123456",
+      "format": 1,
+      "block": "0F7979564A8BB77F",
+      "clear": "06127676FEDCBA98",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "5264220012345678",
+      "pin": "123456",
+      "format": 2,
+      "block": "3DDAF9DDD2B09BD4",
+      "clear": "6123456987654321",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "5264220012345678",
+      "pin": "123456",
+      "format": 3,
+      "block": "3184D8628938B51E",
+      "clear": "123456FFFFFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "5264220012345678",
+      "pin": "123456",
+      "format": 4,
+      "block": "543DFB5D82F25090",
+      "clear": "06126632DDFFEDCB",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "5264220012345678",
+      "pin": "987654321",
+      "format": 1,
+      "block": "4A25D5B17CA4C0E9",
+      "clear": "09983474333CBA98",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "5264220012345678",
+      "pin": "987654321",
+      "format": 3,
+      "block": "C95C1F33C321C71B",
+      "clear": "987654321FFFFFFF",
+      "err": ""
+    },
+    {
+      "key": "0123456789ABCDEFFEDCBA987654321089ABCDEF01234567",
+      "pan": "5264220012345678",
+      "pin": "987654321",
+      "format": 4,
+      "block": "443A6634C5533B9A",
+      "clear": "09982430101FEDCB",
+      "err": ""
+    }
+  ],
+  "luhn": [
+    {
+      "digits": "411111111111111",
+      "check": 1,
+      "full": "4111111111111111",
+      "valid": true
+    },
+    {
+      "digits": "526422001234567",
+      "check": 8,
+      "full": "5264220012345678",
+      "valid": true
+    },
+    {
+      "digits": "601100000000000",
+      "check": 4,
+      "full": "6011000000000004",
+      "valid": true
+    },
+    {
+      "digits": "37828224631000",
+      "check": 5,
+      "full": "378282246310005",
+      "valid": true
+    },
+    {
+      "digits": "49927398716",
+      "check": 8,
+      "full": "499273987168",
+      "valid": false
+    },
+    {
+      "digits": "123456789012345678",
+      "check": 5,
+      "full": "1234567890123456785",
+      "valid": false
+    }
+  ],
+  "emv": [
+    {
+      "hex": "9F2608A1B2C3D4E5F601029F2701809F100706010A03A0B8005F34010182025C009F3602001A9F1A0203605F2A0203609A032609309C01009F370412345678",
+      "items": [
+        {
+          "tag": "9F26",
+          "length": 8,
+          "value": "A1B2C3D4E5F60102"
+        },
+        {
+          "tag": "9F27",
+          "length": 1,
+          "value": "80"
+        },
+        {
+          "tag": "9F10",
+          "length": 7,
+          "value": "06010A03A0B800"
+        },
+        {
+          "tag": "5F34",
+          "length": 1,
+          "value": "01"
+        },
+        {
+          "tag": "82",
+          "length": 2,
+          "value": "5C00"
+        },
+        {
+          "tag": "9F36",
+          "length": 2,
+          "value": "001A"
+        },
+        {
+          "tag": "9F1A",
+          "length": 2,
+          "value": "0360"
+        },
+        {
+          "tag": "5F2A",
+          "length": 2,
+          "value": "0360"
+        },
+        {
+          "tag": "9A",
+          "length": 3,
+          "value": "260930"
+        },
+        {
+          "tag": "9C",
+          "length": 1,
+          "value": "00"
+        },
+        {
+          "tag": "9F37",
+          "length": 4,
+          "value": "12345678"
+        }
+      ],
+      "rebuilt": "9F2608A1B2C3D4E5F601029F2701809F100706010A03A0B8005F34010182025C009F3602001A9F1A0203605F2A0203609A032609309C01009F370412345678",
+      "info": "9F26 08 A1B2C3D4E5F60102 => Application Request Cryptogram ARQC\n9F27 01 80 => Cryptogram Information Data (CID)\n9F10 07 06010A03A0B800 => Issuer Application Data\n5F34 01 01 => Application Sequence Number\n82   02 5C00 => Application Interchange Profile\n9F36 02 001A => Application Transaction Counter (ATC)\n9F1A 02 0360 => Terminal Country Code\n5F2A 02 0360 => Transaction Currency Code\n9A   03 260930 => Transaction Date\n9C   01 00 => Transaction Type\n9F37 04 12345678 => Unpredictable Number\n"
+    },
+    {
+      "hex": "DF018196ABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB",
+      "items": [
+        {
+          "tag": "DF01",
+          "length": 150,
+          "value": "ABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB"
+        }
+      ],
+      "rebuilt": "DF018196ABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB",
+      "info": "DF01 150 ABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB => Kernel Identifier\n"
+    }
+  ],
+  "numeric": {
+    "build3": "001005HELLO026014ID.CO.QRIS.WWW039001X",
+    "build2": "0105HELLO2614ID.CO.QRIS.WWW3901X",
+    "element": "007003ABC",
+    "parse3": {
+      "1": "HELLO",
+      "26": "ID.CO.QRIS.WWW",
+      "39": "X"
+    },
+    "parse2": {
+      "1": "HELLO",
+      "26": "ID.CO.QRIS.WWW",
+      "39": "X"
+    },
+    "truncated": {
+      "1": "HELLO"
+    }
+  },
+  "dumps": [
+    {
+      "hex": "",
+      "dump": "[00000]                    \n"
+    },
+    {
+      "hex": "14",
+      "dump": "[00000]  .                  14\n"
+    },
+    {
+      "hex": "141B222930373E454C535A61686F76",
+      "dump": "[00000]  ..\")07>ELSZahov    14 1B 22 29 30 37 3E 45 4C 53 5A 61 68 6F 76\n"
+    },
+    {
+      "hex": "141B222930373E454C535A61686F767D",
+      "dump": "[00000]  ..\")07>ELSZahov}   14 1B 22 29 30 37 3E 45 4C 53 5A 61 68 6F 76 7D\n[00016]                    \n"
+    },
+    {
+      "hex": "141B222930373E454C535A61686F767D84",
+      "dump": "[00000]  ..\")07>ELSZahov}   14 1B 22 29 30 37 3E 45 4C 53 5A 61 68 6F 76 7D\n[00016]  .                  84\n"
+    },
+    {
+      "hex": "141B222930373E454C535A61686F767D848B9299A0A7AEB5BCC3CAD1D8DFE6EDF4FB020910171E25",
+      "dump": "[00000]  ..\")07>ELSZahov}   14 1B 22 29 30 37 3E 45 4C 53 5A 61 68 6F 76 7D\n[00016]  ................   84 8B 92 99 A0 A7 AE B5 BC C3 CA D1 D8 DF E6 ED\n[00032]  .......%           F4 FB 02 09 10 17 1E 25\n"
+    }
+  ],
+  "bcd": [
+    {
+      "digits": "0200",
+      "padRight": false,
+      "hex": "0200"
+    },
+    {
+      "digits": "123",
+      "padRight": false,
+      "hex": "0123"
+    },
+    {
+      "digits": "4111111111111111D251",
+      "padRight": true,
+      "hex": "4111111111111111D251"
+    },
+    {
+      "digits": "4111D25",
+      "padRight": true,
+      "hex": "4111D250"
+    },
+    {
+      "digits": "000000009900",
+      "padRight": false,
+      "hex": "000000009900"
+    }
+  ],
+  "ebcdic": {
+    "text": "TERM0001 Toko Jaya-123",
+    "hex": "E3C5D9D4F0F0F0F140E396929640D181A88160F1F2F3"
+  }
+}

@@ -1,0 +1,1692 @@
+[
+  {
+    "name": "default-link-down-manual-reset",
+    "start": "2026-09-28T08:00:00",
+    "configs": [],
+    "steps": [
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "91",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 1.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "05",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 1.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": false,
+        "Rc": "00",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 1.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": false,
+        "Rc": "1091",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "reset",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": false,
+        "Rc": null,
+        "Latency": null,
+        "InstId": null
+      }
+    ],
+    "results": [
+      {
+        "status": "DOWN",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "LINK_DOWN",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": null,
+        "LastRcCode": "91",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A DOWN LINK_DOWN 91",
+          "log PRODUCT PLN BILLER_A 91 LINK_DOWN  "
+        ]
+      },
+      {
+        "status": "DOWN",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "LINK_DOWN",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": null,
+        "LastRcCode": "91",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      },
+      {
+        "status": "DOWN",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "LINK_DOWN",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": null,
+        "LastRcCode": "91",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "00",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  00"
+        ]
+      },
+      {
+        "status": "DOWN",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "LINK_DOWN",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:03:00",
+        "BlockedUntil": null,
+        "LastRcCode": "1091",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A DOWN LINK_DOWN 1091",
+          "log PRODUCT PLN BILLER_A 1091 LINK_DOWN  "
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "1091",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  1091"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "timeout-suspect-probe-cycle",
+    "start": "2026-09-28T08:00:00",
+    "configs": [
+      {
+        "RoutingType": "PRODUCT",
+        "InstId": null,
+        "RcLinkDown": "91,1091",
+        "LinkDownCooldownMinutes": 10,
+        "RcSuspect": "68, 1068",
+        "MaxConsecutiveSuspect": 3,
+        "SuspectCooldownMinutes": 5,
+        "RcFailed": "05,14,68",
+        "MaxConsecutiveFailed": 2,
+        "FailedCooldownMinutes": 3,
+        "RcPending": "09,68",
+        "MaxConsecutivePending": 2,
+        "PendingCooldownMinutes": 4,
+        "LatencyThresholdMs": 1000,
+        "MaxConsecutiveLatency": 2,
+        "LatencyCooldownMinutes": 2,
+        "IsActive": true,
+        "IsLatencyActive": true
+      }
+    ],
+    "steps": [
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 1.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": false,
+        "Rc": "00",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 1.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 1.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 1.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 6.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 6.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": 500,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 1.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": null,
+        "InstId": "PLN"
+      }
+    ],
+    "results": [
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 1,
+        "ConsecutiveFailedCount": 1,
+        "ConsecutivePendingCount": 1,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "68",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  68"
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 1,
+        "ConsecutiveFailedCount": 1,
+        "ConsecutivePendingCount": 1,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "68",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "PENDING",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:02:00",
+        "BlockedUntil": "2026-09-28T08:06:00",
+        "LastRcCode": "68",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A SUSPECT PENDING 68",
+          "log PRODUCT PLN BILLER_A 68 PENDING  "
+        ]
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "PENDING",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:02:00",
+        "BlockedUntil": "2026-09-28T08:06:00",
+        "LastRcCode": "68",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "PENDING",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:02:00",
+        "BlockedUntil": "2026-09-28T08:06:00",
+        "LastRcCode": "68",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "TIMEOUT",
+        "RetryCount": 1,
+        "BlockedSince": "2026-09-28T08:02:00",
+        "BlockedUntil": "2026-09-28T08:15:00",
+        "LastRcCode": "68",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A SUSPECT TIMEOUT 68",
+          "log PRODUCT PLN BILLER_A 68 TIMEOUT  "
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "00",
+        "LastLatencyMs": 500,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  00"
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 1,
+        "ConsecutiveFailedCount": 1,
+        "ConsecutivePendingCount": 1,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "68",
+        "LastLatencyMs": 500,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  68"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "inquiry-does-not-reset",
+    "start": "2026-09-28T08:00:00",
+    "configs": [
+      {
+        "RoutingType": "PRODUCT",
+        "InstId": null,
+        "RcLinkDown": "91,1091",
+        "LinkDownCooldownMinutes": 10,
+        "RcSuspect": "68, 1068",
+        "MaxConsecutiveSuspect": 3,
+        "SuspectCooldownMinutes": 5,
+        "RcFailed": "05,14,68",
+        "MaxConsecutiveFailed": 2,
+        "FailedCooldownMinutes": 3,
+        "RcPending": "09,68",
+        "MaxConsecutivePending": 2,
+        "PendingCooldownMinutes": 4,
+        "LatencyThresholdMs": 1000,
+        "MaxConsecutiveLatency": 2,
+        "LatencyCooldownMinutes": 2,
+        "IsActive": true,
+        "IsLatencyActive": true
+      }
+    ],
+    "steps": [
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": false,
+        "Rc": "05",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": false,
+        "Rc": "00",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": false,
+        "Rc": "05",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 10.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "05",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "14",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "14",
+        "Latency": null,
+        "InstId": "PLN"
+      }
+    ],
+    "results": [
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 1,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "05",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  05"
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 1,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "05",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "RC_FAILED",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:03:00",
+        "LastRcCode": "05",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A SUSPECT RC_FAILED 05",
+          "log PRODUCT PLN BILLER_A 05 RC_FAILED  "
+        ]
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "RC_FAILED",
+        "RetryCount": 1,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:13:00",
+        "LastRcCode": "05",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A SUSPECT RC_FAILED 05",
+          "log PRODUCT PLN BILLER_A 05 RC_FAILED  "
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "00",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  00"
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 1,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "14",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  14"
+        ]
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "RC_FAILED",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:10:00",
+        "BlockedUntil": "2026-09-28T08:13:00",
+        "LastRcCode": "14",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A SUSPECT RC_FAILED 14",
+          "log PRODUCT PLN BILLER_A 14 RC_FAILED  "
+        ]
+      }
+    ]
+  },
+  {
+    "name": "latency-and-timeout-not-latency",
+    "start": "2026-09-28T08:00:00",
+    "configs": [
+      {
+        "RoutingType": "PRODUCT",
+        "InstId": null,
+        "RcLinkDown": "91,1091",
+        "LinkDownCooldownMinutes": 10,
+        "RcSuspect": "68, 1068",
+        "MaxConsecutiveSuspect": 3,
+        "SuspectCooldownMinutes": 5,
+        "RcFailed": "05,14,68",
+        "MaxConsecutiveFailed": 2,
+        "FailedCooldownMinutes": 3,
+        "RcPending": "09,68",
+        "MaxConsecutivePending": 2,
+        "PendingCooldownMinutes": 4,
+        "LatencyThresholdMs": 1000,
+        "MaxConsecutiveLatency": 2,
+        "LatencyCooldownMinutes": 2,
+        "IsActive": true,
+        "IsLatencyActive": true
+      }
+    ],
+    "steps": [
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": 1500,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": 5000,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": 900,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": false,
+        "Rc": "00",
+        "Latency": 2000,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": 2000,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 3.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": 100,
+        "InstId": "PLN"
+      }
+    ],
+    "results": [
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 1,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "00",
+        "LastLatencyMs": 1500,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  00"
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 1,
+        "ConsecutiveFailedCount": 1,
+        "ConsecutivePendingCount": 1,
+        "ConsecutiveLatencyCount": 1,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "68",
+        "LastLatencyMs": 5000,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  68"
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "00",
+        "LastLatencyMs": 900,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  00"
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 1,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "00",
+        "LastLatencyMs": 2000,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  00"
+        ]
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "LATENCY",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:02:00",
+        "LastRcCode": "00",
+        "LastLatencyMs": 2000,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A SUSPECT LATENCY 00",
+          "log PRODUCT PLN BILLER_A 00 LATENCY 2000 "
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "00",
+        "LastLatencyMs": 100,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  00"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "pending-and-multi-category",
+    "start": "2026-09-28T08:00:00",
+    "configs": [
+      {
+        "RoutingType": "PRODUCT",
+        "InstId": null,
+        "RcLinkDown": "91,1091",
+        "LinkDownCooldownMinutes": 10,
+        "RcSuspect": "68, 1068",
+        "MaxConsecutiveSuspect": 3,
+        "SuspectCooldownMinutes": 5,
+        "RcFailed": "05,14,68",
+        "MaxConsecutiveFailed": 2,
+        "FailedCooldownMinutes": 3,
+        "RcPending": "09,68",
+        "MaxConsecutivePending": 2,
+        "PendingCooldownMinutes": 4,
+        "LatencyThresholdMs": 1000,
+        "MaxConsecutiveLatency": 2,
+        "LatencyCooldownMinutes": 2,
+        "IsActive": true,
+        "IsLatencyActive": true
+      }
+    ],
+    "steps": [
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "09",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "09",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 5.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": null,
+        "InstId": "PLN"
+      }
+    ],
+    "results": [
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 1,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "09",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  09"
+        ]
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "PENDING",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:04:00",
+        "LastRcCode": "09",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A SUSPECT PENDING 09",
+          "log PRODUCT PLN BILLER_A 09 PENDING  "
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "00",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  00"
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 1,
+        "ConsecutiveFailedCount": 1,
+        "ConsecutivePendingCount": 1,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "68",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  68"
+        ]
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "PENDING",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:05:00",
+        "BlockedUntil": "2026-09-28T08:09:00",
+        "LastRcCode": "68",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A SUSPECT PENDING 68",
+          "log PRODUCT PLN BILLER_A 68 PENDING  "
+        ]
+      }
+    ]
+  },
+  {
+    "name": "probe-slow-reblocks",
+    "start": "2026-09-28T08:00:00",
+    "configs": [
+      {
+        "RoutingType": "PRODUCT",
+        "InstId": null,
+        "RcLinkDown": "91,1091",
+        "LinkDownCooldownMinutes": 10,
+        "RcSuspect": "68, 1068",
+        "MaxConsecutiveSuspect": 3,
+        "SuspectCooldownMinutes": 5,
+        "RcFailed": "05,14,68",
+        "MaxConsecutiveFailed": 2,
+        "FailedCooldownMinutes": 3,
+        "RcPending": "09,68",
+        "MaxConsecutivePending": 2,
+        "PendingCooldownMinutes": 4,
+        "LatencyThresholdMs": 1000,
+        "MaxConsecutiveLatency": 2,
+        "LatencyCooldownMinutes": 2,
+        "IsActive": true,
+        "IsLatencyActive": true
+      }
+    ],
+    "steps": [
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "91",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 11.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": 3000,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": 100,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": 100,
+        "InstId": "PLN"
+      }
+    ],
+    "results": [
+      {
+        "status": "DOWN",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "LINK_DOWN",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:10:00",
+        "LastRcCode": "91",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A DOWN LINK_DOWN 91",
+          "log PRODUCT PLN BILLER_A 91 LINK_DOWN  "
+        ]
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "LATENCY",
+        "RetryCount": 1,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:13:00",
+        "LastRcCode": "00",
+        "LastLatencyMs": 3000,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A SUSPECT LATENCY 00",
+          "log PRODUCT PLN BILLER_A 00 LATENCY 3000 "
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "00",
+        "LastLatencyMs": 100,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  00"
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "00",
+        "LastLatencyMs": 100,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      }
+    ]
+  },
+  {
+    "name": "in-window-payment-restores",
+    "start": "2026-09-28T08:00:00",
+    "configs": [
+      {
+        "RoutingType": "PRODUCT",
+        "InstId": null,
+        "RcLinkDown": "91,1091",
+        "LinkDownCooldownMinutes": 10,
+        "RcSuspect": "68, 1068",
+        "MaxConsecutiveSuspect": 3,
+        "SuspectCooldownMinutes": 5,
+        "RcFailed": "05,14,68",
+        "MaxConsecutiveFailed": 2,
+        "FailedCooldownMinutes": 3,
+        "RcPending": "09,68",
+        "MaxConsecutivePending": 2,
+        "PendingCooldownMinutes": 4,
+        "LatencyThresholdMs": 1000,
+        "MaxConsecutiveLatency": 2,
+        "LatencyCooldownMinutes": 2,
+        "IsActive": true,
+        "IsLatencyActive": true
+      }
+    ],
+    "steps": [
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "91",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 1.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": false,
+        "Rc": "00",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 1.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": 5000,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 1.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "00",
+        "Latency": 10,
+        "InstId": "PLN"
+      }
+    ],
+    "results": [
+      {
+        "status": "DOWN",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "LINK_DOWN",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:10:00",
+        "LastRcCode": "91",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A DOWN LINK_DOWN 91",
+          "log PRODUCT PLN BILLER_A 91 LINK_DOWN  "
+        ]
+      },
+      {
+        "status": "DOWN",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "LINK_DOWN",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:10:00",
+        "LastRcCode": "91",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      },
+      {
+        "status": "DOWN",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "LINK_DOWN",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:10:00",
+        "LastRcCode": "91",
+        "LastLatencyMs": 5000,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "00",
+        "LastLatencyMs": 10,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A ACTIVE  00"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "product-config-overrides-global",
+    "start": "2026-09-28T08:00:00",
+    "configs": [
+      {
+        "RoutingType": "PRODUCT",
+        "InstId": null,
+        "RcLinkDown": "91,1091",
+        "LinkDownCooldownMinutes": 10,
+        "RcSuspect": "68, 1068",
+        "MaxConsecutiveSuspect": 3,
+        "SuspectCooldownMinutes": 5,
+        "RcFailed": "05,14,68",
+        "MaxConsecutiveFailed": 2,
+        "FailedCooldownMinutes": 3,
+        "RcPending": "09,68",
+        "MaxConsecutivePending": 2,
+        "PendingCooldownMinutes": 4,
+        "LatencyThresholdMs": 1000,
+        "MaxConsecutiveLatency": 2,
+        "LatencyCooldownMinutes": 2,
+        "IsActive": true,
+        "IsLatencyActive": true
+      },
+      {
+        "RoutingType": "PRODUCT",
+        "InstId": "PLN",
+        "RcLinkDown": "91,1091",
+        "LinkDownCooldownMinutes": 10,
+        "RcSuspect": "68, 1068",
+        "MaxConsecutiveSuspect": 3,
+        "SuspectCooldownMinutes": 5,
+        "RcFailed": "77",
+        "MaxConsecutiveFailed": 1,
+        "FailedCooldownMinutes": 3,
+        "RcPending": "09,68",
+        "MaxConsecutivePending": 2,
+        "PendingCooldownMinutes": 4,
+        "LatencyThresholdMs": 1000,
+        "MaxConsecutiveLatency": 2,
+        "LatencyCooldownMinutes": 2,
+        "IsActive": true,
+        "IsLatencyActive": true
+      },
+      {
+        "RoutingType": "PRODUCT",
+        "InstId": "BPJS",
+        "RcLinkDown": "91,1091",
+        "LinkDownCooldownMinutes": 10,
+        "RcSuspect": "68, 1068",
+        "MaxConsecutiveSuspect": 3,
+        "SuspectCooldownMinutes": 5,
+        "RcFailed": "77",
+        "MaxConsecutiveFailed": 2,
+        "FailedCooldownMinutes": 3,
+        "RcPending": "09,68",
+        "MaxConsecutivePending": 2,
+        "PendingCooldownMinutes": 4,
+        "LatencyThresholdMs": 1000,
+        "MaxConsecutiveLatency": 2,
+        "LatencyCooldownMinutes": 2,
+        "IsActive": false,
+        "IsLatencyActive": true
+      }
+    ],
+    "steps": [
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "77",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "77",
+        "Latency": null,
+        "InstId": "BPJS"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "05",
+        "Latency": null,
+        "InstId": "BPJS"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "PRODUCT",
+        "IsPayment": true,
+        "Rc": "05",
+        "Latency": null,
+        "InstId": "BPJS"
+      }
+    ],
+    "results": [
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "RC_FAILED",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:03:00",
+        "LastRcCode": "77",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": [
+          "upsert BILLER_A SUSPECT RC_FAILED 77",
+          "log PRODUCT PLN BILLER_A 77 RC_FAILED  "
+        ]
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "RC_FAILED",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:03:00",
+        "LastRcCode": "77",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "RC_FAILED",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:03:00",
+        "LastRcCode": "77",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "RC_FAILED",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": "2026-09-28T08:03:00",
+        "LastRcCode": "77",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": true,
+        "writes": []
+      }
+    ]
+  },
+  {
+    "name": "margin-default-when-global-inactive",
+    "start": "2026-09-28T08:00:00",
+    "configs": [
+      {
+        "RoutingType": "MARGIN",
+        "InstId": null,
+        "RcLinkDown": "91,1091",
+        "LinkDownCooldownMinutes": 10,
+        "RcSuspect": "68, 1068",
+        "MaxConsecutiveSuspect": 3,
+        "SuspectCooldownMinutes": 5,
+        "RcFailed": "05,14,68",
+        "MaxConsecutiveFailed": 2,
+        "FailedCooldownMinutes": 3,
+        "RcPending": "09,68",
+        "MaxConsecutivePending": 2,
+        "PendingCooldownMinutes": 4,
+        "LatencyThresholdMs": 1000,
+        "MaxConsecutiveLatency": 2,
+        "LatencyCooldownMinutes": 2,
+        "IsActive": false,
+        "IsLatencyActive": true
+      }
+    ],
+    "steps": [
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "MARGIN",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "MARGIN",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": null,
+        "InstId": "PLN"
+      },
+      {
+        "AdvanceMinutes": 0.0,
+        "Action": "record",
+        "Supplier": "BILLER_A",
+        "RoutingType": "MARGIN",
+        "IsPayment": true,
+        "Rc": "68",
+        "Latency": null,
+        "InstId": "PLN"
+      }
+    ],
+    "results": [
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 1,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "68",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": false,
+        "writes": [
+          "upsert BILLER_A ACTIVE  68"
+        ]
+      },
+      {
+        "status": "ACTIVE",
+        "ConsecutiveSuspectCount": 2,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": null,
+        "RetryCount": 0,
+        "BlockedSince": null,
+        "BlockedUntil": null,
+        "LastRcCode": "68",
+        "LastLatencyMs": null,
+        "eligible": true,
+        "eligibleIn1Min": true,
+        "failoverProduct": true,
+        "failoverMargin": false,
+        "writes": [
+          "upsert BILLER_A ACTIVE  68"
+        ]
+      },
+      {
+        "status": "SUSPECT",
+        "ConsecutiveSuspectCount": 0,
+        "ConsecutiveFailedCount": 0,
+        "ConsecutivePendingCount": 0,
+        "ConsecutiveLatencyCount": 0,
+        "BlockReason": "TIMEOUT",
+        "RetryCount": 0,
+        "BlockedSince": "2026-09-28T08:00:00",
+        "BlockedUntil": null,
+        "LastRcCode": "68",
+        "LastLatencyMs": null,
+        "eligible": false,
+        "eligibleIn1Min": false,
+        "failoverProduct": true,
+        "failoverMargin": false,
+        "writes": [
+          "upsert BILLER_A SUSPECT TIMEOUT 68",
+          "log MARGIN PLN BILLER_A 68 TIMEOUT  "
+        ]
+      }
+    ]
+  }
+]

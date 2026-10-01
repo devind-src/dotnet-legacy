@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SyncNetPro.Iso8583</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>SyncNetPro.Iso8583</PackageId>
+    <Description>Packer/parser ISO 8583 untuk interface SyncNet: spesifikasi field (ASCII/EBCDIC/BCD, fixed/LLVAR…), bitmap primer/sekunder, TPDU, format trace.</Description>
+    <PackageTags>syncnet;iso8583</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SyncNetPro.Contracts\SyncNetPro.Contracts.csproj" />
+    <ProjectReference Include="..\SyncNetPro.Toolkit\SyncNetPro.Toolkit.csproj" />
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SyncNetPro.Iso8583.Tests" />
+  </ItemGroup>
+
+</Project>
